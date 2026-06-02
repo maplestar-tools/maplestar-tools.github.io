@@ -61,7 +61,9 @@ h1 {
 /* 針對【首頁】與【團隊分紅】維持精緻窄卡片樣式 */
 .tab-narrow {
     max-width: 450px;
+    width: 100%; /* 強制撐滿 450px 的限制空間 */
     margin: 0 auto;
+    box-sizing: border-box;
 }
 
 /* 隱藏未選中分頁 */
@@ -183,7 +185,8 @@ h1 {
 .calc-btn {
     width: 100%;
     padding: 12px;
-    color: white;
+    color: #ffffff !important; /* 強制白色字體，防止變空白 */
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3); /* 讓文字更清晰 */
     border: none;
     border-radius: 8px;
     font-size: 15px;
@@ -191,6 +194,8 @@ h1 {
     cursor: pointer;
     transition: filter 0.2s;
     margin: 5px 0 20px 0;
+    display: block; /* 確保按鈕是區塊元素 */
+    text-align: center;
 }
 .calc-btn:hover { filter: brightness(1.1); }
 
