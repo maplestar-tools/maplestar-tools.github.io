@@ -66,26 +66,7 @@ window.switchTab = function(tabId) {
         if (btn.getAttribute('onclick').includes(tabId)) { btn.classList.add('active'); }
     });
 }
-// 🔄 智慧連動：當下拉選單切換時，自動判斷是否為法師武器
-window.autoToggleJob = function() {
-    const coeff = parseFloat(document.getElementById('coeff').value);
-    const lblMain = document.getElementById('lblMain');
-    const lblSub = document.getElementById('lblSub');
-    const resTitle = document.getElementById('resTitle');
-    
-    // 如果選到 1.00 (長短杖)，自動切換成法師的文字標籤
-    if (coeff === 1.00) {
-        lblMain.innerText = '主屬性 (智力 INT)';
-        lblSub.innerText = '副屬性 (幸運 LUK)';
-        resTitle.innerText = '反推純淨基礎魔法攻擊力';
-    } else {
-        lblMain.innerText = '主屬性 (STR / DEX / LUK)';
-        lblSub.innerText = '副屬性 (DEX / STR)';
-        resTitle.innerText = '反推純淨基礎物理攻擊力';
-    }
-}
-
-// 🧮 智慧核心演算法
+// 🧮 基礎攻擊力反推（不分物魔，極簡通算版）
 window.calculateBaseAtk = function() {
     const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
@@ -93,7 +74,7 @@ window.calculateBaseAtk = function() {
     const percentAtk = (parseFloat(document.getElementById('percentAtk').value) || 0) / 100;
     const coeff = parseFloat(document.getElementById('coeff').value);
     
-    // 計算屬性基底公式：(主屬 * 4 + 副屬) / 100
+    // 基本公式：(主屬 * 4 + 副屬) / 100
     const statFactor = (mainStat * 4 + subStat) / 100;
     
     if (statFactor === 0 || coeff === 0) {
@@ -101,10 +82,10 @@ window.calculateBaseAtk = function() {
         return;
     }
     
-    // 反推總攻擊力，再扣除 %攻 的加成
+    // 反推公式
     const totalAtk = maxAtk / coeff / statFactor;
     const baseAtk = totalAtk / (1 + percentAtk);
     
-    // 四捨五入輸出
+    // 四捨五入輸出結果
     document.getElementById('resultDisplay').innerText = Math.round(baseAtk);
 }
