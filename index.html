@@ -119,78 +119,56 @@
 
                 <div class="card">
     <h2>🔮 最終表攻動態模擬</h2>
-    <p class="subtitle">連動前兩欄數據，可手動修改上方基準值，自由模擬新的最大表攻。</p>
+    <p class="subtitle">連動前兩欄數據，自由輸入預計提升的數值，直接模擬出新的最大表攻。</p>
     <hr>
-    
-    <div class="simulation-section" style="margin-bottom: 25px;">
-        <h3 style="color: #ff5252; margin-bottom: 12px;">⚔️ 攻擊力模擬條件</h3>
-        
-        <div class="input-group" style="margin-bottom: 15px;">
-            <label style="color: #ffaa66;">當前基準總攻擊力 (自動連動 / 可手動扣除修改)</label>
-            <input type="number" id="simCurrentBaseAtk" value="147" style="border: 1px solid #ffaa66;">
-        </div>
 
-        <div class="input-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-            <div class="input-group">
-                <label>擬提升 攻擊 %</label>
-                <input type="number" id="simAtkPercentInput" value="1">
-            </div>
-            <div class="input-group">
-                <label>擬提升 固定攻擊</label>
-                <input type="number" id="simAtkValueInput" value="26">
-            </div>
+    <h3>⚔️ 攻擊力模擬條件</h3>
+    <div class="input-grid">
+        <div class="input-group">
+            <label>擬提升 攻擊 %</label>
+            <input type="number" id="simAtkPercentInput" value="1">
         </div>
-        
-        <button onclick="simulateAtkBenefit()" class="btn" style="margin-top: 15px; width: 100%;">
-            模擬攻擊提升後的表攻
-        </button>
-        
-        <div class="result-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
-            <div class="result-box">
-                <span id="lblSimAtkPercent">模擬後最大表攻 (+1%)</span>
-                <div id="atkSimPercent" class="sim-result">0</div>
-            </div>
-            <div class="result-box">
-                <span id="lblSimAtkValue">模擬後最大表攻 (+26 攻)</span>
-                <div id="atkSimValue" class="sim-result">0</div>
-            </div>
+        <div class="input-group">
+            <label>擬提升 固定攻擊</label>
+            <input type="number" id="simAtkValueInput" value="26">
+        </div>
+    </div>
+    <button onclick="simulateAtkBenefit()" class="btn">模擬攻擊提升後的表攻</button>
+
+    <div class="result-grid">
+        <div class="result-box">
+            <span id="lblSimAtkPercent">模擬後最大表攻 (+1%)</span>
+            <div id="atkSimPercent">0</div>
+        </div>
+        <div class="result-box">
+            <span id="lblSimAtkValue">模擬後最大表攻 (+26 攻)</span>
+            <div id="atkSimValue">0</div>
         </div>
     </div>
 
-    <hr style="border-top: 1px dashed #444; margin: 20px 0;">
+    <hr>
 
-    <div class="simulation-section">
-        <h3 style="color: #52ff52; margin-bottom: 12px;">🧬 主屬性模擬條件</h3>
-        
-        <div class="input-group" style="margin-bottom: 15px;">
-            <label style="color: #66ffaa;">當前基準總主屬性 (自動連動 / 可手動修改)</label>
-            <input type="number" id="simCurrentBaseStat" value="874" style="border: 1px solid #66ffaa;">
+    <h3>🧬 主屬性模擬條件</h3>
+    <div class="input-grid">
+        <div class="input-group">
+            <label>擬提升 屬性 %</label>
+            <input type="number" id="simStatPercentInput" value="1">
         </div>
+        <div class="input-group">
+            <label>擬提升 固定屬性</label>
+            <input type="number" id="simStatValueInput" value="1">
+        </div>
+    </div>
+    <button onclick="simulateStatBenefit()" class="btn">模擬屬性提升後的表攻</button>
 
-        <div class="input-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-            <div class="input-group">
-                <label>擬提升 屬性 %</label>
-                <input type="number" id="simStatPercentInput" value="1">
-            </div>
-            <div class="input-group">
-                <label>擬提升 固定屬性</label>
-                <input type="number" id="simStatValueInput" value="1">
-            </div>
+    <div class="result-grid">
+        <div class="result-box">
+            <span id="lblSimStatPercent">模擬後最大表攻 (+1%)</span>
+            <div id="statSimPercent">0</div>
         </div>
-        
-        <button onclick="simulateStatBenefit()" class="btn" style="margin-top: 15px; width: 100%;">
-            模擬屬性提升後的表攻
-        </button>
-        
-        <div class="result-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
-            <div class="result-box">
-                <span id="lblSimStatPercent">模擬後最大表攻 (+1%)</span>
-                <div id="statSimPercent" class="sim-result">0</div>
-            </div>
-            <div class="result-box">
-                <span id="lblSimStatValue">模擬後最大表攻 (+1 屬)</span>
-                <div id="statSimValue" class="sim-result">0</div>
-            </div>
+        <div class="result-box">
+            <span id="lblSimStatValue">模擬後最大表攻 (+1 屬)</span>
+            <div id="statSimValue">0</div>
         </div>
     </div>
 </div>
