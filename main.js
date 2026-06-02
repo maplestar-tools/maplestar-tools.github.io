@@ -115,7 +115,7 @@ function calculateEquipStat() {
     elDisplay.innerText = finalEquipStat;
 }
 
-// 🧮 第三類：攻擊力邊際效益模擬（連動高精度補償）
+// 🧮 第三類：模擬攻擊提升後的「全新最大表攻」
 function simulateAtkBenefit() {
     const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
@@ -124,34 +124,51 @@ function simulateAtkBenefit() {
     const coeff = parseFloat(document.getElementById('coeff').value);
     
     const statFactor = (mainStat * 4 + subStat) / 100;
-    if (statFactor === 0 || coeff === 0) { alert("請先確保第一欄的攻擊力數據輸入正確！"); return; }
+    if (statFactor === 0 || coeff === 0 || maxAtk === 0) { 
+        alert("請先確保第一欄的攻擊力數據已正確輸入！"); 
+        return; 
+    }
     
     const customAtkPercent = parseFloat(document.getElementById('simAtkPercentInput').value) || 0;
     const customAtkValue = parseFloat(document.getElementById('simAtkValueInput').value) || 0;
 
-    // 這裡同樣使用補償後的總表攻，確保基底是準確的
+    // 1. 還原出高精度的乾淨基礎攻擊力（含中線補償）
     const totalAtk = (maxAtk + 0.5) / coeff / statFactor;
     const baseAtk = totalAtk / (1 + percentAtk); 
 
-    // 模擬提升後的總表攻（最後交給遊戲公式的無條件捨去）
-    const simAtkPercent = baseAtk * (1 + percentAtk + (customAtkPercent / 100)) * coeff * statFactor;
-    const simAtkValue = (baseAtk + customAtkValue) * (1 + percentAtk) * coeff * statFactor;
+    // 2. 方案 A：只增加 %攻，計算出「新的最大表攻」
+    const newMaxAtkPercent = baseAtk * (1 + percentAtk + (customAtkPercent / 100)) * coeff * statFactor;
+    
+    // 3. 方案 B：只增加固定攻，計算出「新的最大表攻」
+    const newMaxAtkValue = (baseAtk + customAtkValue) * (1 + percentAtk) * coeff * statFactor;
 
-    document.getElementById('lblSimAtkPercent').innerText = `額外 +${customAtkPercent}% 攻擊力`;
-    document.getElementById('lblSimAtkValue').innerText = `額外 +${customAtkValue} 固定攻擊`;
+    // 4. 動態更新標籤文字
+    document.getElementById('lblSimAtkPercent').innerText = `模擬後最大表攻 (+${customAtkPercent}%)`;
+    document.getElementById('lblSimAtkValue').innerText = `模擬後最大表攻 (+${customAtkValue} 攻)`;
 
-    // 💡 最終輸出：模擬遊戲內部的面板呈現，直接無條件捨去
-    document.getElementById('atkSimPercent').innerText = Math.floor(simAtkPercent);
-    document.getElementById('atkSimValue').innerText = Math.floor(simAtkValue);
+    // 5. 輸出結果（模擬楓之谷面板，無條件捨去）
+    document.getElementById('atkSimPercent').innerText = Math.floor(newMaxAtkPercent);
+    document.getElementById('atkSimValue').innerText = Math.floor(newMaxAtkValue);
 }
 
-// 🧮 第三類：主屬性邊際效益模擬（連動高精度補償）
+// 🧮 第三類：模擬屬性提升後的「全新最大表攻」
 function simulateStatBenefit() {
+    // 連動第一類的攻擊力基底
+    const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
+    const subStat = parseFloat(document.getElementById('subStat').value) || 0;
+    const maxAtk = parseFloat(document.getElementById('maxAtk').value) || 0;
+    const percentAtk = (parseFloat(document.getElementById('percentAtk').value) || 0) / 100;
+    const coeff = parseFloat(document.getElementById('coeff').value);
+
+    // 連動第二類的屬性基底
     const elTotal = document.getElementById('statTotal');
     const elBase = document.getElementById('statBaseOnly');
     const elPercent = document.getElementById('statPercent');
 
-    if (!elTotal || !elBase || !elPercent) { return; }
+    if (!elTotal || !elBase || !elPercent || maxAtk === 0) { 
+        alert("請先確保第一欄與第二欄的數據皆已正確輸入！"); 
+        return; 
+    }
 
     const statTotal = parseFloat(elTotal.value) || 0;
     const statBaseOnly = parseFloat(elBase.value) || 0;
@@ -160,19 +177,30 @@ function simulateStatBenefit() {
     const customStatPercent = parseFloat(document.getElementById('simStatPercentInput').value) || 0;
     const customStatValue = parseFloat(document.getElementById('simStatValueInput').value) || 0;
 
-    // 反推出無誤差的純裝備屬性
+    // 1. 還原高精度純裝備屬性與純攻擊力
     const rawEquipStat = ((statTotal + 0.5) / (1 + statPercent)) - statBaseOnly;
-    const finalEquipStat = Math.max(0, Math.floor(rawEquipStat));
+    const finalEquipStat = Math.max(0, rawEquipStat);
+    
+    const totalAtk = (maxAtk + 0.5) / coeff / ((mainStat * 4 + subStat) / 100);
+    const baseAtk = totalAtk / (1 + percentAtk);
 
-    // 模擬新面板屬性（無條件捨去）
-    const simStatPercent = (statBaseOnly + finalEquipStat) * (1 + statPercent + (customStatPercent / 100));
-    const simStatValue = (statBaseOnly + finalEquipStat + customStatValue) * (1 + statPercent);
+    // 2. 方案 A：只增加 %屬，計算出「新主屬」，並推回「新表攻」
+    const newMainStatPercent = Math.floor(finalEquipStat * (1 + statPercent + (customStatPercent / 100))) + statBaseOnly;
+    const newStatFactorPercent = (newMainStatPercent * 4 + subStat) / 100;
+    const newMaxAtkPercent = baseAtk * (1 + percentAtk) * coeff * newStatFactorPercent;
+    
+    // 3. 方案 B：只增加固定屬，計算出「新主屬」，並推回「新表攻」
+    const newMainStatValue = Math.floor((finalEquipStat + customStatValue) * (1 + statPercent)) + statBaseOnly;
+    const newStatFactorValue = (newMainStatValue * 4 + subStat) / 100;
+    const newMaxAtkValue = baseAtk * (1 + percentAtk) * coeff * newStatFactorValue;
 
-    document.getElementById('lblSimStatPercent').innerText = `額外 +${customStatPercent}% 主屬性`;
-    document.getElementById('lblSimStatValue').innerText = `額外 +${customStatValue} 固定主屬`;
+    // 4. 動態更新標籤文字
+    document.getElementById('lblSimStatPercent').innerText = `模擬後最大表攻 (+${customStatPercent}%)`;
+    document.getElementById('lblSimStatValue').innerText = `模擬後最大表攻 (+${customStatValue} 屬)`;
 
-    document.getElementById('statSimPercent').innerText = Math.floor(simStatPercent);
-    document.getElementById('statSimValue').innerText = Math.floor(simStatValue);
+    // 5. 輸出結果（無條件捨去）
+    document.getElementById('statSimPercent').innerText = Math.floor(newMaxAtkPercent);
+    document.getElementById('statSimValue').innerText = Math.floor(newMaxAtkValue);
 }
 
 // 🎯 用 DOMContentLoaded 安全掛載所有按鈕監聽器
