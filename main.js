@@ -13,7 +13,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 🌐 雲端儲存
+// 🌐 雲端儲存與讀取 (邏輯不變)
 window.saveToCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
     const statusText = document.getElementById('cloudStatus');
@@ -32,47 +32,30 @@ window.saveToCloud = async function() {
     }
 }
 
-// 🌐 雲端讀取
 window.loadFromCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
     const statusText = document.getElementById('cloudStatus');
     if (!keyCode) { alert('請先輸入你要讀取的自訂字串（代碼）！'); return; }
-    statusText.innerText = "正在從雲端搜尋你的抽屜...";
     try {
         const docRef = doc(db, "player_data", keyCode);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             const data = docSnap.data();
-            alert(`【讀取成功！】\n代碼：${data.userCode}\n最後存檔時間：${data.lastSaveTime}\n雲端內文：${data.testMessage}`);
-            statusText.innerText = `📂 成功讀取代碼 [${keyCode}] 的進度！`;
+            alert(`【讀取成功！】\n代碼：${data.userCode}\n最後存檔時間：${data.lastSaveTime}`);
         } else {
-            statusText.innerText = "❓ 找不到這個代碼的資料。";
             alert("找不到這個代碼的資料！");
         }
-    } catch (error) {
-        console.error("讀取失敗：", error);
-        statusText.innerText = "❌ 讀取失敗。";
-    }
+    } catch (error) { console.error("讀取失敗：", error); }
 }
 
-// 🔄 切換分頁邏輯
 window.switchTab = function(tabId) {
-    const contents = document.querySelectorAll('.tab-content');
-    contents.forEach(content => content.classList.remove('active'));
-    
-    const buttons = document.querySelectorAll('.tab-btn');
-    buttons.forEach(btn => btn.classList.remove('active'));
-    
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-    
-    buttons.forEach(btn => {
-        if (btn.getAttribute('onclick').includes(tabId)) { 
-            btn.classList.add('active'); 
-        }
-    });
+    document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
 }
 
-// 🧮 第一類：基礎攻擊力反推（真・公式還原版）
+// 🧮 計算核心邏輯
 function calculateBaseAtk() {
     const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
@@ -81,140 +64,78 @@ function calculateBaseAtk() {
     const coeff = parseFloat(document.getElementById('coeff').value);
     
     const statFactor = (mainStat * 4 + subStat) / 100;
-    if (statFactor === 0 || coeff === 0 || maxAtk === 0) { 
-        alert("請輸入正確的能力值！");
-        return; 
-    }
+    if (statFactor === 0 || coeff === 0 || maxAtk === 0) { alert("請輸入正確的能力值！"); return; }
     
     const estimatedAtk = Math.round((maxAtk / coeff / statFactor) / (1 + percentAtk));
-    const startAtk = Math.max(1, estimatedAtk - 1000);
-    const endAtk = estimatedAtk + 1000;
-    
-    let matchedBaseAtk = 0;
-    for (let testAtk = startAtk; testAtk <= endAtk; testAtk++) {
-        let totalAtk = Math.floor(testAtk * (1 + percentAtk));
-        let calcMax = Math.round(totalAtk * coeff * statFactor);
-        
-        if (calcMax === Math.round(maxAtk)) {
-            matchedBaseAtk = testAtk;
-            break;
+    let matchedBaseAtk = estimatedAtk;
+    for (let testAtk = Math.max(1, estimatedAtk - 1000); testAtk <= estimatedAtk + 1000; testAtk++) {
+        if (Math.round(Math.floor(testAtk * (1 + percentAtk)) * coeff * statFactor) === Math.round(maxAtk)) {
+            matchedBaseAtk = testAtk; break;
         }
     }
-    
-    if (matchedBaseAtk === 0) matchedBaseAtk = estimatedAtk;
     document.getElementById('resultDisplay').innerText = matchedBaseAtk;
-}
-
-// 🧮 第二類：裝備純屬性反推（同步改為真公式邏輯）
-function calculateEquipStat() {
-    const elTotal = document.getElementById('statTotal');
-    const elBase = document.getElementById('statBaseOnly');
-    const elPercent = document.getElementById('statPercent');
-    const elDisplay = document.getElementById('equipStatDisplay');
-
-    if (!elTotal || !elBase || !elPercent || !elDisplay) { return; }
-
-    const statTotal = parseFloat(elTotal.value) || 0;
-    const statBaseOnly = parseFloat(elBase.value) || 0;
-    const statPercent = (parseFloat(elPercent.value) || 0) / 100;
-
-    const estimatedEquip = Math.round((statTotal / (1 + statPercent)) - statBaseOnly);
     
-    let matchedEquipStat = 0;
-    for (let testEquip = estimatedEquip - 1000; testEquip <= estimatedEquip + 1000; testEquip++) {
-        if (testEquip < 0) continue;
-        let calcTotal = Math.round((statBaseOnly + testEquip) * (1 + statPercent));
-        if (calcTotal === Math.round(statTotal)) {
-            matchedEquipStat = testEquip;
-            break;
-        }
-    }
-
-    if (matchedEquipStat === 0 && statTotal > 0) matchedEquipStat = Math.max(0, estimatedEquip);
-    elDisplay.innerText = matchedEquipStat;
+    // 自動填入基準值欄位
+    document.getElementById('baseAtkOverride').value = matchedBaseAtk;
+    document.getElementById('mainStatOverride').value = mainStat;
 }
 
-// 🧮 第三類：模擬攻擊提升後的「全新最大表攻」
+function calculateEquipStat() {
+    const statTotal = parseFloat(document.getElementById('statTotal').value) || 0;
+    const statBaseOnly = parseFloat(document.getElementById('statBaseOnly').value) || 0;
+    const statPercent = (parseFloat(document.getElementById('statPercent').value) || 0) / 100;
+
+    let matchedEquipStat = Math.max(0, Math.round((statTotal / (1 + statPercent)) - statBaseOnly));
+    document.getElementById('equipStatDisplay').innerText = matchedEquipStat;
+}
+
+// 🧮 模擬邏輯 (已加入基準值優先級判斷)
 function simulateAtkBenefit() {
-    const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
+    const mainStat = parseFloat(document.getElementById('mainStatOverride').value) || parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
-    const maxAtk = parseFloat(document.getElementById('maxAtk').value) || 0;
     const percentAtk = (parseFloat(document.getElementById('percentAtk').value) || 0) / 100;
     const coeff = parseFloat(document.getElementById('coeff').value);
     
+    let baseAtk = parseFloat(document.getElementById('baseAtkOverride').value) || parseFloat(document.getElementById('resultDisplay').innerText) || 0;
     const statFactor = (mainStat * 4 + subStat) / 100;
-    if (statFactor === 0 || coeff === 0 || maxAtk === 0) { return; }
     
     const customAtkPercent = parseFloat(document.getElementById('simAtkPercentInput').value) || 0;
     const customAtkValue = parseFloat(document.getElementById('simAtkValueInput').value) || 0;
 
-    let baseAtk = parseFloat(document.getElementById('resultDisplay').innerText) || 321;
+    let newMaxAtkPercent = Math.round(Math.floor(baseAtk * (1 + percentAtk + (customAtkPercent / 100))) * coeff * statFactor);
+    let newMaxAtkValue = Math.round(Math.floor((baseAtk + customAtkValue) * (1 + percentAtk)) * coeff * statFactor);
 
-    let totalAtkPercent = Math.floor(baseAtk * (1 + percentAtk + (customAtkPercent / 100)));
-    let newMaxAtkPercent = Math.round(totalAtkPercent * coeff * statFactor);
-    
-    let totalAtkValue = Math.floor((baseAtk + customAtkValue) * (1 + percentAtk));
-    let newMaxAtkValue = Math.round(totalAtkValue * coeff * statFactor);
-
-    document.getElementById('lblSimAtkPercent').innerText = `模擬後最大表攻 (+${customAtkPercent}%)`;
-    document.getElementById('lblSimAtkValue').innerText = `模擬後最大表攻 (+${customAtkValue} 攻)`;
     document.getElementById('atkSimPercent').innerText = newMaxAtkPercent;
     document.getElementById('atkSimValue').innerText = newMaxAtkValue;
 }
 
-// 🧮 第三類：模擬屬性提升後的「全新最大表攻」
 function simulateStatBenefit() {
-    const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
-    const maxAtk = parseFloat(document.getElementById('maxAtk').value) || 0;
     const percentAtk = (parseFloat(document.getElementById('percentAtk').value) || 0) / 100;
     const coeff = parseFloat(document.getElementById('coeff').value);
-
-    const elTotal = document.getElementById('statTotal');
-    const elBase = document.getElementById('statBaseOnly');
-    const elPercent = document.getElementById('statPercent');
-
-    if (!elTotal || !elBase || !elPercent || maxAtk === 0) { return; }
-
-    const statTotal = parseFloat(elTotal.value) || 0;
-    const statBaseOnly = parseFloat(elBase.value) || 0;
-    const statPercent = (parseFloat(elPercent.value) || 0) / 100;
+    
+    let baseAtk = parseFloat(document.getElementById('baseAtkOverride').value) || parseFloat(document.getElementById('resultDisplay').innerText) || 0;
+    let mainStat = parseFloat(document.getElementById('mainStatOverride').value) || parseFloat(document.getElementById('mainStat').value) || 0;
+    const statPercent = (parseFloat(document.getElementById('statPercent').value) || 0) / 100;
 
     const customStatPercent = parseFloat(document.getElementById('simStatPercentInput').value) || 0;
     const customStatValue = parseFloat(document.getElementById('simStatValueInput').value) || 0;
 
-    let baseAtk = parseFloat(document.getElementById('resultDisplay').innerText) || 321;
     let finalEquipStat = parseFloat(document.getElementById('equipStatDisplay').innerText) || 0;
 
-    const statIncrementPercent = Math.floor(finalEquipStat * (customStatPercent / 100));
-    const newMainStatPercent = mainStat + statIncrementPercent;
-    const newStatFactorPercent = (newMainStatPercent * 4 + subStat) / 100;
-    let currentTotalAtkA = Math.floor(baseAtk * (1 + percentAtk));
-    let newMaxAtkPercent = Math.round(currentTotalAtkA * coeff * newStatFactorPercent);
+    let newStatFactorPercent = ((mainStat + Math.floor(finalEquipStat * (customStatPercent / 100))) * 4 + subStat) / 100;
+    let newMaxAtkPercent = Math.round(Math.floor(baseAtk * (1 + percentAtk)) * coeff * newStatFactorPercent);
     
-    const statIncrementValue = Math.floor(customStatValue * (1 + statPercent));
-    const newMainStatValue = mainStat + statIncrementValue;
-    const newStatFactorValue = (newMainStatValue * 4 + subStat) / 100;
-    let currentTotalAtkB = Math.floor(baseAtk * (1 + percentAtk));
-    let newMaxAtkValue = Math.round(currentTotalAtkB * coeff * newStatFactorValue);
+    let newStatFactorValue = ((mainStat + Math.floor(customStatValue * (1 + statPercent))) * 4 + subStat) / 100;
+    let newMaxAtkValue = Math.round(Math.floor(baseAtk * (1 + percentAtk)) * coeff * newStatFactorValue);
 
-    document.getElementById('lblSimStatPercent').innerText = `模擬後最大表攻 (+${customStatPercent}%)`;
-    document.getElementById('lblSimStatValue').innerText = `模擬後最大表攻 (+${customStatValue} 屬)`;
     document.getElementById('statSimPercent').innerText = newMaxAtkPercent;
     document.getElementById('statSimValue').innerText = newMaxAtkValue;
 }
 
-// 🎯 用 DOMContentLoaded 安全掛載所有按鈕監聽器
 document.addEventListener('DOMContentLoaded', () => {
-    const btnBaseAtk = document.getElementById('btnCalcBaseAtk');
-    const btnEquipStat = document.getElementById('btnCalcEquipStat');
-    const btnSimAtk = document.getElementById('btnSimAtk');
-    const btnSimStat = document.getElementById('btnSimStat');
-
-    if (btnBaseAtk) btnBaseAtk.addEventListener('click', calculateBaseAtk);
-    if (btnEquipStat) btnEquipStat.addEventListener('click', calculateEquipStat);
-    
-    // 綁定第三類自訂模擬按鈕
-    if (btnSimAtk) btnSimAtk.addEventListener('click', simulateAtkBenefit);
-    if (btnSimStat) btnSimStat.addEventListener('click', simulateStatBenefit);
+    document.getElementById('btnCalcBaseAtk').addEventListener('click', calculateBaseAtk);
+    document.getElementById('btnCalcEquipStat').addEventListener('click', calculateEquipStat);
+    document.getElementById('btnSimAtk').addEventListener('click', simulateAtkBenefit);
+    document.getElementById('btnSimStat').addEventListener('click', simulateStatBenefit);
 });

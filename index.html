@@ -118,65 +118,59 @@
                 </div>
 
                 <div class="calc-card">
-                    <h4 class="title-blue">🔮 最終表攻動態模擬</h4>
-                    <p class="card-desc">連動前兩欄數據，自由輸入預計提升的數值，直接模擬出新的最大表攻。</p>
+    <h4 class="title-blue">🔮 最終表攻動態模擬</h4>
+    <p class="card-desc">連動前兩欄數據，自由輸入預計提升的數值，直接模擬出新的最大表攻。</p>
 
-                    <div class="sim-section" style="margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px;">
-                        <h5 style="margin: 0 0 10px 0; color: #ff6b6b; font-size: 14px; text-align: left;">⚔️ 攻擊力模擬條件</h5>
-                        
-                        <div class="sim-input-row">
-                            <div class="sim-input-col">
-                                <label style="font-size: 12px; color: #ccc; display: block; margin-bottom: 4px; text-align: left;">擬提升 攻擊 %</label>
-                                <input type="number" id="simAtkPercentInput" class="cloud-input" value="1" style="padding: 6px 10px;">
-                            </div>
-                            <div class="sim-input-col">
-                                <label style="font-size: 12px; color: #ccc; display: block; margin-bottom: 4px; text-align: left;">擬提升 固定攻擊</label>
-                                <input type="number" id="simAtkValueInput" class="cloud-input" value="1" style="padding: 6px 10px;">
-                            </div>
-                        </div>
+    <div class="sim-section" style="margin-bottom: 20px; border-bottom: 1px solid #333; padding-bottom: 15px;">
+        <h5 style="color: #ff6b6b; margin-bottom: 10px;">⚔️ 攻擊力模擬條件</h5>
+        
+        <div class="form-group">
+            <label>基準總攻擊力 (0為自動反推):</label>
+            <input type="number" id="baseAtkOverride" class="cloud-input" value="0">
+        </div>
 
-                        <button id="btnSimAtk" class="calc-btn btn-blue" style="margin-bottom: 12px; padding: 8px;">模擬攻擊提升後的表攻</button>
-                        
-                        <div class="sim-row">
-                            <div class="sim-box">
-                                <div class="sim-label" id="lblSimAtkPercent">模擬後最大表攻 (+1%)</div>
-                                <div class="sim-val" id="atkSimPercent">1</div>
-                            </div>
-                            <div class="sim-box">
-                                <div class="sim-label" id="lblSimAtkValue">模擬後最大表攻 (+1 攻)</div>
-                                <div class="sim-val" id="atkSimValue">1</div>
-                            </div>
-                        </div>
-                    </div>
+        <div class="sim-input-row">
+            <div class="sim-input-col">
+                <label>擬提升 攻擊 %</label>
+                <input type="number" id="simAtkPercentInput" class="cloud-input" value="0">
+            </div>
+            <div class="sim-input-col">
+                <label>擬提升 固定攻擊</label>
+                <input type="number" id="simAtkValueInput" class="cloud-input" value="0">
+            </div>
+        </div>
+        <button id="btnSimAtk" class="calc-btn btn-blue">模擬攻擊提升後的表攻</button>
+        <div class="sim-row">
+            <div class="sim-box"><div class="sim-label" id="lblSimAtkPercent">模擬後最大表攻 (+0%)</div><div class="sim-val" id="atkSimPercent">0</div></div>
+            <div class="sim-box"><div class="sim-label" id="lblSimAtkValue">模擬後最大表攻 (+0 攻)</div><div class="sim-val" id="atkSimValue">0</div></div>
+        </div>
+    </div>
 
-                    <div class="sim-section">
-                        <h5 style="margin: 0 0 10px 0; color: #4dae4c; font-size: 14px; text-align: left;">🧬 主屬性模擬條件</h5>
-                        
-                        <div class="sim-input-row">
-                            <div class="sim-input-col">
-                                <label style="font-size: 12px; color: #ccc; display: block; margin-bottom: 4px; text-align: left;">擬提升 屬性 %</label>
-                                <input type="number" id="simStatPercentInput" class="cloud-input" value="1" style="padding: 6px 10px;">
-                            </div>
-                            <div class="sim-input-col">
-                                <label style="font-size: 12px; color: #ccc; display: block; margin-bottom: 4px; text-align: left;">擬提升 固定屬性</label>
-                                <input type="number" id="simStatValueInput" class="cloud-input" value="1" style="padding: 6px 10px;">
-                            </div>
-                        </div>
+    <div class="sim-section">
+        <h5 style="color: #4dae4c; margin-bottom: 10px;">🧬 主屬性模擬條件</h5>
+        
+        <div class="form-group">
+            <label>基準總主屬 (0為自動反推):</label>
+            <input type="number" id="mainStatOverride" class="cloud-input" value="0">
+        </div>
 
-                        <button id="btnSimStat" class="calc-btn btn-blue" style="margin-bottom: 12px; padding: 8px;">模擬屬性提升後的表攻</button>
-                        
-                        <div class="sim-row">
-                            <div class="sim-box">
-                                <div class="sim-label" id="lblSimStatPercent">模擬後最大表攻 (+1%)</div>
-                                <div class="sim-val" id="statSimPercent">1</div>
-                            </div>
-                            <div class="sim-box">
-                                <div class="sim-label" id="lblSimStatValue">模擬後最大表攻 (+1 屬)</div>
-                                <div class="sim-val" id="statSimValue">1</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        <div class="sim-input-row">
+            <div class="sim-input-col">
+                <label>擬提升 屬性 %</label>
+                <input type="number" id="simStatPercentInput" class="cloud-input" value="0">
+            </div>
+            <div class="sim-input-col">
+                <label>擬提升 固定屬性</label>
+                <input type="number" id="simStatValueInput" class="cloud-input" value="0">
+            </div>
+        </div>
+        <button id="btnSimStat" class="calc-btn btn-blue">模擬屬性提升後的表攻</button>
+        <div class="sim-row">
+            <div class="sim-box"><div class="sim-label" id="lblSimStatPercent">模擬後最大表攻 (+0%)</div><div class="sim-val" id="statSimPercent">0</div></div>
+            <div class="sim-box"><div class="sim-label" id="lblSimStatValue">模擬後最大表攻 (+0 屬)</div><div class="sim-val" id="statSimValue">0</div></div>
+        </div>
+    </div>
+</div>
 
     <script type="module" src="main.js"></script>
 </body>
