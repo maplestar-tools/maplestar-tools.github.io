@@ -2,23 +2,51 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>楓星綜合工具箱</title>
+    <title>楓星工具箱</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
-        h1 { color: #d9534f; }
+        /* 全域暗色背景設定 */
+        body { 
+            font-family: Arial, sans-serif; 
+            padding: 20px; 
+            background-color: #121212; /* 深碳黑 */
+            color: #e0e0e0; /* 亮灰字 */
+        }
+        h1 { color: #ff6b6b; } /* 楓葉紅調整得更亮一點，在暗色背景才顯眼 */
+        
+        /* 分頁按鈕樣式 */
         .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
-        .tab-btn { padding: 10px 20px; background: #ddd; border: none; cursor: pointer; font-size: 16px; border-radius: 5px; }
-        .tab-btn.active { background: #d9534f; color: white; }
-        .content { background: white; padding: 20px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .tab-btn { 
+            padding: 10px 20px; 
+            background: #2d2d2d; /* 暗色按鈕 */
+            color: #aaaaaa;
+            border: 1px solid #444; 
+            cursor: pointer; 
+            font-size: 16px; 
+            border-radius: 5px; 
+        }
+        .tab-btn.active { 
+            background: #ff6b6b; 
+            color: white; 
+            border-color: #ff6b6b;
+        }
+        
+        /* 內容框暗色設定 */
+        .content { 
+            background: #1e1e1e; /* 深灰框 */
+            padding: 20px; 
+            border-radius: 5px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5); 
+            border: 1px solid #333;
+        }
         
         /* 隱藏未選中分頁的設定 */
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* 雲端存取區塊的帥氣樣式 */
+        /* 雲端存取區塊的帥氣暗色樣式 */
         .cloud-box {
-            background-color: #fff9f9;
-            border: 2px dashed #d9534f;
+            background-color: #251b1b; /* 帶有一點點紅的黑 */
+            border: 2px dashed #ff6b6b;
             padding: 15px;
             border-radius: 8px;
             margin-top: 20px;
@@ -26,14 +54,16 @@
         .cloud-input {
             padding: 8px;
             font-size: 16px;
-            border: 1px solid #ccc;
+            background-color: #333; /* 暗色輸入框 */
+            color: white;
+            border: 1px solid #555;
             border-radius: 4px;
             width: 200px;
         }
         .cloud-btn {
             padding: 8px 15px;
             font-size: 14px;
-            background-color: #5cb85c;
+            background-color: #4cae4c;
             color: white;
             border: none;
             border-radius: 4px;
@@ -45,7 +75,7 @@
 </head>
 <body>
 
-    <h1>🍁 楓星綜合工具箱 🍁</h1>
+    <h1>🍁 楓星工具箱 🍁</h1>
 
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('home')">首頁</button>
@@ -65,7 +95,7 @@
                 <input type="text" id="userKeyCode" class="cloud-input" placeholder="例如：maple123">
                 <button class="cloud-btn load" onclick="loadFromCloud()">📥 讀取進度</button>
                 <button class="cloud-btn" onclick="saveToCloud()">📤 儲存測試資料</button>
-                <p id="cloudStatus" style="color: blue; font-weight: bold; margin-top: 10px;"></p>
+                <p id="cloudStatus" style="color: #64b5f6; font-weight: bold; margin-top: 10px;"></p>
             </div>
         </div>
 
@@ -86,11 +116,9 @@
     </div>
 
     <script type="module">
-        // 1. 引入 Firebase 核心與 Firestore 資料庫功能
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
         import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
         
-        // 2. 你的專屬 Firebase 雲端通行證密鑰
         const firebaseConfig = {
             apiKey: "AIzaSyD1dONez4mPFyoQpIgxN0aSGCKYiUvbyxU",
             authDomain: "maplestar-tools.firebaseapp.com",
@@ -100,27 +128,16 @@
             appId: "1:109052078453:web:31dd776acaed7ed0828b3c"
         };
 
-        // 3. 初始化 Firebase 與資料庫
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         console.log("楓星工具箱：Google Firebase & 資料庫連線成功！");
 
-        // ───────────────────────────────────────
-        // ☁️ 核心功能：輸入字串，將測試資料「儲存」到雲端
-        // ───────────────────────────────────────
         window.saveToCloud = async function() {
             const keyCode = document.getElementById('userKeyCode').value.trim();
             const statusText = document.getElementById('cloudStatus');
-
-            if (!keyCode) {
-                alert('請先輸入一個自訂字串（代碼）再儲存喔！');
-                return;
-            }
-
+            if (!keyCode) { alert('請先輸入一個自訂字串（代碼）再儲存喔！'); return; }
             statusText.innerText = "正在連線到 Google 雲端儲存中...";
-
             try {
-                // 我們在雲端建立一個叫 "player_data" 的大櫃子，並用玩家輸入的字串當作抽屜名稱
                 await setDoc(doc(db, "player_data", keyCode), {
                     userCode: keyCode,
                     lastSaveTime: new Date().toLocaleString(),
@@ -129,36 +146,25 @@
                 statusText.innerText = `🎉 儲存成功！時間：${new Date().toLocaleTimeString()}`;
             } catch (error) {
                 console.error("儲存失敗：", error);
-                statusText.innerText = "❌ 儲存失敗，請檢查控制台錯誤訊息。";
+                statusText.innerText = "❌ 儲存失敗。";
             }
         }
 
-        // ───────────────────────────────────────
-        // ☁️ 核心功能：輸入字串，將資料從雲端「讀取」出來
-        // ───────────────────────────────────────
         window.loadFromCloud = async function() {
             const keyCode = document.getElementById('userKeyCode').value.trim();
             const statusText = document.getElementById('cloudStatus');
-
-            if (!keyCode) {
-                alert('請先輸入你要讀取的自訂字串（代碼）！');
-                return;
-            }
-
+            if (!keyCode) { alert('請先輸入你要讀取的自訂字串（代碼）！'); return; }
             statusText.innerText = "正在從雲端搜尋你的抽屜...";
-
             try {
                 const docRef = doc(db, "player_data", keyCode);
                 const docSnap = await getDoc(docRef);
-
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    // 成功抓到資料！把它彈窗顯示給玩家看
                     alert(`【讀取成功！】\n代碼：${data.userCode}\n最後存檔時間：${data.lastSaveTime}\n雲端內文：${data.testMessage}`);
                     statusText.innerText = `📂 成功讀取代碼 [${keyCode}] 的進度！`;
                 } else {
-                    statusText.innerText = "❓ 找不到這個代碼的資料，請確認有沒有打錯字。";
-                    alert("找不到這個代碼的資料，可能它是個新代碼喔！");
+                    statusText.innerText = "❓ 找不到這個代碼的資料。";
+                    alert("找不到這個代碼的資料！");
                 }
             } catch (error) {
                 console.error("讀取失敗：", error);
@@ -166,23 +172,16 @@
             }
         }
 
-        // ─── 下面是控制分頁切換的程式碼 ───
         window.switchTab = function(tabId) {
             const contents = document.querySelectorAll('.tab-content');
             contents.forEach(content => content.classList.remove('active'));
-
             const buttons = document.querySelectorAll('.tab-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
-
             document.getElementById(tabId).classList.add('active');
-
             buttons.forEach(btn => {
-                if (btn.getAttribute('onclick').includes(tabId)) {
-                    btn.classList.add('active');
-                }
+                if (btn.getAttribute('onclick').includes(tabId)) { btn.classList.add('active'); }
             });
         }
     </script>
-
 </body>
 </html>
