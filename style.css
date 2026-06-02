@@ -1,5 +1,5 @@
 /* ==========================================================================
-   🧱 1. 全域基礎樣式（網頁大底、全面水平置中）
+   🧱 1. 全域基礎樣式（將整頁的幾何中心點死死鎖定）
    ========================================================================== */
 body { 
     font-family: "Helvetica Neue", Arial, "Noto Sans TC", sans-serif; 
@@ -8,27 +8,34 @@ body {
     color: #e0e0e0; 
     display: flex;
     flex-direction: column;
-    align-items: center; /* 核心：確保所有大元件在螢幕上絕對水平置中 */
+    align-items: center;    /* 👈 核心：強迫所有大元件（標題、分頁、內容）以螢幕中線為基準對齊 */
+    justify-content: flex-start;
     min-height: 100vh;
     margin: 0;
     box-sizing: border-box;
+    width: 100%;
+    overflow_x: hidden;     /* 防止寬幅震盪產生橫向滾動條 */
 }
 
+/* 確保大標題百分之百置中，不受任何子分頁寬度拉扯 */
 h1 { 
     color: #ff6b6b; 
-    text-align: center;
-    margin-bottom: 25px;
+    text-align: center !important;
+    margin: 10px 0 25px 0;
+    width: 100%;
+    max-width: 1200px;
+    display: block;
 } 
 
 /* ==========================================================================
-   🎛️ 2. 分頁按鈕區域（回歸完美置中）
+   🎛️ 2. 分頁按鈕區域（獨立置中，永不偏斜）
    ========================================================================== */
 .tabs { 
     display: flex; 
     gap: 10px; 
     margin-bottom: 25px; 
     flex-wrap: wrap; 
-    justify-content: center; /* 👈 標籤按鈕一律置中 */
+    justify-content: center; /* 👈 標籤按鈕一律保持完美的水平居中 */
     width: 100%; 
     max-width: 1200px;
     box-sizing: border-box;
@@ -53,22 +60,28 @@ h1 {
 }
 
 /* ==========================================================================
-   📦 3. 隱形內容外殼（負責最大寬度，內部全面置中）
+   📦 3. 隱形主外殼（寬度防禦牆：隔離不同分頁的寬度影響）
    ========================================================================== */
 .content { 
     width: 100%; 
-    max-width: 1200px; 
+    max-width: 1200px; /* 裝備計算並排時的最大上限 */
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    align-items: center; /* 👈 核心：確保內部不管是窄卡還是寬Grid，重心都在正中央 */
+    align-items: center; /* 👈 核心：強迫塞進來的所有分頁內容，重心一律對準中線 */
 }
 
-/* 隱藏與顯示分頁 */
-.tab-content { display: none; width: 100%; }
-.tab-content.active { display: block; }
+/* 分頁隱藏與顯示的標準行為 */
+.tab-content { 
+    display: none; 
+    width: 100%; 
+    box-sizing: border-box;
+}
+.tab-content.active { 
+    display: block; /* 啟用時展開 */
+}
 
-/* 標題與內文一律置中 */
+/* 分頁內部的標題與描述引導字 */
 .tab-content h3 {
     text-align: center;
     margin-top: 0;
@@ -82,7 +95,7 @@ h1 {
 }
 
 /* ==========================================================================
-   📐 4. 【首頁】與【團隊分紅】專用精緻獨立窄卡片（絕對置中版）
+   📐 4. 【首頁】與【團隊分紅】專用精緻獨立窄卡片（黃金寬度居中）
    ========================================================================== */
 .tab-narrow {
     background: #1e1e1e; 
@@ -90,14 +103,14 @@ h1 {
     border-radius: 16px; 
     box-shadow: 0 8px 24px rgba(0,0,0,0.6); 
     border: 1px solid #333;
-    max-width: 450px; /* 牢牢鎖定450px精緻寬度 */
+    max-width: 450px; /* 鎖定小巧好讀的寬度 */
     width: 100%; 
-    margin: 0 auto; /* 👈 核心：在 1200px 大外殼中達成絕對居中 */
+    margin: 0 auto !important; /* 👈 核心：強迫自己在左右留出等寬的空白，達成置中 */
     box-sizing: border-box;
 }
 
 /* ==========================================================================
-   📥 5. 首頁【雲端進度同步】專用樣式（修正按鈕錯亂與位置）
+   📥 5. 首頁【雲端進度同步】專用樣式（按鈕樣式物理隔離）
    ========================================================================== */
 .cloud-box {
     background-color: #251b1b; 
@@ -122,11 +135,10 @@ h1 {
 }
 .cloud-input:focus { border-color: #ff9f43; outline: none; }
 
-/* 首頁專屬雲端按鈕樣式（與計算機按鈕完全分離） */
 .cloud-btn {
     width: 100%;
     padding: 12px;
-    background: linear-gradient(135deg, #4cae4c, #398439); /* 綠色 */
+    background: linear-gradient(135deg, #4cae4c, #398439); 
     color: white;
     border: none;
     border-radius: 8px;
@@ -139,28 +151,25 @@ h1 {
     text-align: center;
     box-sizing: border-box;
 }
-.cloud-btn.load { background: linear-gradient(135deg, #f0ad4e, #d9534f); } /* 橘紅 */
+.cloud-btn.load { background: linear-gradient(135deg, #f0ad4e, #d9534f); } 
 .cloud-btn:hover { opacity: 0.9; }
 
 /* ==========================================================================
-   ⚡ 6. 【裝備綜合計算工具】三欄大並排與子卡片（終極完美置中版）
+   ⚡ 6. 【裝備綜合計算工具】三欄網格佈局（終極對稱置中技術）
    ========================================================================== */
 .calc-grid {
     display: grid;
-    /* 核心修正 1：大螢幕時限制 Grid 的最大寬度，並確保卡片寬度合理 */
-    grid-template-columns: repeat(auto-fit, minmax(290px, 380px)); 
+    /* 大螢幕時三欄平分，小螢幕自動往下流動排列 */
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
     gap: 25px;
     
-    /* 核心修正 2：這兩行是 Grid 的左右護法，強迫所有卡片在 1200px 空間內絕對居中對齊 */
-    justify-content: center;  /* 水平方向集體置中 */
-    justify-items: center;    /* 單個卡片內部元件也置中 */
+    /* 👈 核心修正：這兩行 Grid 內部對齊法，強迫所有並排的卡片整體在空間中水平居中 */
+    justify-content: center; 
     align-items: start;
     
     width: 100%;
     max-width: 1200px;
-    
-    /* 核心修正 3：加上這個，確保在大螢幕上 Grid 自己也會在 .content 裡絕對居中 */
-    margin: 10px auto 0 auto; 
+    margin: 10px auto 0 auto; /* 使用 auto 邊距確保大螢幕下 Grid 整體靠中線對齊 */
     box-sizing: border-box;
 }
 
@@ -208,7 +217,7 @@ h1 {
 .calc-btn {
     width: 100%;
     padding: 12px;
-    color: #ffffff; 
+    color: #ffffff !important; 
     border: none;
     border-radius: 8px;
     font-size: 15px;
@@ -233,27 +242,26 @@ h1 {
 .result-title { font-size: 13px; color: #aaa; }
 .result-value { font-size: 28px; font-weight: bold; margin-top: 5px; }
 
-/* 繽紛配色類別 */
+/* 繽補配色類別 */
 .title-red { color: #ff6b6b; }
 .title-green { color: #4dae4c; }
 .title-blue { color: #64b5f6; }
 
 .btn-red { background: linear-gradient(135deg, #ff6b6b, #e55353); }
 .btn-green { background: linear-gradient(135deg, #4dae4c, #3b8e3a); }
-.btn-blue { background: linear-gradient(135deg, #1e88e5, #1565c0); } /* 深邃科技藍，高對比白字 */
+.btn-blue { background: linear-gradient(135deg, #1e88e5, #1565c0); } /* 高對比深藍色，凸顯白字 */
 
 .border-red { border-top: 4px solid #ff6b6b; }
 .border-green { border-top: 4px solid #4dae4c; }
 
 /* ==========================================================================
-   🔮 7. 第三類自訂模擬專用佈局（修正輸入欄位爆出問題）
+   🔮 7. 第三類自訂模擬專用佈局（防撐爆保護罩）
    ========================================================================== */
 .sim-section {
     width: 100%;
     box-sizing: border-box;
 }
 
-/* 修正點：防範輸入框並排時擠爆邊界 */
 .sim-input-row {
     display: flex;
     gap: 10px;
@@ -263,7 +271,7 @@ h1 {
 }
 .sim-input-col {
     flex: 1;
-    min-width: 0; /* 阻止 Flex 子項強行撐大 */
+    min-width: 0; 
     box-sizing: border-box;
 }
 
