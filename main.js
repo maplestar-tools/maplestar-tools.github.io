@@ -66,40 +66,34 @@ window.switchTab = function(tabId) {
         if (btn.getAttribute('onclick').includes(tabId)) { btn.classList.add('active'); }
     });
 }
-// 🔄 切換職業類型 (物理 / 魔法)
-window.toggleJob = function(type) {
-    const weaponGroup = document.getElementById('weaponGroup');
+// 🔄 智慧連動：當下拉選單切換時，自動判斷是否為法師武器
+window.autoToggleJob = function() {
+    const coeff = parseFloat(document.getElementById('coeff').value);
     const lblMain = document.getElementById('lblMain');
     const lblSub = document.getElementById('lblSub');
     const resTitle = document.getElementById('resTitle');
     
-    if (type === 'magic') {
-        weaponGroup.style.display = 'none';
+    // 如果選到 1.00 (長短杖)，自動切換成法師的文字標籤
+    if (coeff === 1.00) {
         lblMain.innerText = '主屬性 (智力 INT)';
         lblSub.innerText = '副屬性 (幸運 LUK)';
         resTitle.innerText = '反推純淨基礎魔法攻擊力';
     } else {
-        weaponGroup.style.display = 'block';
         lblMain.innerText = '主屬性 (STR / DEX / LUK)';
         lblSub.innerText = '副屬性 (DEX / STR)';
         resTitle.innerText = '反推純淨基礎物理攻擊力';
     }
 }
 
-// 🧮 核心演算法：反推乾淨攻擊力
+// 🧮 智慧核心演算法
 window.calculateBaseAtk = function() {
-    const jobType = document.querySelector('input[name="jobType"]:checked').value;
     const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
     const maxAtk = parseFloat(document.getElementById('maxAtk').value) || 0;
     const percentAtk = (parseFloat(document.getElementById('percentAtk').value) || 0) / 100;
+    const coeff = parseFloat(document.getElementById('coeff').value);
     
-    let coeff = 1.0;
-    if (jobType === 'physical') {
-        coeff = parseFloat(document.getElementById('coeff').value);
-    }
-    
-    // 計算屬性基底
+    // 計算屬性基底公式：(主屬 * 4 + 副屬) / 100
     const statFactor = (mainStat * 4 + subStat) / 100;
     
     if (statFactor === 0 || coeff === 0) {
