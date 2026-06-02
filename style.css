@@ -228,8 +228,14 @@ h1 {
 
 .btn-red { background: linear-gradient(135deg, #ff6b6b, #e55353); }
 .btn-green { background: linear-gradient(135deg, #4dae4c, #3b8e3a); }
-.btn-blue { background: linear-gradient(135deg, #64b5f6, #2196f3); }
-
+.btn-blue { 
+    background: linear-gradient(135deg, #1e88e5, #1565c0) !important; 
+    color: #ffffff !important;
+}
+/* 加上滑鼠懸停時微亮的效果 */
+.btn-blue:hover {
+    filter: brightness(1.2) !important;
+}
 .border-red { border-left: 5px solid #ff6b6b; }
 .border-green { border-left: 5px solid #4dae4c; }
 
