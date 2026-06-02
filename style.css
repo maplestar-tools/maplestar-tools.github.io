@@ -1,4 +1,6 @@
-/* 全域暗色背景與置中設定 */
+/* ==========================================================================
+   🧱 1. 全域基礎樣式與完全置中
+   ========================================================================== */
 body { 
     font-family: "Helvetica Neue", Arial, "Noto Sans TC", sans-serif; 
     padding: 20px; 
@@ -6,7 +8,7 @@ body {
     color: #e0e0e0; 
     display: flex;
     flex-direction: column;
-    align-items: center; /* 讓所有東西水平置中 */
+    align-items: center; /* 確保所有大元件（標題、分頁鈕、內容區）水平置中 */
     min-height: 100vh;
     margin: 0;
     box-sizing: border-box;
@@ -18,13 +20,15 @@ h1 {
     margin-bottom: 25px;
 } 
 
-/* 分頁按鈕區域置中 */
+/* ==========================================================================
+   🎛️ 2. 分頁按鈕區域
+   ========================================================================== */
 .tabs { 
     display: flex; 
     gap: 10px; 
-    margin-bottom: 20px; 
+    margin-bottom: 25px; 
     flex-wrap: wrap; 
-    justify-content: center; /* 按鈕置中 */
+    justify-content: center; 
 }
 
 .tab-btn { 
@@ -39,38 +43,29 @@ h1 {
 }
 
 .tab-btn.active { 
-    background: linear-gradient(135deg, #ff9f43, #ff5252); /* 亮眼橘紅漸層 */
+    background: linear-gradient(135deg, #ff9f43, #ff5252); 
     color: white; 
     border-color: #ff5252;
     font-weight: bold;
 }
 
-/* 計算機大外殼（寬度解鎖版，最高支援 1200px 橫向延伸） */
+/* ==========================================================================
+   📦 3. 內容外殼（全面化為隱形，僅負責寬度控制，徹底解決擠壓歪斜）
+   ========================================================================== */
 .content { 
-    background: #1e1e1e; 
-    padding: 25px; 
-    border-radius: 16px; /* 柔和的大圓角 */
-    box-shadow: 0 8px 24px rgba(0,0,0,0.6); /* 帥氣的深色陰影 */
-    border: 1px solid #333;
-    max-width: 1200px; 
     width: 100%; 
+    max-width: 1200px; /* 裝備計算的最大極限寬度 */
     box-sizing: border-box;
-    transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* 針對【首頁】與【團隊分紅】維持精緻窄卡片樣式 */
-.tab-narrow {
-    max-width: 450px;
-    width: 100%; /* 強制撐滿 450px 的限制空間 */
-    margin: 0 auto;
-    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* 確保內部子元件在縮放時全面維持中線對齊 */
 }
 
 /* 隱藏未選中分頁 */
-.tab-content { display: none; }
+.tab-content { display: none; width: 100%; }
 .tab-content.active { display: block; }
 
-/* 標題與內文樣式微調 */
+/* 標題與內文通用微調 */
 .tab-content h3 {
     text-align: center;
     margin-top: 0;
@@ -83,7 +78,22 @@ h1 {
     margin-bottom: 20px;
 }
 
-/* 雲端與輸入框樣式優化 */
+/* ==========================================================================
+   📐 4. 【首頁】與【團隊分紅】專用精緻獨立黑卡片樣式（絕對置中）
+   ========================================================================== */
+.tab-narrow {
+    background: #1e1e1e; 
+    padding: 25px; 
+    border-radius: 16px; 
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6); 
+    border: 1px solid #333;
+    max-width: 450px; /* 牢牢鎖定黃金寬度 */
+    width: 100%; 
+    margin: 0 auto; /* 左右自動邊距，達成大螢幕時的完美置中 */
+    box-sizing: border-box;
+}
+
+/* 雲端小盒子 */
 .cloud-box {
     background-color: #251b1b; 
     border: 2px dashed #ff5252;
@@ -92,9 +102,10 @@ h1 {
     margin-top: 20px;
 }
 
+/* 表單群組靠左好讀 */
 .form-group {
     margin-bottom: 15px;
-    text-align: left; /* 表單標籤靠左比較好讀 */
+    text-align: left; 
 }
 
 .form-group label {
@@ -122,7 +133,7 @@ h1 {
     outline: none;
 }
 
-/* 雲端按鈕樣式 */
+/* 通用按鈕樣式 */
 .cloud-btn {
     width: 100%;
     padding: 12px;
@@ -141,26 +152,27 @@ h1 {
 
 
 /* ==========================================================================
-   ⚡ 裝備綜合計算工具 - 三欄橫向並排 CSS Grid 設計
+   ⚡ 5. 【裝備綜合計算工具】三欄大並排 CSS Grid 完全置中佈局
    ========================================================================== */
-
 .calc-grid {
     display: grid;
-    /* 桌機大於 900px 時自動並排三欄，小於時自動轉成垂直單欄響應式 */
-    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    /* 桌機與大螢幕平分三欄，視窗縮小時自動化為單欄垂直排列 */
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 25px;
+    justify-content: center; /* 核心：大螢幕時，Grid 內部子項集體置中對齊 */
     align-items: start;
     width: 100%;
     box-sizing: border-box;
     margin-top: 10px;
 }
 
-/* 子卡片基礎樣式 */
+/* 計算機子卡片（各自擁有圓角、黑底、陰影，不再共用混亂的外殼） */
 .calc-card {
-    background-color: #121212; /* 深一階的黑卡片，增加層次感 */
+    background: #1e1e1e; /* 換回漂亮的黑卡片底色 */
     padding: 22px; 
-    border-radius: 12px; 
-    border: 1px solid #2d2d2d;
+    border-radius: 16px; /* 統一同款帥氣大圓角 */
+    border: 1px solid #333;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5); /* 帥氣的深色陰影 */
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
@@ -170,7 +182,7 @@ h1 {
     margin-top: 0; 
     font-size: 18px; 
     padding-bottom: 12px;
-    border-bottom: 1px solid #2d2d2d;
+    border-bottom: 1px solid #333;
     text-align: left;
 }
 
@@ -181,12 +193,12 @@ h1 {
     text-align: left !important;
 }
 
-/* 卡片內專用按鈕 */
+/* 卡片內運算專用按鈕 */
 .calc-btn {
     width: 100%;
     padding: 12px;
-    color: #ffffff !important; /* 強制白色字體，防止變空白 */
-    text-shadow: 0 1px 2px rgba(0,0,0,0.3); /* 讓文字更清晰 */
+    color: #ffffff !important; 
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3); 
     border: none;
     border-radius: 8px;
     font-size: 15px;
@@ -194,14 +206,14 @@ h1 {
     cursor: pointer;
     transition: filter 0.2s;
     margin: 5px 0 20px 0;
-    display: block; /* 確保按鈕是區塊元素 */
+    display: block; 
     text-align: center;
 }
 .calc-btn:hover { filter: brightness(1.1); }
 
 /* 結果呈現框設定 */
 .result-box {
-    background-color: #1a1a1a; 
+    background-color: #121212; /* 深一階的黑底，凸顯數字 */
     padding: 15px; 
     border-radius: 0 8px 8px 0; 
     text-align: center;
@@ -209,27 +221,19 @@ h1 {
 .result-title { font-size: 13px; color: #aaa; }
 .result-value { font-size: 28px; font-weight: bold; margin-top: 5px; }
 
-/* 裝飾配色類別 */
+/* 繽紛配色類別 */
 .title-red { color: #ff6b6b; }
 .title-green { color: #4dae4c; }
 .title-blue { color: #64b5f6; }
 
 .btn-red { background: linear-gradient(135deg, #ff6b6b, #e55353); }
 .btn-green { background: linear-gradient(135deg, #4dae4c, #3b8e3a); }
+.btn-blue { background: linear-gradient(135deg, #64b5f6, #2196f3); }
 
 .border-red { border-left: 5px solid #ff6b6b; }
 .border-green { border-left: 5px solid #4dae4c; }
 
-/* 第三類規劃中留位樣式 */
-.card-dashed { border: 1px dashed #555; opacity: 0.75; }
-.border-dashed { border-bottom: 1px dashed #555 !important; }
-.placeholder-text {
-    height: 180px; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    color: #555; 
-    /* 第三類專用橫向列與微型卡片 */
+/* 第三類邊際效益樣式細調 */
 .sim-row {
     display: flex;
     gap: 10px;
@@ -238,8 +242,8 @@ h1 {
 
 .sim-box {
     flex: 1;
-    background-color: #1a1a1a;
-    border: 1px solid #333;
+    background-color: #121212;
+    border: 1px solid #2d2d2d;
     padding: 10px;
     border-radius: 6px;
     text-align: center;
@@ -255,11 +259,4 @@ h1 {
     font-size: 18px;
     font-weight: bold;
     color: #64b5f6;
-}
-
-.btn-blue {
-    background: linear-gradient(135deg, #64b5f6, #2196f3);
-}
-    font-style: italic;
-    font-size: 15px;
 }
