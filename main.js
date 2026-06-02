@@ -88,14 +88,30 @@ window.calculateBaseAtk = function() {
     document.getElementById('resultDisplay').innerText = Math.round(baseAtk);
 }
 
-// 🧮 第二類：裝備純屬性反推
+// 🧮 第二類：裝備純屬性反推（加強防呆與錯誤檢查版）
 window.calculateEquipStat = function() {
-    const statTotal = parseFloat(document.getElementById('statTotal').value) || 0;
-    const statBaseOnly = parseFloat(document.getElementById('statBaseOnly').value) || 0;
-    const statPercent = (parseFloat(document.getElementById('statPercent').value) || 0) / 100;
+    // 檢查網頁上有沒有這些輸入框，沒有的話跳出錯誤提示
+    const elTotal = document.getElementById('statTotal');
+    const elBase = document.getElementById('statBaseOnly');
+    const elPercent = document.getElementById('statPercent');
+    const elDisplay = document.getElementById('equipStatDisplay');
 
+    if (!elTotal || !elBase || !elPercent || !elDisplay) {
+        alert("程式碼中的欄位 ID 對不上，請檢查 index.html 是否有正確的 id！");
+        return;
+    }
+
+    // 抓取數值
+    const statTotal = parseFloat(elTotal.value) || 0;
+    const statBaseOnly = parseFloat(elBase.value) || 0;
+    const statPercent = (parseFloat(elPercent.value) || 0) / 100;
+
+    // 逆向公式：(總屬性 / (1 + 總%數)) - 基礎屬性
     const rawEquipStat = (statTotal / (1 + statPercent)) - statBaseOnly;
+
+    // 防止算出負數，四捨五入輸出
     const finalEquipStat = Math.max(0, Math.round(rawEquipStat));
 
-    document.getElementById('equipStatDisplay').innerText = finalEquipStat;
+    // 渲染到網頁上
+    elDisplay.innerText = finalEquipStat;
 }
