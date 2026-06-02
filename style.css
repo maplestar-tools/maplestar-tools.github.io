@@ -224,6 +224,37 @@ h1 {
     align-items: center; 
     justify-content: center; 
     color: #555; 
+    /* 第三類專用橫向列與微型卡片 */
+.sim-row {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+}
+
+.sim-box {
+    flex: 1;
+    background-color: #1a1a1a;
+    border: 1px solid #333;
+    padding: 10px;
+    border-radius: 6px;
+    text-align: center;
+}
+
+.sim-label {
+    font-size: 11px;
+    color: #999;
+    margin-bottom: 4px;
+}
+
+.sim-val {
+    font-size: 18px;
+    font-weight: bold;
+    color: #64b5f6;
+}
+
+.btn-blue {
+    background: linear-gradient(135deg, #64b5f6, #2196f3);
+}
     font-style: italic;
     font-size: 15px;
 }
