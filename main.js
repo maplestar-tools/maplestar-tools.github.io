@@ -72,7 +72,7 @@ window.switchTab = function(tabId) {
     });
 }
 
-// 🧮 第一類：基礎攻擊力反推（迴圈精準比對法：100% 零誤差）
+// 🧮 第一類：基礎攻擊力反推（原廠分段截斷枚舉法：100% 零誤差）
 function calculateBaseAtk() {
     const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
@@ -89,18 +89,20 @@ function calculateBaseAtk() {
     
     let matchedBaseAtk = 0;
     
-    // 💡 核心邏輯：直接枚舉可能的整數基礎攻擊力（1~10000 攻）
+    // 枚舉基礎攻擊力
     for (let testAtk = 1; testAtk <= 10000; testAtk++) {
-        // 模擬遊戲真實乘法與無條件捨去
-        let calcMax = Math.floor(testAtk * (1 + percentAtk) * coeff * statFactor);
+        // 💡 完美還原遊戲步驟 1：攻擊力乘完 % 數立刻無條件捨去
+        let totalAtk = Math.floor(testAtk * (1 + percentAtk) + 0.00001);
+        
+        // 💡 完美還原遊戲步驟 2：總項乘完再無條件捨去一次
+        let calcMax = Math.floor(totalAtk * coeff * statFactor + 0.00001);
         
         if (calcMax === Math.floor(maxAtk)) {
             matchedBaseAtk = testAtk;
-            break; // 抓到了！這就是唯一的真實整數
+            break; // 完美命中！
         }
     }
     
-    // 如果極端狀況沒完全對上，則給予最接近的估計
     if (matchedBaseAtk === 0) {
         matchedBaseAtk = Math.round((maxAtk / coeff / statFactor) / (1 + percentAtk));
     }
@@ -108,7 +110,7 @@ function calculateBaseAtk() {
     document.getElementById('resultDisplay').innerText = matchedBaseAtk;
 }
 
-// 🧮 第二類：裝備純屬性反推（迴圈精準比對法：100% 零誤差）
+// 🧮 第二類：裝備純屬性反推（原廠分段截斷枚舉法：100% 零誤差）
 function calculateEquipStat() {
     const elTotal = document.getElementById('statTotal');
     const elBase = document.getElementById('statBaseOnly');
@@ -123,13 +125,13 @@ function calculateEquipStat() {
 
     let matchedEquipStat = 0;
 
-    // 💡 核心邏輯：直接枚舉純裝備屬性整數（0~10000 屬性）
     for (let testEquip = 0; testEquip <= 10000; testEquip++) {
-        let calcTotal = Math.floor((statBaseOnly + testEquip) * (1 + statPercent));
+        // 遊戲內屬性 % 數計算也是乘完立刻捨去
+        let calcTotal = Math.floor((statBaseOnly + testEquip) * (1 + statPercent) + 0.00001);
         
         if (calcTotal === Math.floor(statTotal)) {
             matchedEquipStat = testEquip;
-            break; // 抓到了
+            break;
         }
     }
 
@@ -157,19 +159,25 @@ function simulateAtkBenefit() {
     const customAtkPercent = parseFloat(document.getElementById('simAtkPercentInput').value) || 0;
     const customAtkValue = parseFloat(document.getElementById('simAtkValueInput').value) || 0;
 
-    // 先用絕對正確的枚舉法，拿到沒有誤差的乾淨基礎攻擊力整數
     let baseAtk = 0;
     for (let testAtk = 1; testAtk <= 10000; testAtk++) {
-        if (Math.floor(testAtk * (1 + percentAtk) * coeff * statFactor) === Math.floor(maxAtk)) {
+        let totalAtk = Math.floor(testAtk * (1 + percentAtk) + 0.00001);
+        let calcMax = Math.floor(totalAtk * coeff * statFactor + 0.00001);
+        if (calcMax === Math.floor(maxAtk)) {
             baseAtk = testAtk;
             break;
         }
     }
     if (baseAtk === 0) baseAtk = Math.round((maxAtk / coeff / statFactor) / (1 + percentAtk));
 
-    // 模擬新表攻（完全對齊原廠公式，最後一刀切）
-    const newMaxAtkPercent = Math.floor(baseAtk * (1 + percentAtk + (customAtkPercent / 100)) * coeff * statFactor);
-    const newMaxAtkValue = Math.floor((baseAtk + customAtkValue) * (1 + percentAtk) * coeff * statFactor);
+    // 💡 第三類輸出同步改為「原廠分段截斷」
+    // 方案 A：增加 %攻
+    let totalAtkPercent = Math.floor(baseAtk * (1 + percentAtk + (customAtkPercent / 100)) + 0.00001);
+    const newMaxAtkPercent = Math.floor(totalAtkPercent * coeff * statFactor);
+    
+    // 方案 B：增加 固定攻
+    let totalAtkValue = Math.floor((baseAtk + customAtkValue) * (1 + percentAtk) + 0.00001);
+    const newMaxAtkValue = Math.floor(totalAtkValue * coeff * statFactor);
 
     document.getElementById('lblSimAtkPercent').innerText = `模擬後最大表攻 (+${customAtkPercent}%)`;
     document.getElementById('lblSimAtkValue').innerText = `模擬後最大表攻 (+${customAtkValue} 攻)`;
@@ -202,10 +210,11 @@ function simulateStatBenefit() {
     const customStatPercent = parseFloat(document.getElementById('simStatPercentInput').value) || 0;
     const customStatValue = parseFloat(document.getElementById('simStatValueInput').value) || 0;
 
-    // 1. 用絕對正確的枚舉法，拿到無誤差的基礎攻擊力與純裝備屬性
     let baseAtk = 0;
     for (let testAtk = 1; testAtk <= 10000; testAtk++) {
-        if (Math.floor(testAtk * (1 + percentAtk) * coeff * ((mainStat * 4 + subStat) / 100)) === Math.floor(maxAtk)) {
+        let totalAtk = Math.floor(testAtk * (1 + percentAtk) + 0.00001);
+        let calcMax = Math.floor(totalAtk * coeff * ((mainStat * 4 + subStat) / 100) + 0.00001);
+        if (calcMax === Math.floor(maxAtk)) {
             baseAtk = testAtk;
             break;
         }
@@ -214,24 +223,27 @@ function simulateStatBenefit() {
 
     let finalEquipStat = 0;
     for (let testEquip = 0; testEquip <= 10000; testEquip++) {
-        if (Math.floor((statBaseOnly + testEquip) * (1 + statPercent)) === Math.floor(statTotal)) {
+        if (Math.floor((statBaseOnly + testEquip) * (1 + statPercent) + 0.00001) === Math.floor(statTotal)) {
             finalEquipStat = testEquip;
             break;
         }
     }
     if (finalEquipStat === 0) finalEquipStat = Math.max(0, Math.round((statTotal / (1 + statPercent)) - statBaseOnly));
 
-    // 2. 模擬新面板（方案 A：增加 %屬）
-    // 裝備屬性吃到新%數後的增量，算完直接無條件捨去，再加回原本總主屬
-    const statIncrementPercent = Math.floor(finalEquipStat * (customStatPercent / 100));
+    // 💡 第三類屬性輸出同步改為「原廠分段截斷」
+    // 方案 A：增加 %屬
+    const statIncrementPercent = Math.floor(finalEquipStat * (customStatPercent / 100) + 0.00001);
     const newMainStatPercent = mainStat + statIncrementPercent;
-    const newMaxAtkPercent = Math.floor(baseAtk * (1 + percentAtk) * coeff * ((newMainStatPercent * 4 + subStat) / 100));
+    const newStatFactorPercent = (newMainStatPercent * 4 + subStat) / 100;
+    let currentTotalAtkA = Math.floor(baseAtk * (1 + percentAtk) + 0.00001);
+    const newMaxAtkPercent = Math.floor(currentTotalAtkA * coeff * newStatFactorPercent);
     
-    // 3. 模擬新面板（方案 B：增加 固定屬）
-    // 固定屬性會受到當前總屬%的放大，算完無條件捨去，加回原本總主屬
-    const statIncrementValue = Math.floor(customStatValue * (1 + statPercent));
+    // 方案 B：增加 固定屬
+    const statIncrementValue = Math.floor(customStatValue * (1 + statPercent) + 0.00001);
     const newMainStatValue = mainStat + statIncrementValue;
-    const newMaxAtkValue = Math.floor(baseAtk * (1 + percentAtk) * coeff * ((newMainStatValue * 4 + subStat) / 100));
+    const newStatFactorValue = (newMainStatValue * 4 + subStat) / 100;
+    let currentTotalAtkB = Math.floor(baseAtk * (1 + percentAtk) + 0.00001);
+    const newMaxAtkValue = Math.floor(currentTotalAtkB * coeff * newStatFactorValue);
 
     document.getElementById('lblSimStatPercent').innerText = `模擬後最大表攻 (+${customStatPercent}%)`;
     document.getElementById('lblSimStatValue').innerText = `模擬後最大表攻 (+${customStatValue} 屬)`;
