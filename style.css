@@ -1,14 +1,32 @@
-/* 全域暗色背景設定 */
+/* 全域暗色背景與置中設定 */
 body { 
-    font-family: Arial, sans-serif; 
+    font-family: "Helvetica Neue", Arial, "Noto Sans TC", sans-serif; 
     padding: 20px; 
     background-color: #121212; 
     color: #e0e0e0; 
+    display: flex;
+    flex-direction: column;
+    align-items: center; /* 讓所有東西水平置中 */
+    min-height: 100vh;
+    margin: 0;
+    box-sizing: border-box;
 }
-h1 { color: #ff6b6b; } 
 
-/* 分頁按鈕樣式 */
-.tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+h1 { 
+    color: #ff6b6b; 
+    text-align: center;
+    margin-bottom: 25px;
+} 
+
+/* 分頁按鈕區域置中 */
+.tabs { 
+    display: flex; 
+    gap: 10px; 
+    margin-bottom: 20px; 
+    flex-wrap: wrap; 
+    justify-content: center; /* 按鈕置中 */
+}
+
 .tab-btn { 
     padding: 10px 20px; 
     background: #2d2d2d; 
@@ -16,52 +34,96 @@ h1 { color: #ff6b6b; }
     border: 1px solid #444; 
     cursor: pointer; 
     font-size: 16px; 
-    border-radius: 5px; 
-}
-.tab-btn.active { 
-    background: #ff6b6b; 
-    color: white; 
-    border-color: #ff6b6b;
+    border-radius: 8px; 
+    transition: background 0.2s;
 }
 
-/* 內容框暗色設定 */
+.tab-btn.active { 
+    background: linear-gradient(135deg, #ff9f43, #ff5252); /* 換上你最愛的亮眼橘紅漸層 */
+    color: white; 
+    border-color: #ff5252;
+    font-weight: bold;
+}
+
+/* 終極置中計算機卡片 */
 .content { 
     background: #1e1e1e; 
-    padding: 20px; 
-    border-radius: 5px; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5); 
+    padding: 25px; 
+    border-radius: 16px; /* 柔和的大圓角 */
+    box-shadow: 0 8px 24px rgba(0,0,0,0.6); /* 帥氣的深色陰影 */
     border: 1px solid #333;
+    max-width: 450px; /* 限制最大寬度，跟原本的反推工具一模一樣 */
+    width: 100%; /* 在手機上會自動縮放 */
+    box-sizing: border-box;
 }
 
-/* 隱藏未選中分頁的設定 */
+/* 隱藏未選中分頁 */
 .tab-content { display: none; }
 .tab-content.active { display: block; }
 
-/* 雲端存取區塊樣式 */
+/* 標題與內文樣式微調 */
+.tab-content h3 {
+    text-align: center;
+    margin-top: 0;
+    color: #fff;
+}
+.tab-content p {
+    text-align: center;
+    font-size: 13px;
+    color: #aaa;
+    margin-bottom: 20px;
+}
+
+/* 雲端與輸入框樣式優化 */
 .cloud-box {
     background-color: #251b1b; 
-    border: 2px dashed #ff6b6b;
+    border: 2px dashed #ff5252;
     padding: 15px;
-    border-radius: 8px;
+    border-radius: 12px;
     margin-top: 20px;
 }
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: #ccc;
+    font-size: 14px;
+}
+
 .cloud-input {
-    padding: 8px;
-    font-size: 16px;
+    width: 100%;
+    padding: 10px 12px;
     background-color: #333; 
     color: white;
     border: 1px solid #555;
-    border-radius: 4px;
-    width: 200px;
+    border-radius: 8px;
+    font-size: 15px;
+    box-sizing: border-box;
+    transition: border-color 0.2s;
 }
+
+.cloud-input:focus {
+    border-color: #ff9f43;
+    outline: none;
+}
+
 .cloud-btn {
-    padding: 8px 15px;
-    font-size: 14px;
-    background-color: #4cae4c;
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #4cae4c, #398439);
     color: white;
     border: none;
-    border-radius: 4px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: bold;
     cursor: pointer;
-    margin-left: 5px;
+    transition: opacity 0.2s;
+    margin-top: 10px;
 }
-.cloud-btn.load { background-color: #f0ad4e; }
+.cloud-btn.load { background: linear-gradient(135deg, #f0ad4e, #d9534f); }
+.cloud-btn:hover { opacity: 0.9; }
