@@ -67,40 +67,6 @@ window.switchTab = function(tabId) {
     });
 }
 
-// 💰 團隊分紅：切換稅率按鈕視覺效果
-window.setTax = function(rate) {
-    document.getElementById('taxRate').value = rate;
-    const btn5 = document.getElementById('btnTax5');
-    const btn3 = document.getElementById('btnTax3');
-    if(!btn5 || !btn3) return;
-    
-    if (rate === 5) {
-        btn5.style.background = '#ffaa00';
-        btn5.style.color = 'black';
-        btn3.style.background = '#2d2d2d';
-        btn3.style.color = '#aaa';
-    } else {
-        btn3.style.background = '#ffaa00';
-        btn3.style.color = 'black';
-        btn5.style.background = '#2d2d2d';
-        btn5.style.color = '#aaa';
-    }
-}
-
-// 💰 團隊分紅：核心計算
-window.calculateSplit = function() {
-    const totalMoney = parseFloat(document.getElementById('totalMoney').value) || 0;
-    const playerCount = parseInt(document.getElementById('playerCount').value) || 1;
-    const taxRate = parseFloat(document.getElementById('taxRate').value) || 5;
-
-    const totalTax = totalMoney * (taxRate / 100);
-    const taxedTotal = totalMoney - totalTax;
-    const perPlayer = Math.floor(taxedTotal / playerCount);
-
-    document.getElementById('perPlayerMoney').innerText = perPlayer.toLocaleString() + " 楓幣";
-    document.getElementById('totalTaxShow').innerText = Math.round(totalTax).toLocaleString() + " 楓幣";
-}
-
 // 🧮 第一類：基礎攻擊力反推（不分物魔，極簡通算版）
 window.calculateBaseAtk = function() {
     const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
@@ -133,6 +99,3 @@ window.calculateEquipStat = function() {
 
     document.getElementById('equipStatDisplay').innerText = finalEquipStat;
 }
-
-// 初始化分紅稅率顏色
-setTimeout(() => { if(document.getElementById('btnTax5')) setTax(5); }, 200);
