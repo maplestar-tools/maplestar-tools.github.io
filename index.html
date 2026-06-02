@@ -35,9 +35,60 @@
             <p>分錢小工具建置中！請把你的範例、想法或對方的網址貼上來，我們馬上動工！</p>
         </div>
 
-        <div id="equip-calc" class="tab-content">
-            <h3>⚔️ 裝備屬性計算</h3>
-            <p>裝備屬性計算功能建置中！未來可以在這裡點選你的星力、火花、潛能，一鍵算出總屬性！</p>
+<div id="equip-calc" class="tab-content">
+            <h3>⚔️ BB大爆炸版 - 基礎攻擊力反推工具</h3>
+            <p style="color: #aaa;">輸入你的面板與屬性，一鍵反推乾淨的純淨基礎攻擊力！</p>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">職業類型</label>
+                <label style="margin-right: 15px; cursor:pointer;">
+                    <input type="radio" name="jobType" value="physical" checked onclick="toggleJob('physical')"> 物理職業
+                </label>
+                <label style="cursor:pointer;">
+                    <input type="radio" name="jobType" value="magic" onclick="toggleJob('magic')"> 魔法職業 (法師)
+                </label>
+            </div>
+
+            <div id="weaponGroup" style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">武器種類 (係數)</label>
+                <select id="coeff" class="cloud-input" style="width: 100%; max-width: 350px;">
+                    <option value="1.49">矛 (1.49) - 狂狼勇士</option>
+                    <option value="1.35" selected>雙手劍 / 雙手斧 / 雙手棍 (1.35)</option>
+                    <option value="1.34">槍 (1.34)</option>
+                    <option value="1.30">拳套 (1.30) - 夜使者</option>
+                    <option value="1.25">指虎 (1.25)</option>
+                    <option value="1.20">單手武器 / 短刀 (1.20)</option>
+                    <option value="1.15">弓 (1.15)</option>
+                    <option value="1.10">弩 (1.10)</option>
+                </select>
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label id="lblMain" style="display:block; margin-bottom:5px; font-weight:bold;">主屬性 (STR / DEX / LUK)</label>
+                <input type="number" id="mainStat" class="cloud-input" style="width: 100%; max-width: 332px;" value="1500">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label id="lblSub" style="display:block; margin-bottom:5px; font-weight:bold;">副屬性 (DEX / STR)</label>
+                <input type="number" id="subStat" class="cloud-input" style="width: 100%; max-width: 332px;" value="200">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">面板最大表攻</label>
+                <input type="number" id="maxAtk" class="cloud-input" style="width: 100%; max-width: 332px;" value="35000">
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">裝備總物理/魔法攻擊力 % (若無則填 0)</label>
+                <input type="number" id="percentAtk" class="cloud-input" style="width: 100%; max-width: 332px;" value="15">
+            </div>
+
+            <button class="cloud-btn" onclick="calculateBaseAtk()" style="background-color: #ff6b6b; font-size: 16px; padding: 12px; width:100%; max-width:350px; margin-left:0; margin-bottom:20px;">立即反推乾淨攻擊力</button>
+
+            <div style="background-color: #222; border-left: 5px solid #ff6b6b; padding: 15px; border-radius: 0 8px 8px 0; max-width: 330px; text-align: center;">
+                <div style="font-size: 14px; color: #aaa;" id="resTitle">反推純淨基礎物理攻擊力</div>
+                <div style="font-size: 32px; font-weight: bold; color: #ff6b6b; margin-top: 5px;" id="resultDisplay">0</div>
+            </div>
         </div>
     </div>
 
