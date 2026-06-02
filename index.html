@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>楓星工具箱</title>
+    <title>楓星綜合工具箱</title>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
         h1 { color: #d9534f; }
@@ -14,11 +14,38 @@
         /* 隱藏未選中分頁的設定 */
         .tab-content { display: none; }
         .tab-content.active { display: block; }
+
+        /* 雲端存取區塊的帥氣樣式 */
+        .cloud-box {
+            background-color: #fff9f9;
+            border: 2px dashed #d9534f;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .cloud-input {
+            padding: 8px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 200px;
+        }
+        .cloud-btn {
+            padding: 8px 15px;
+            font-size: 14px;
+            background-color: #5cb85c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        .cloud-btn.load { background-color: #f0ad4e; }
     </style>
 </head>
 <body>
 
-    <h1>🍁 楓星工具箱 🍁</h1>
+    <h1>🍁 楓星綜合工具箱 🍁</h1>
 
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('home')">首頁</button>
@@ -31,6 +58,15 @@
         <div id="home" class="tab-content active">
             <h3>歡迎來到楓星工具箱！</h3>
             <p>目前網站正在全力開發中，敬請期待...</p>
+
+            <div class="cloud-box">
+                <h4>💾 雲端進度同步（免註冊）</h4>
+                <p>輸入你自訂的「自訂字串」，就能在雲端儲存或讀取你的工具箱設定喔！</p>
+                <input type="text" id="userKeyCode" class="cloud-input" placeholder="例如：maple123">
+                <button class="cloud-btn load" onclick="loadFromCloud()">📥 讀取進度</button>
+                <button class="cloud-btn" onclick="saveToCloud()">📤 儲存測試資料</button>
+                <p id="cloudStatus" style="color: blue; font-weight: bold; margin-top: 10px;"></p>
+            </div>
         </div>
 
         <div id="calculator" class="tab-content">
@@ -50,8 +86,9 @@
     </div>
 
     <script type="module">
-        // 1. 引入 Firebase 核心功能（已轉換成網頁專用雲端網址）
+        // 1. 引入 Firebase 核心與 Firestore 資料庫功能
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
         
         // 2. 你的專屬 Firebase 雲端通行證密鑰
         const firebaseConfig = {
@@ -63,25 +100,82 @@
             appId: "1:109052078453:web:31dd776acaed7ed0828b3c"
         };
 
-        // 3. 初始化 Firebase 啟動連線！
+        // 3. 初始化 Firebase 與資料庫
         const app = initializeApp(firebaseConfig);
-        console.log("楓星工具箱：Google Firebase 雲端連線成功！");
+        const db = getFirestore(app);
+        console.log("楓星工具箱：Google Firebase & 資料庫連線成功！");
 
+        // ───────────────────────────────────────
+        // ☁️ 核心功能：輸入字串，將測試資料「儲存」到雲端
+        // ───────────────────────────────────────
+        window.saveToCloud = async function() {
+            const keyCode = document.getElementById('userKeyCode').value.trim();
+            const statusText = document.getElementById('cloudStatus');
+
+            if (!keyCode) {
+                alert('請先輸入一個自訂字串（代碼）再儲存喔！');
+                return;
+            }
+
+            statusText.innerText = "正在連線到 Google 雲端儲存中...";
+
+            try {
+                // 我們在雲端建立一個叫 "player_data" 的大櫃子，並用玩家輸入的字串當作抽屜名稱
+                await setDoc(doc(db, "player_data", keyCode), {
+                    userCode: keyCode,
+                    lastSaveTime: new Date().toLocaleString(),
+                    testMessage: "哈囉！這是你用神祕代碼存在 Google 雲端的測試資料！"
+                });
+                statusText.innerText = `🎉 儲存成功！時間：${new Date().toLocaleTimeString()}`;
+            } catch (error) {
+                console.error("儲存失敗：", error);
+                statusText.innerText = "❌ 儲存失敗，請檢查控制台錯誤訊息。";
+            }
+        }
+
+        // ───────────────────────────────────────
+        // ☁️ 核心功能：輸入字串，將資料從雲端「讀取」出來
+        // ───────────────────────────────────────
+        window.loadFromCloud = async function() {
+            const keyCode = document.getElementById('userKeyCode').value.trim();
+            const statusText = document.getElementById('cloudStatus');
+
+            if (!keyCode) {
+                alert('請先輸入你要讀取的自訂字串（代碼）！');
+                return;
+            }
+
+            statusText.innerText = "正在從雲端搜尋你的抽屜...";
+
+            try {
+                const docRef = doc(db, "player_data", keyCode);
+                const docSnap = await getDoc(docRef);
+
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    // 成功抓到資料！把它彈窗顯示給玩家看
+                    alert(`【讀取成功！】\n代碼：${data.userCode}\n最後存檔時間：${data.lastSaveTime}\n雲端內文：${data.testMessage}`);
+                    statusText.innerText = `📂 成功讀取代碼 [${keyCode}] 的進度！`;
+                } else {
+                    statusText.innerText = "❓ 找不到這個代碼的資料，請確認有沒有打錯字。";
+                    alert("找不到這個代碼的資料，可能它是個新代碼喔！");
+                }
+            } catch (error) {
+                console.error("讀取失敗：", error);
+                statusText.innerText = "❌ 讀取失敗。";
+            }
+        }
 
         // ─── 下面是控制分頁切換的程式碼 ───
         window.switchTab = function(tabId) {
-            // 讓所有內容分頁隱藏
             const contents = document.querySelectorAll('.tab-content');
             contents.forEach(content => content.classList.remove('active'));
 
-            // 讓所有按鈕取消紅色高亮
             const buttons = document.querySelectorAll('.tab-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
 
-            // 顯示被點擊的分頁
             document.getElementById(tabId).classList.add('active');
 
-            // 讓被點擊的按鈕變成紅色高亮
             buttons.forEach(btn => {
                 if (btn.getAttribute('onclick').includes(tabId)) {
                     btn.classList.add('active');
