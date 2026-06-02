@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>楓星綜合工具箱</title>
+    <title>楓星工具箱</title>
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; background-color: #f4f4f4; }
         h1 { color: #d9534f; }
@@ -10,23 +10,85 @@
         .tab-btn { padding: 10px 20px; background: #ddd; border: none; cursor: pointer; font-size: 16px; border-radius: 5px; }
         .tab-btn.active { background: #d9534f; color: white; }
         .content { background: white; padding: 20px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        
+        /* 隱藏未選中分頁的設定 */
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
     </style>
 </head>
 <body>
 
-    <h1>🍁 楓星綜合工具箱 🍁</h1>
+    <h1>🍁 楓星工具箱 🍁</h1>
 
     <div class="tabs">
-        <button class="tab-btn active">首頁</button>
-        <button class="tab-btn">計算機功能</button>
-        <button class="tab-btn">配裝模擬</button>
-        <button class="tab-btn">潛能模擬</button>
+        <button class="tab-btn active" onclick="switchTab('home')">首頁</button>
+        <button class="tab-btn" onclick="switchTab('calculator')">計算機功能</button>
+        <button class="tab-btn" onclick="switchTab('equip')">配裝模擬</button>
+        <button class="tab-btn" onclick="switchTab('potential')">潛能模擬</button>
     </div>
 
     <div class="content">
-        <h3>歡迎來到楓星工具箱！</h3>
-        <p>目前網站正在全力開發中，敬請期待...</p>
+        <div id="home" class="tab-content active">
+            <h3>歡迎來到楓星工具箱！</h3>
+            <p>目前網站正在全力開發中，敬請期待...</p>
+        </div>
+
+        <div id="calculator" class="tab-content">
+            <h3>🧮 遊戲計算機</h3>
+            <p>計算機功能開發中，未來可以在這裡計算傷害或核心機率！</p>
+        </div>
+
+        <div id="equip" class="tab-content">
+            <h3>⚔️ 配裝模擬器</h3>
+            <p>配裝模擬功能開發中，未來可以在這裡搭配你的終極神裝！</p>
+        </div>
+
+        <div id="potential" class="tab-content">
+            <h3>✨ 潛能洗洗樂</h3>
+            <p>潛能模擬功能開發中，未來可以在這裡體驗一秒洗出三排線的快感！</p>
+        </div>
     </div>
+
+    <script type="module">
+        // 1. 引入 Firebase 核心功能（已轉換成網頁專用雲端網址）
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
+        
+        // 2. 你的專屬 Firebase 雲端通行證密鑰
+        const firebaseConfig = {
+            apiKey: "AIzaSyD1dONez4mPFyoQpIgxN0aSGCKYiUvbyxU",
+            authDomain: "maplestar-tools.firebaseapp.com",
+            projectId: "maplestar-tools",
+            storageBucket: "maplestar-tools.firebasestorage.app",
+            messagingSenderId: "109052078453",
+            appId: "1:109052078453:web:31dd776acaed7ed0828b3c"
+        };
+
+        // 3. 初始化 Firebase 啟動連線！
+        const app = initializeApp(firebaseConfig);
+        console.log("楓星工具箱：Google Firebase 雲端連線成功！");
+
+
+        // ─── 下面是控制分頁切換的程式碼 ───
+        window.switchTab = function(tabId) {
+            // 讓所有內容分頁隱藏
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+
+            // 讓所有按鈕取消紅色高亮
+            const buttons = document.querySelectorAll('.tab-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+
+            // 顯示被點擊的分頁
+            document.getElementById(tabId).classList.add('active');
+
+            // 讓被點擊的按鈕變成紅色高亮
+            buttons.forEach(btn => {
+                if (btn.getAttribute('onclick').includes(tabId)) {
+                    btn.classList.add('active');
+                }
+            });
+        }
+    </script>
 
 </body>
 </html>
