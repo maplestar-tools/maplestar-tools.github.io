@@ -13,7 +13,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 雲端儲存
+// 🌐 雲端儲存
 window.saveToCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
     const statusText = document.getElementById('cloudStatus');
@@ -32,7 +32,7 @@ window.saveToCloud = async function() {
     }
 }
 
-// 雲端讀取
+// 🌐 雲端讀取
 window.loadFromCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
     const statusText = document.getElementById('cloudStatus');
@@ -55,20 +55,25 @@ window.loadFromCloud = async function() {
     }
 }
 
-// 切換分頁
+// 🔄 切換分頁邏輯
 window.switchTab = function(tabId) {
     const contents = document.querySelectorAll('.tab-content');
     contents.forEach(content => content.classList.remove('active'));
+    
     const buttons = document.querySelectorAll('.tab-btn');
     buttons.forEach(btn => btn.classList.remove('active'));
+    
     document.getElementById(tabId).classList.add('active');
+    
     buttons.forEach(btn => {
-        if (btn.getAttribute('onclick').includes(tabId)) { btn.classList.add('active'); }
+        if (btn.getAttribute('onclick').includes(tabId)) { 
+            btn.classList.add('active'); 
+        }
     });
 }
 
-// 🧮 第一類：基礎攻擊力反推（不分物魔，極簡通算版）
-window.calculateBaseAtk = function() {
+// 🧮 第一類：基礎攻擊力反推（極簡通算版）
+function calculateBaseAtk() {
     const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
     const maxAtk = parseFloat(document.getElementById('maxAtk').value) || 0;
@@ -88,30 +93,34 @@ window.calculateBaseAtk = function() {
     document.getElementById('resultDisplay').innerText = Math.round(baseAtk);
 }
 
-// 🧮 第二類：裝備純屬性反推（加強防呆與錯誤檢查版）
-window.calculateEquipStat = function() {
-    // 檢查網頁上有沒有這些輸入框，沒有的話跳出錯誤提示
+// 🧮 第二類：裝備純屬性反推（加強版）
+function calculateEquipStat() {
     const elTotal = document.getElementById('statTotal');
     const elBase = document.getElementById('statBaseOnly');
     const elPercent = document.getElementById('statPercent');
     const elDisplay = document.getElementById('equipStatDisplay');
 
-    if (!elTotal || !elBase || !elPercent || !elDisplay) {
-        alert("程式碼中的欄位 ID 對不上，請檢查 index.html 是否有正確的 id！");
-        return;
-    }
+    if (!elTotal || !elBase || !elPercent || !elDisplay) { return; }
 
-    // 抓取數值
     const statTotal = parseFloat(elTotal.value) || 0;
     const statBaseOnly = parseFloat(elBase.value) || 0;
     const statPercent = (parseFloat(elPercent.value) || 0) / 100;
 
-    // 逆向公式：(總屬性 / (1 + 總%數)) - 基礎屬性
     const rawEquipStat = (statTotal / (1 + statPercent)) - statBaseOnly;
-
-    // 防止算出負數，四捨五入輸出
     const finalEquipStat = Math.max(0, Math.round(rawEquipStat));
-
-    // 渲染到網頁上
+    
     elDisplay.innerText = finalEquipStat;
 }
+
+// 🎯 用 DOMContentLoaded 確保安全的監聽器掛載（解決模組按鈕失聯問題）
+document.addEventListener('DOMContentLoaded', () => {
+    const btnBaseAtk = document.getElementById('btnCalcBaseAtk');
+    const btnEquipStat = document.getElementById('btnCalcEquipStat');
+
+    if (btnBaseAtk) {
+        btnBaseAtk.addEventListener('click', calculateBaseAtk);
+    }
+    if (btnEquipStat) {
+        btnEquipStat.addEventListener('click', calculateEquipStat);
+    }
+});

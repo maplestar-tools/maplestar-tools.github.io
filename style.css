@@ -39,22 +39,29 @@ h1 {
 }
 
 .tab-btn.active { 
-    background: linear-gradient(135deg, #ff9f43, #ff5252); /* 換上你最愛的亮眼橘紅漸層 */
+    background: linear-gradient(135deg, #ff9f43, #ff5252); /* 亮眼橘紅漸層 */
     color: white; 
     border-color: #ff5252;
     font-weight: bold;
 }
 
-/* 終極置中計算機卡片 */
+/* 計算機大外殼（寬度解鎖版，最高支援 1200px 橫向延伸） */
 .content { 
     background: #1e1e1e; 
     padding: 25px; 
     border-radius: 16px; /* 柔和的大圓角 */
     box-shadow: 0 8px 24px rgba(0,0,0,0.6); /* 帥氣的深色陰影 */
     border: 1px solid #333;
-    max-width: 450px; /* 限制最大寬度，跟原本的反推工具一模一樣 */
-    width: 100%; /* 在手機上會自動縮放 */
+    max-width: 1200px; 
+    width: 100%; 
     box-sizing: border-box;
+    transition: max-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 針對【首頁】與【團隊分紅】維持精緻窄卡片樣式 */
+.tab-narrow {
+    max-width: 450px;
+    margin: 0 auto;
 }
 
 /* 隱藏未選中分頁 */
@@ -85,6 +92,7 @@ h1 {
 
 .form-group {
     margin-bottom: 15px;
+    text-align: left; /* 表單標籤靠左比較好讀 */
 }
 
 .form-group label {
@@ -112,6 +120,7 @@ h1 {
     outline: none;
 }
 
+/* 雲端按鈕樣式 */
 .cloud-btn {
     width: 100%;
     padding: 12px;
@@ -127,3 +136,94 @@ h1 {
 }
 .cloud-btn.load { background: linear-gradient(135deg, #f0ad4e, #d9534f); }
 .cloud-btn:hover { opacity: 0.9; }
+
+
+/* ==========================================================================
+   ⚡ 裝備綜合計算工具 - 三欄橫向並排 CSS Grid 設計
+   ========================================================================== */
+
+.calc-grid {
+    display: grid;
+    /* 桌機大於 900px 時自動並排三欄，小於時自動轉成垂直單欄響應式 */
+    grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+    gap: 25px;
+    align-items: start;
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 10px;
+}
+
+/* 子卡片基礎樣式 */
+.calc-card {
+    background-color: #121212; /* 深一階的黑卡片，增加層次感 */
+    padding: 22px; 
+    border-radius: 12px; 
+    border: 1px solid #2d2d2d;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+}
+
+.calc-card h4 {
+    margin-top: 0; 
+    font-size: 18px; 
+    padding-bottom: 12px;
+    border-bottom: 1px solid #2d2d2d;
+    text-align: left;
+}
+
+.card-desc {
+    color: #aaa !important; 
+    font-size: 13px;
+    margin-bottom: 20px;
+    text-align: left !important;
+}
+
+/* 卡片內專用按鈕 */
+.calc-btn {
+    width: 100%;
+    padding: 12px;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: filter 0.2s;
+    margin: 5px 0 20px 0;
+}
+.calc-btn:hover { filter: brightness(1.1); }
+
+/* 結果呈現框設定 */
+.result-box {
+    background-color: #1a1a1a; 
+    padding: 15px; 
+    border-radius: 0 8px 8px 0; 
+    text-align: center;
+}
+.result-title { font-size: 13px; color: #aaa; }
+.result-value { font-size: 28px; font-weight: bold; margin-top: 5px; }
+
+/* 裝飾配色類別 */
+.title-red { color: #ff6b6b; }
+.title-green { color: #4dae4c; }
+.title-blue { color: #64b5f6; }
+
+.btn-red { background: linear-gradient(135deg, #ff6b6b, #e55353); }
+.btn-green { background: linear-gradient(135deg, #4dae4c, #3b8e3a); }
+
+.border-red { border-left: 5px solid #ff6b6b; }
+.border-green { border-left: 5px solid #4dae4c; }
+
+/* 第三類規劃中留位樣式 */
+.card-dashed { border: 1px dashed #555; opacity: 0.75; }
+.border-dashed { border-bottom: 1px dashed #555 !important; }
+.placeholder-text {
+    height: 180px; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    color: #555; 
+    font-style: italic;
+    font-size: 15px;
+}

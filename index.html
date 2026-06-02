@@ -16,7 +16,8 @@
     </div>
 
     <div class="content">
-        <div id="home" class="tab-content active">
+        
+        <div id="home" class="tab-content tab-narrow active">
             <h3>歡迎來到楓星工具箱！</h3>
             <p>專為楓之谷玩家打造的便利小工具基地。</p>
 
@@ -30,24 +31,24 @@
             </div>
         </div>
 
-        <div id="money-split" class="tab-content">
+        <div id="money-split" class="tab-content tab-narrow">
             <h3>💰 團隊分紅計算</h3>
             <p>分錢小工具建置中！</p>
         </div>
 
- <div id="equip-calc" class="tab-content">
+        <div id="equip-calc" class="tab-content">
             <h3>⚔️ 裝備綜合計算工具</h3>
-            <p style="color: #aaa; margin-bottom: 25px;">全方位反推各項面版數據，點擊下方各工具即可開始計算。</p>
+            <p>全方位反推各項面版數據，點擊下方各工具即可開始計算。</p>
             
-            <div class="calc-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 25px; align-items: start;">
+            <div class="calc-grid">
                 
-                <div class="calc-card" style="background-color: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #333;">
-                    <h4 style="margin-top: 0; color: #ff6b6b; font-size: 18px; border-bottom: 1px solid #333; padding-bottom: 10px;">⚔️ 基礎攻擊力反推</h4>
-                    <p style="color: #aaa; font-size: 13px;">選擇武器並輸入面板與屬性，反推基礎能力。</p>
+                <div class="calc-card">
+                    <h4 class="title-red">⚔️ 基礎攻擊力反推</h4>
+                    <p class="card-desc">選擇武器並輸入面板與屬性，反推基礎能力。</p>
                     
-                    <div style="margin-bottom: 15px;">
-                        <label style="display:block; margin-bottom:5px; font-weight:bold;">武器種類 (係數)</label>
-                        <select id="coeff" class="cloud-input" style="width: 100%;">
+                    <div class="form-group">
+                        <label>武器種類 (係數)</label>
+                        <select id="coeff" class="cloud-input">
                             <option value="1.75">拳套 (1.75)</option>
                             <option value="1.70">指虎 (1.70)</option>
                             <option value="1.50">手槍 / 大砲 (1.50)</option>
@@ -61,71 +62,73 @@
                         </select>
                     </div>
 
-                    <div style="margin-bottom: 15px;">
-                        <label id="lblMain" style="display:block; margin-bottom:5px; font-weight:bold;">主屬性</label>
-                        <input type="number" id="mainStat" class="cloud-input" style="width: 100%; box-sizing: border-box;" value="700">
+                    <div class="form-group">
+                        <label id="lblMain">主屬性</label>
+                        <input type="number" id="mainStat" class="cloud-input" value="700">
                     </div>
 
-                    <div style="margin-bottom: 15px;">
-                        <label id="lblSub" style="display:block; margin-bottom:5px; font-weight:bold;">副屬性</label>
-                        <input type="number" id="subStat" class="cloud-input" style="width: 100%; box-sizing: border-box;" value="100">
+                    <div class="form-group">
+                        <label id="lblSub">副屬性</label>
+                        <input type="number" id="subStat" class="cloud-input" value="100">
                     </div>
 
-                    <div style="margin-bottom: 15px;">
-                        <label style="display:block; margin-bottom:5px; font-weight:bold;">面板最大表攻</label>
-                        <input type="number" id="maxAtk" class="cloud-input" style="width: 100%; box-sizing: border-box;" value="15000">
+                    <div class="form-group">
+                        <label>面板最大表攻</label>
+                        <input type="number" id="maxAtk" class="cloud-input" value="15000">
                     </div>
 
-                    <div style="margin-bottom: 20px;">
-                        <label style="display:block; margin-bottom:5px; font-weight:bold;">裝備總攻擊力 %</label>
-                        <input type="number" id="percentAtk" class="cloud-input" style="width: 100%; box-sizing: border-box;" value="0">
+                    <div class="form-group">
+                        <label>裝備總攻擊力 %</label>
+                        <input type="number" id="percentAtk" class="cloud-input" value="0">
                     </div>
 
-                    <button class="cloud-btn" onclick="calculateBaseAtk()" style="background-color: #ff6b6b; font-size: 15px; padding: 10px; width:100%; margin: 0 0 15px 0;">立即反推乾淨攻擊力</button>
+                    <button id="btnCalcBaseAtk" class="calc-btn btn-red">立即反推乾淨攻擊力</button>
 
-                    <div style="background-color: #222; border-left: 5px solid #ff6b6b; padding: 12px; border-radius: 0 8px 8px 0; text-align: center;">
-                        <div style="font-size: 13px; color: #aaa;">反推基礎攻擊力</div>
-                        <div style="font-size: 28px; font-weight: bold; color: #ff6b6b; margin-top: 5px;" id="resultDisplay">0</div>
-                    </div>
-                </div>
-
-                <div class="calc-card" style="background-color: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px solid #333;">
-                    <h4 style="margin-top: 0; color: #4dae4c; font-size: 18px; border-bottom: 1px solid #333; padding-bottom: 10px;">🧬 裝備純屬性反推</h4>
-                    <p style="color: #aaa; font-size: 13px;">扣除屬性 % 數與淨能力，反推裝備提供的固定主屬。</p>
-
-                    <div style="margin-bottom: 15px;">
-                        <label style="display:block; margin-bottom:5px; font-weight:bold;">面板顯示的【總主屬性】</label>
-                        <input type="number" id="statTotal" class="cloud-input" style="width: 100%; box-sizing: border-box;" value="5000">
-                    </div>
-
-                    <div style="margin-bottom: 15px;">
-                        <label style="display:block; margin-bottom:5px; font-weight:bold;">不吃 % 數的【基礎能力值】</label>
-                        <input type="number" id="statBaseOnly" class="cloud-input" style="width: 100%; box-sizing: border-box;" value="1200">
-                    </div>
-
-                    <div style="margin-bottom: 74px;"> <label style="display:block; margin-bottom:5px; font-weight:bold;">裝備與潛能的【總主屬性 %】</label>
-                        <input type="number" id="statPercent" class="cloud-input" style="width: 100%; box-sizing: border-box;" value="120">
-                    </div>
-
-                    <button class="cloud-btn" onclick="calculateEquipStat()" style="background-color: #4dae4c; font-size: 15px; padding: 10px; width:100%; margin: 0 0 15px 0;">立即反推裝備純屬性</button>
-
-                    <div style="background-color: #222; border-left: 5px solid #4dae4c; padding: 12px; border-radius: 0 8px 8px 0; text-align: center;">
-                        <div style="font-size: 13px; color: #aaa;">裝備提供的純固定屬性</div>
-                        <div style="font-size: 28px; font-weight: bold; color: #4cae4c; margin-top: 5px;" id="equipStatDisplay">0</div>
+                    <div class="result-box border-red">
+                        <div class="result-title">反推基礎攻擊力</div>
+                        <div class="result-value text-red" id="resultDisplay">0</div>
                     </div>
                 </div>
 
-                <div class="calc-card" style="background-color: #1a1a1a; padding: 20px; border-radius: 8px; border: 1px dashed #555; opacity: 0.8;">
-                    <h4 style="margin-top: 0; color: #64b5f6; font-size: 18px; border-bottom: 1px dashed #555; padding-bottom: 10px;">🔮 第三類功能（待定）</h4>
-                    <p style="color: #aaa; font-size: 13px;">請告訴我第三類你想計算什麼？我們馬上把它填滿！</p>
+                <div class="calc-card">
+                    <h4 class="title-green">🧬 裝備純屬性反推</h4>
+                    <p class="card-desc">扣除屬性 % 數與淨能力，反推裝備提供的固定主屬。</p>
+
+                    <div class="form-group">
+                        <label>面板顯示的【總主屬性】</label>
+                        <input type="number" id="statTotal" class="cloud-input" value="5000">
+                    </div>
+
+                    <div class="form-group">
+                        <label>不吃 % 數的【基礎能力值】</label>
+                        <input type="number" id="statBaseOnly" class="cloud-input" value="1200">
+                    </div>
+
+                    <div class="form-group"> 
+                        <label>裝備與潛能的【總主屬性 %】</label>
+                        <input type="number" id="statPercent" class="cloud-input" value="120">
+                    </div>
+
+                    <button id="btnCalcEquipStat" class="calc-btn btn-green">立即反推裝備純屬性</button>
+
+                    <div class="result-box border-green">
+                        <div class="result-title">裝備提供的純固定屬性</div>
+                        <div class="result-value text-green" id="equipStatDisplay">0</div>
+                    </div>
+                </div>
+
+                <div class="calc-card card-dashed">
+                    <h4 class="title-blue border-dashed">🔮 第三類功能（待定）</h4>
+                    <p class="card-desc">請告訴我第三類你想計算什麼？我們馬上把它填滿！</p>
                     
-                    <div style="height: 250px; display: flex; align-items: center; justify-content: center; color: #555; font-style: italic;">
+                    <div class="placeholder-text">
                         功能規劃中...
                     </div>
                 </div>
 
             </div>
         </div>
+    </div>
 
     <script type="module" src="main.js"></script>
 </body>
