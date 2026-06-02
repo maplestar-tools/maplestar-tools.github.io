@@ -8,16 +8,16 @@
         body { 
             font-family: Arial, sans-serif; 
             padding: 20px; 
-            background-color: #121212; /* 深碳黑 */
-            color: #e0e0e0; /* 亮灰字 */
+            background-color: #121212; 
+            color: #e0e0e0; 
         }
-        h1 { color: #ff6b6b; } /* 楓葉紅調整得更亮一點，在暗色背景才顯眼 */
+        h1 { color: #ff6b6b; } 
         
         /* 分頁按鈕樣式 */
-        .tabs { display: flex; gap: 10px; margin-bottom: 20px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
         .tab-btn { 
             padding: 10px 20px; 
-            background: #2d2d2d; /* 暗色按鈕 */
+            background: #2d2d2d; 
             color: #aaaaaa;
             border: 1px solid #444; 
             cursor: pointer; 
@@ -32,7 +32,7 @@
         
         /* 內容框暗色設定 */
         .content { 
-            background: #1e1e1e; /* 深灰框 */
+            background: #1e1e1e; 
             padding: 20px; 
             border-radius: 5px; 
             box-shadow: 0 4px 10px rgba(0,0,0,0.5); 
@@ -43,9 +43,9 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* 雲端存取區塊的帥氣暗色樣式 */
+        /* 雲端存取區塊樣式 */
         .cloud-box {
-            background-color: #251b1b; /* 帶有一點點紅的黑 */
+            background-color: #251b1b; 
             border: 2px dashed #ff6b6b;
             padding: 15px;
             border-radius: 8px;
@@ -54,7 +54,7 @@
         .cloud-input {
             padding: 8px;
             font-size: 16px;
-            background-color: #333; /* 暗色輸入框 */
+            background-color: #333; 
             color: white;
             border: 1px solid #555;
             border-radius: 4px;
@@ -79,15 +79,14 @@
 
     <div class="tabs">
         <button class="tab-btn active" onclick="switchTab('home')">首頁</button>
-        <button class="tab-btn" onclick="switchTab('calculator')">計算機功能</button>
-        <button class="tab-btn" onclick="switchTab('equip')">配裝模擬</button>
-        <button class="tab-btn" onclick="switchTab('potential')">潛能模擬</button>
+        <button class="tab-btn" onclick="switchTab('money-split')">💰 團隊分紅</button>
+        <button class="tab-btn" onclick="switchTab('equip-calc')">⚔️ 裝備計算</button>
     </div>
 
     <div class="content">
         <div id="home" class="tab-content active">
             <h3>歡迎來到楓星工具箱！</h3>
-            <p>目前網站正在全力開發中，敬請期待...</p>
+            <p>專為楓之谷玩家打造的便利小工具基地。</p>
 
             <div class="cloud-box">
                 <h4>💾 雲端進度同步（免註冊）</h4>
@@ -99,19 +98,14 @@
             </div>
         </div>
 
-        <div id="calculator" class="tab-content">
-            <h3>🧮 遊戲計算機</h3>
-            <p>計算機功能開發中，未來可以在這裡計算傷害或核心機率！</p>
+        <div id="money-split" class="tab-content">
+            <h3>💰 團隊分紅計算</h3>
+            <p>分錢小工具建置中！請把你的範例、想法或對方的網址貼上來，我們馬上動工！</p>
         </div>
 
-        <div id="equip" class="tab-content">
-            <h3>⚔️ 配裝模擬器</h3>
-            <p>配裝模擬功能開發中，未來可以在這裡搭配你的終極神裝！</p>
-        </div>
-
-        <div id="potential" class="tab-content">
-            <h3>✨ 潛能洗洗樂</h3>
-            <p>潛能模擬功能開發中，未來可以在這裡體驗一秒洗出三排線的快感！</p>
+        <div id="equip-calc" class="tab-content">
+            <h3>⚔️ 裝備屬性計算</h3>
+            <p>裝備屬性計算功能建置中！未來可以在這裡點選你的星力、火花、潛能，一鍵算出總屬性！</p>
         </div>
     </div>
 
@@ -130,7 +124,6 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
-        console.log("楓星工具箱：Google Firebase & 資料庫連線成功！");
 
         window.saveToCloud = async function() {
             const keyCode = document.getElementById('userKeyCode').value.trim();
