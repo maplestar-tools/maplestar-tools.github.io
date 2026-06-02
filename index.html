@@ -32,16 +32,47 @@
 
         <div id="money-split" class="tab-content">
             <h3>💰 團隊分紅計算</h3>
-            <p>分錢小工具建置中！</p>
+            <p>簡單、直覺、大格子，打完王一秒分好錢！</p>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">💰 拍賣場總成交金額</label>
+                <input type="number" id="totalMoney" class="cloud-input" style="width: 100%; max-width: 332px; font-size: 18px; font-weight: bold; color: #ffca28;" value="1000000000" step="1000000">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">👥 分紅總人數</label>
+                <input type="number" id="playerCount" class="cloud-input" style="width: 100%; max-width: 332px;" value="6" min="1">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">🏛️ 選擇拍賣場稅率</label>
+                <div style="display: flex; gap: 10px; margin-top: 5px; max-width: 350px;">
+                    <button type="button" class="tab-btn" id="btnTax5" onclick="setTax(5)" style="flex: 1; padding: 8px;">一般 (5%)</button>
+                    <button type="button" class="tab-btn" id="btnTax3" onclick="setTax(3)" style="flex: 1; padding: 8px;">MVP尊爵 (3%)</button>
+                </div>
+                <input type="hidden" id="taxRate" value="5">
+            </div>
+
+            <button class="cloud-btn" onclick="calculateSplit()" style="background: linear-gradient(135deg, #ff9f43, #ff5252); box-shadow: 0 4px 12px rgba(255, 82, 82, 0.3); font-size: 16px; padding: 12px; width:100%; max-width:350px; margin-left:0; margin-top: 15px; margin-bottom: 25px;">🧮 立即計算分紅</button>
+
+            <div style="background-color: #222; border-left: 5px solid #ffaa00; padding: 15px; border-radius: 0 8px 8px 0; max-width: 330px; text-align: center;">
+                <div style="font-size: 13px; color: #aaa; margin-bottom: 5px;">💸 每人實拿（已扣稅）</div>
+                <div style="font-size: 26px; font-weight: bold; color: #4cae4c; letter-spacing: 1px;" id="perPlayerMoney">0 楓幣</div>
+                <hr style="border: 0; border-top: 1px solid #333; margin: 10px 0;">
+                <div style="display: flex; justify-content: space-between; font-size: 13px; color: #bbb;">
+                    <span>政府收走的稅金:</span>
+                    <span id="totalTaxShow" style="color: #ff5252;">0 楓幣</span>
+                </div>
+            </div>
         </div>
 
-<div id="equip-calc" class="tab-content">
+        <div id="equip-calc" class="tab-content">
             <h3>⚔️ 基礎攻擊力反推工具</h3>
             <p style="color: #aaa;">選擇武器並輸入面板與屬性，反推基礎能力！</p>
             
             <div id="weaponGroup" style="margin-bottom: 15px;">
                 <label style="display:block; margin-bottom:5px; font-weight:bold;">武器種類 (係數)</label>
-                <select id="coeff" class="cloud-input" style="width: 100%; max-width: 350px;" onchange="autoToggleJob()">
+                <select id="coeff" class="cloud-input" style="width: 100%; max-width: 350px;">
                     <option value="1.75">拳套 (1.75)</option>
                     <option value="1.70">指虎 (1.70)</option>
                     <option value="1.50">手槍 / 大砲 (1.50)</option>
@@ -77,11 +108,39 @@
 
             <button class="cloud-btn" onclick="calculateBaseAtk()" style="background-color: #ff6b6b; font-size: 16px; padding: 12px; width:100%; max-width:350px; margin-left:0; margin-bottom:20px;">立即反推乾淨攻擊力</button>
 
-            <div style="background-color: #222; border-left: 5px solid #ff6b6b; padding: 15px; border-radius: 0 8px 8px 0; max-width: 330px; text-align: center;">
+            <div style="background-color: #222; border-left: 5px solid #ff6b6b; padding: 15px; border-radius: 0 8px 8px 0; max-width: 330px; text-align: center; margin-bottom: 30px;">
                 <div style="font-size: 14px; color: #aaa;" id="resTitle">反推基礎攻擊力</div>
                 <div style="font-size: 32px; font-weight: bold; color: #ff6b6b; margin-top: 5px;" id="resultDisplay">0</div>
             </div>
+
+            <hr style="border: 0; border-top: 2px dashed #444; margin: 30px 0; max-width: 350px;">
+
+            <h3>🧬 裝備純屬性反推工具</h3>
+            <p style="color: #aaa;">扣除屬性 % 數與淨能力，反推裝備實際提供的固定主屬性！</p>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">面板顯示的【總主屬性】</label>
+                <input type="number" id="statTotal" class="cloud-input" style="width: 100%; max-width: 332px;" value="5000">
+            </div>
+
+            <div style="margin-bottom: 15px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">不吃 % 數的【基礎能力值】(如AP、戰地、傳授固定值)</label>
+                <input type="number" id="statBaseOnly" class="cloud-input" style="width: 100%; max-width: 332px;" value="1200">
+            </div>
+
+            <div style="margin-bottom: 20px;">
+                <label style="display:block; margin-bottom:5px; font-weight:bold;">裝備與潛能的【總主屬性 %】(如 120% 請填 120)</label>
+                <input type="number" id="statPercent" class="cloud-input" style="width: 100%; max-width: 332px;" value="120">
+            </div>
+
+            <button class="cloud-btn" onclick="calculateEquipStat()" style="background-color: #4dae4c; font-size: 16px; padding: 12px; width:100%; max-width:350px; margin-left:0; margin-bottom:20px;">立即反推裝備純屬性</button>
+
+            <div style="background-color: #222; border-left: 5px solid #4dae4c; padding: 15px; border-radius: 0 8px 8px 0; max-width: 330px; text-align: center;">
+                <div style="font-size: 14px; color: #aaa;">裝備提供的純固定屬性</div>
+                <div style="font-size: 32px; font-weight: bold; color: #4cae4c; margin-top: 5px;" id="equipStatDisplay">0</div>
+            </div>
         </div>
+    </div>
 
     <script type="module" src="main.js"></script>
 </body>
