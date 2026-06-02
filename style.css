@@ -1,5 +1,5 @@
 /* ==========================================================================
-   🧱 1. 全域基礎樣式與完全置中
+   🧱 1. 全域基礎樣式（結構大改版：確保中線絕對鎖死）
    ========================================================================== */
 body { 
     font-family: "Helvetica Neue", Arial, "Noto Sans TC", sans-serif; 
@@ -8,7 +8,7 @@ body {
     color: #e0e0e0; 
     display: flex;
     flex-direction: column;
-    align-items: center; /* 確保所有大元件（標題、分頁鈕、內容區）水平置中 */
+    align-items: center; /* 讓 1200px 的主大框在螢幕上絕對居中 */
     min-height: 100vh;
     margin: 0;
     box-sizing: border-box;
@@ -18,17 +18,34 @@ h1 {
     color: #ff6b6b; 
     text-align: center;
     margin-bottom: 25px;
+    width: 100%;
+    max-width: 1200px; /* 標題也鎖定最大寬度 */
 } 
 
 /* ==========================================================================
-   🎛️ 2. 分頁按鈕區域
+   📦 2. 核心大外殼（固定寬度容器：防止分頁縮放時網頁焦距偏斜）
+   ========================================================================== */
+.content { 
+    width: 100%; 
+    max-width: 1200px; /* 裝備計算三欄展開的最大極限寬度 */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start; /* 內元件全面統一靠左，與分頁標籤左線絕對對齊 */
+}
+
+/* ==========================================================================
+   🎛️ 3. 分頁按鈕區域（已修正為完美靠左對齊線）
    ========================================================================== */
 .tabs { 
     display: flex; 
     gap: 10px; 
     margin-bottom: 25px; 
     flex-wrap: wrap; 
-    justify-content: center; 
+    justify-content: flex-start; /* 靠左對齊 */
+    width: 100%; 
+    max-width: 1200px; /* 與大容器完全切齊 */
+    box-sizing: border-box;
 }
 
 .tab-btn { 
@@ -49,37 +66,25 @@ h1 {
     font-weight: bold;
 }
 
-/* ==========================================================================
-   📦 3. 內容外殼（全面化為隱形，僅負責寬度控制，徹底解決擠壓歪斜）
-   ========================================================================== */
-.content { 
-    width: 100%; 
-    max-width: 1200px; /* 裝備計算的最大極限寬度 */
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* 確保內部子元件在縮放時全面維持中線對齊 */
-}
-
 /* 隱藏未選中分頁 */
 .tab-content { display: none; width: 100%; }
 .tab-content.active { display: block; }
 
 /* 標題與內文通用微調 */
 .tab-content h3 {
-    text-align: center;
+    text-align: left; /* 改為靠左，讓視覺跟隨分頁按鈕一體化 */
     margin-top: 0;
     color: #fff;
 }
 .tab-content p {
-    text-align: center;
+    text-align: left; /* 改為靠左 */
     font-size: 13px;
     color: #aaa;
     margin-bottom: 20px;
 }
 
 /* ==========================================================================
-   📐 4. 【首頁】與【團隊分紅】專用精緻獨立黑卡片樣式（絕對置中）
+   📐 4. 【首頁】與【團隊分紅】獨立黑卡片（靠左貼齊對齊線，極度穩定）
    ========================================================================== */
 .tab-narrow {
     background: #1e1e1e; 
@@ -87,9 +92,9 @@ h1 {
     border-radius: 16px; 
     box-shadow: 0 8px 24px rgba(0,0,0,0.6); 
     border: 1px solid #333;
-    max-width: 450px; /* 牢牢鎖定黃金寬度 */
+    max-width: 450px; /* 限制窄版寬度 */
     width: 100%; 
-    margin: 0 auto; /* 左右自動邊距，達成大螢幕時的完美置中 */
+    margin: 0; /* ❌ 拔除 auto 居中，改為 0 靠左，這樣就不會跟裝備計算的位置打架 */
     box-sizing: border-box;
 }
 
@@ -102,53 +107,11 @@ h1 {
     margin-top: 20px;
 }
 
-/* 表單群組靠左好讀 */
+/* 表單群組靠左 */
 .form-group {
     margin-bottom: 15px;
     text-align: left; 
 }
-
-.form-group label {
-    display: block;
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: #ccc;
-    font-size: 14px;
-}
-
-.cloud-input {
-    width: 100%;
-    padding: 10px 12px;
-    background-color: #333; 
-    color: white;
-    border: 1px solid #555;
-    border-radius: 8px;
-    font-size: 15px;
-    box-sizing: border-box;
-    transition: border-color 0.2s;
-}
-
-.cloud-input:focus {
-    border-color: #ff9f43;
-    outline: none;
-}
-
-/* 通用按鈕樣式 */
-.cloud-btn {
-    width: 100%;
-    padding: 12px;
-    background: linear-gradient(135deg, #4cae4c, #398439);
-    color: white;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: bold;
-    cursor: pointer;
-    transition: opacity 0.2s;
-    margin-top: 10px;
-}
-.cloud-btn.load { background: linear-gradient(135deg, #f0ad4e, #d9534f); }
-.cloud-btn:hover { opacity: 0.9; }
 
 
 /* ==========================================================================
