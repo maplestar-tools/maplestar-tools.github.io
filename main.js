@@ -72,72 +72,8 @@ window.switchTab = function(tabId) {
     });
 }
 
-// 🧮 第一類：基礎攻擊力反推（真・公式還原版）
+// 💡 修改原有第一類：讓反推得到的結果，自動填入第三欄新增的攻擊力輸入框中
 function calculateBaseAtk() {
-    const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
-    const subStat = parseFloat(document.getElementById('subStat').value) || 0;
-    const maxAtk = parseFloat(document.getElementById('maxAtk').value) || 0;
-    const percentAtk = (parseFloat(document.getElementById('percentAtk').value) || 0) / 100;
-    const coeff = parseFloat(document.getElementById('coeff').value);
-    
-    const statFactor = (mainStat * 4 + subStat) / 100;
-    if (statFactor === 0 || coeff === 0 || maxAtk === 0) { 
-        alert("請輸入正確的能力值！");
-        return; 
-    }
-    
-    const estimatedAtk = Math.round((maxAtk / coeff / statFactor) / (1 + percentAtk));
-    const startAtk = Math.max(1, estimatedAtk - 1000);
-    const endAtk = estimatedAtk + 1000;
-    
-    let matchedBaseAtk = 0;
-    for (let testAtk = startAtk; testAtk <= endAtk; testAtk++) {
-        // 1. 遊戲底層：總攻用 floor 砍
-        let totalAtk = Math.floor(testAtk * (1 + percentAtk));
-        // 2. 最終輸出：遊戲用 round 四捨五入
-        let calcMax = Math.round(totalAtk * coeff * statFactor);
-        
-        if (calcMax === Math.round(maxAtk)) {
-            matchedBaseAtk = testAtk;
-            break;
-        }
-    }
-    
-    if (matchedBaseAtk === 0) matchedBaseAtk = estimatedAtk;
-    document.getElementById('resultDisplay').innerText = matchedBaseAtk;
-}
-
-// 🧮 第二類：裝備純屬性反推（同步改為真公式邏輯）
-function calculateEquipStat() {
-    const elTotal = document.getElementById('statTotal');
-    const elBase = document.getElementById('statBaseOnly');
-    const elPercent = document.getElementById('statPercent');
-    const elDisplay = document.getElementById('equipStatDisplay');
-
-    if (!elTotal || !elBase || !elPercent || !elDisplay) { return; }
-
-    const statTotal = parseFloat(elTotal.value) || 0;
-    const statBaseOnly = parseFloat(elBase.value) || 0;
-    const statPercent = (parseFloat(elPercent.value) || 0) / 100;
-
-    const estimatedEquip = Math.round((statTotal / (1 + statPercent)) - statBaseOnly);
-    
-    let matchedEquipStat = 0;
-    for (let testEquip = estimatedEquip - 1000; testEquip <= estimatedEquip + 1000; testEquip++) {
-        if (testEquip < 0) continue;
-        let calcTotal = Math.round((statBaseOnly + testEquip) * (1 + statPercent));
-        if (calcTotal === Math.round(statTotal)) {
-            matchedEquipStat = testEquip;
-            break;
-        }
-    }
-
-    if (matchedEquipStat === 0 && statTotal > 0) matchedEquipStat = Math.max(0, estimatedEquip);
-    elDisplay.innerText = matchedEquipStat;
-}
-
-// 🧮 第三類：模擬攻擊提升後的「全新最大表攻」
-function simulateAtkBenefit() {
     const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
     const maxAtk = parseFloat(document.getElementById('maxAtk').value) || 0;
@@ -147,18 +83,55 @@ function simulateAtkBenefit() {
     const statFactor = (mainStat * 4 + subStat) / 100;
     if (statFactor === 0 || coeff === 0 || maxAtk === 0) { return; }
     
+    const estimatedAtk = Math.round((maxAtk / coeff / statFactor) / (1 + percentAtk));
+    const startAtk = Math.max(1, estimatedAtk - 200);
+    const endAtk = estimatedAtk + 200;
+    
+    let matchedBaseAtk = 0;
+    for (let testAtk = startAtk; testAtk <= endAtk; testAtk++) {
+        let totalAtk = Math.floor(testAtk * (1 + percentAtk));
+        let calcMax = Math.floor(totalAtk * coeff * statFactor);
+        
+        if (calcMax === Math.floor(maxAtk)) {
+            matchedBaseAtk = testAtk;
+            break;
+        }
+    }
+    
+    if (matchedBaseAtk === 0) matchedBaseAtk = estimatedAtk;
+    
+    // 渲染至第一類結果
+    document.getElementById('resultDisplay').innerText = matchedBaseAtk;
+    // 👑 同步將結果填入第三欄的「手動攻擊力基準框」
+    document.getElementById('simCurrentBaseAtk').value = matchedBaseAtk;
+    // 👑 順便幫玩家把目前的主屬性也預填到下方的「手動主屬基準框」
+    document.getElementById('simCurrentBaseStat').value = mainStat;
+}
+
+// 🧮 第三類：模擬攻擊提升（讀取手動基準框版）
+function simulateAtkBenefit() {
+    // 讀取第一欄的基本屬性常數
+    const subStat = parseFloat(document.getElementById('subStat').value) || 0;
+    const percentAtk = (parseFloat(document.getElementById('percentAtk').value) || 0) / 100;
+    const coeff = parseFloat(document.getElementById('coeff').value);
+    
+    // 👑 重點：改為直接讀取你新加的、可自由修改的攻擊力與主屬性框！
+    const baseAtk = parseFloat(document.getElementById('simCurrentBaseAtk').value) || 0;
+    const mainStat = parseFloat(document.getElementById('simCurrentBaseStat').value) || 0;
+    
+    const statFactor = (mainStat * 4 + subStat) / 100;
+    if (statFactor === 0 || coeff === 0) { return; }
+    
     const customAtkPercent = parseFloat(document.getElementById('simAtkPercentInput').value) || 0;
     const customAtkValue = parseFloat(document.getElementById('simAtkValueInput').value) || 0;
 
-    let baseAtk = parseFloat(document.getElementById('resultDisplay').innerText) || 321;
-
-    // 方案 A：增加 %攻
+    // 方案 A：增加 %攻 (基於被修改後的攻擊力)
     let totalAtkPercent = Math.floor(baseAtk * (1 + percentAtk + (customAtkPercent / 100)));
-    let newMaxAtkPercent = Math.round(totalAtkPercent * coeff * statFactor);
+    let newMaxAtkPercent = Math.floor(totalAtkPercent * coeff * statFactor);
     
-    // 方案 B：增加 固定攻
+    // 方案 B：增加 固定攻 (基於被修改後的攻擊力)
     let totalAtkValue = Math.floor((baseAtk + customAtkValue) * (1 + percentAtk));
-    let newMaxAtkValue = Math.round(totalAtkValue * coeff * statFactor);
+    let newMaxAtkValue = Math.floor(totalAtkValue * coeff * statFactor);
 
     document.getElementById('lblSimAtkPercent').innerText = `模擬後最大表攻 (+${customAtkPercent}%)`;
     document.getElementById('lblSimAtkValue').innerText = `模擬後最大表攻 (+${customAtkValue} 攻)`;
@@ -166,43 +139,39 @@ function simulateAtkBenefit() {
     document.getElementById('atkSimValue').innerText = newMaxAtkValue;
 }
 
-// 🧮 第三類：模擬屬性提升後的「全新最大表攻」
+// 🧮 第三類：模擬屬性提升（讀取手動基準框版）
 function simulateStatBenefit() {
-    const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
-    const maxAtk = parseFloat(document.getElementById('maxAtk').value) || 0;
     const percentAtk = (parseFloat(document.getElementById('percentAtk').value) || 0) / 100;
     const coeff = parseFloat(document.getElementById('coeff').value);
 
-    const elTotal = document.getElementById('statTotal');
-    const elBase = document.getElementById('statBaseOnly');
+    // 👑 重點：改為直接讀取你新加的、可自由修改的攻擊力與主屬性框！
+    const baseAtk = parseFloat(document.getElementById('simCurrentBaseAtk').value) || 0;
+    const mainStat = parseFloat(document.getElementById('simCurrentBaseStat').value) || 0;
+
     const elPercent = document.getElementById('statPercent');
-
-    if (!elTotal || !elBase || !elPercent || maxAtk === 0) { return; }
-
-    const statTotal = parseFloat(elTotal.value) || 0;
-    const statBaseOnly = parseFloat(elBase.value) || 0;
-    const statPercent = (parseFloat(elPercent.value) || 0) / 100;
-
+    const statPercent = elPercent ? (parseFloat(elPercent.value) || 0) / 100 : 0;
+    
     const customStatPercent = parseFloat(document.getElementById('simStatPercentInput').value) || 0;
     const customStatValue = parseFloat(document.getElementById('simStatValueInput').value) || 0;
 
-    let baseAtk = parseFloat(document.getElementById('resultDisplay').innerText) || 321;
-    let finalEquipStat = parseFloat(document.getElementById('equipStatDisplay').innerText) || 0;
+    // 讀取第二類算出來的純裝備屬性（若無則設為0）
+    const elEquipDisplay = document.getElementById('equipStatDisplay');
+    let finalEquipStat = elEquipDisplay ? (parseFloat(elEquipDisplay.innerText) || 0) : 0;
+
+    let currentTotalAtk = Math.floor(baseAtk * (1 + percentAtk));
 
     // 方案 A：增加 %屬
     const statIncrementPercent = Math.floor(finalEquipStat * (customStatPercent / 100));
     const newMainStatPercent = mainStat + statIncrementPercent;
     const newStatFactorPercent = (newMainStatPercent * 4 + subStat) / 100;
-    let currentTotalAtkA = Math.floor(baseAtk * (1 + percentAtk));
-    let newMaxAtkPercent = Math.round(currentTotalAtkA * coeff * newStatFactorPercent);
+    let newMaxAtkPercent = Math.floor(currentTotalAtk * coeff * newStatFactorPercent);
     
     // 方案 B：增加 固定屬
     const statIncrementValue = Math.floor(customStatValue * (1 + statPercent));
     const newMainStatValue = mainStat + statIncrementValue;
     const newStatFactorValue = (newMainStatValue * 4 + subStat) / 100;
-    let currentTotalAtkB = Math.floor(baseAtk * (1 + percentAtk));
-    let newMaxAtkValue = Math.round(currentTotalAtkB * coeff * newStatFactorValue);
+    let newMaxAtkValue = Math.floor(currentTotalAtk * coeff * newStatFactorValue);
 
     document.getElementById('lblSimStatPercent').innerText = `模擬後最大表攻 (+${customStatPercent}%)`;
     document.getElementById('lblSimStatValue').innerText = `模擬後最大表攻 (+${customStatValue} 屬)`;
