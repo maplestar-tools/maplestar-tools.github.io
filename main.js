@@ -72,7 +72,7 @@ window.switchTab = function(tabId) {
     });
 }
 
-// 🧮 第一類：基礎攻擊力反推（精準優化版）
+// 🧮 第一類：基礎攻擊力反推（遊戲同步捨去版）
 function calculateBaseAtk() {
     const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
@@ -80,6 +80,7 @@ function calculateBaseAtk() {
     const percentAtk = (parseFloat(document.getElementById('percentAtk').value) || 0) / 100;
     const coeff = parseFloat(document.getElementById('coeff').value);
     
+    // 遊戲中的能力值基底通常是整數
     const statFactor = (mainStat * 4 + subStat) / 100;
     
     if (statFactor === 0 || coeff === 0) {
@@ -87,15 +88,15 @@ function calculateBaseAtk() {
         return;
     }
     
-    // 修正點：全程不進行任何提早取整，保留高精度浮點數
+    // 反推總攻擊力與乾淨基礎攻擊力
     const totalAtk = maxAtk / coeff / statFactor;
     const baseAtk = totalAtk / (1 + percentAtk);
     
-    // 最後輸出時再使用四捨五入。如果遊戲公式有特殊的無條件捨去，也可以改用 Math.floor
-    document.getElementById('resultDisplay').innerText = Math.round(baseAtk);
+    // 💡 修正點：改用 Math.floor（無條件捨去），並補上 0.0001 防止浮點數精準度往下掉
+    document.getElementById('resultDisplay').innerText = Math.floor(baseAtk + 0.0001);
 }
 
-// 🧮 第二類：裝備純屬性反推（精準優化版）
+// 🧮 第二類：裝備純屬性反推（遊戲同步捨去版）
 function calculateEquipStat() {
     const elTotal = document.getElementById('statTotal');
     const elBase = document.getElementById('statBaseOnly');
@@ -108,16 +109,16 @@ function calculateEquipStat() {
     const statBaseOnly = parseFloat(elBase.value) || 0;
     const statPercent = (parseFloat(elPercent.value) || 0) / 100;
 
-    // 修正點：移除中間的變數截斷，一氣呵成計算
+    // 反推純裝備屬性
     const rawEquipStat = (statTotal / (1 + statPercent)) - statBaseOnly;
     
-    // 加上 0.00001 修正微小的浮點數二進位制誤差（JavaScript 經典難題）
-    const finalEquipStat = Math.max(0, Math.round(rawEquipStat + 0.00001));
+    // 💡 修正點：同步改為 Math.floor
+    const finalEquipStat = Math.max(0, Math.floor(rawEquipStat + 0.0001));
     
     elDisplay.innerText = finalEquipStat;
 }
 
-// 🧮 第三類：攻擊力邊際效益模擬
+// 🧮 第三類：攻擊力邊際效益模擬（遊戲同步捨去版）
 function simulateAtkBenefit() {
     const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
@@ -132,20 +133,21 @@ function simulateAtkBenefit() {
     const customAtkValue = parseFloat(document.getElementById('simAtkValueInput').value) || 0;
 
     const totalAtk = maxAtk / coeff / statFactor;
-    const baseAtk = totalAtk / (1 + percentAtk); // 核心乾淨攻擊（高精度浮點數）
+    const baseAtk = totalAtk / (1 + percentAtk); 
 
+    // 模擬實際面板：遊戲公式中，最後的面板總值會被無條件捨去
     const simAtkPercent = baseAtk * (1 + percentAtk + (customAtkPercent / 100));
     const simAtkValue = (baseAtk + customAtkValue) * (1 + percentAtk);
 
     document.getElementById('lblSimAtkPercent').innerText = `額外 +${customAtkPercent}% 攻擊力`;
     document.getElementById('lblSimAtkValue').innerText = `額外 +${customAtkValue} 固定攻擊`;
 
-    // 最後一步才四捨五入
-    document.getElementById('atkSimPercent').innerText = Math.round(simAtkPercent + 0.00001);
-    document.getElementById('atkSimValue').innerText = Math.round(simAtkValue + 0.00001);
+    // 💡 修正點：輸出全面改為 Math.floor
+    document.getElementById('atkSimPercent').innerText = Math.floor(simAtkPercent + 0.0001);
+    document.getElementById('atkSimValue').innerText = Math.floor(simAtkValue + 0.0001);
 }
 
-// 🧮 第三類：主屬性邊際效益模擬
+// 🧮 第三類：主屬性邊際效益模擬（遊戲同步捨去版）
 function simulateStatBenefit() {
     const elTotal = document.getElementById('statTotal');
     const elBase = document.getElementById('statBaseOnly');
@@ -160,17 +162,18 @@ function simulateStatBenefit() {
     const customStatPercent = parseFloat(document.getElementById('simStatPercentInput').value) || 0;
     const customStatValue = parseFloat(document.getElementById('simStatValueInput').value) || 0;
 
-    // 保留最精準的純裝備屬性浮點數
     const finalEquipStat = (statTotal / (1 + statPercent)) - statBaseOnly;
 
+    // 模擬實際面板
     const simStatPercent = (statBaseOnly + finalEquipStat) * (1 + statPercent + (customStatPercent / 100));
     const simStatValue = (statBaseOnly + finalEquipStat + customStatValue) * (1 + statPercent);
 
     document.getElementById('lblSimStatPercent').innerText = `額外 +${customStatPercent}% 主屬性`;
     document.getElementById('lblSimStatValue').innerText = `額外 +${customStatValue} 固定主屬`;
 
-    document.getElementById('statSimPercent').innerText = Math.round(simStatPercent + 0.00001);
-    document.getElementById('statSimValue').innerText = Math.round(simStatValue + 0.00001);
+    // 💡 修正點：輸出全面改為 Math.floor
+    document.getElementById('statSimPercent').innerText = Math.floor(simStatPercent + 0.0001);
+    document.getElementById('statSimValue').innerText = Math.floor(simStatValue + 0.0001);
 }
 
 // 🎯 用 DOMContentLoaded 安全掛載所有按鈕監聽器
