@@ -72,7 +72,7 @@ window.switchTab = function(tabId) {
     });
 }
 
-// 🧮 第一類：基礎攻擊力反推（楓星純淨補償版）
+// 🧮 第一類：基礎攻擊力反推（精準對齊版）
 function calculateBaseAtk() {
     const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
@@ -87,15 +87,15 @@ function calculateBaseAtk() {
         return;
     }
     
-    // 💡 修正核心：因為 maxAtk 被遊戲捨去過，我們反推總表攻時，加上 0.5 補償誤差
-    const totalAtk = (maxAtk + 0.5) / coeff / statFactor;
+    // 改回最穩定的無條件捨去反推補償，還原最真實的整數基礎攻擊力
+    const totalAtk = maxAtk / coeff / statFactor;
     const baseAtk = totalAtk / (1 + percentAtk);
     
-    // 還原乾淨攻擊力（通常裝備上的攻擊力總和是整數，用 round 最穩）
-    document.getElementById('resultDisplay').innerText = Math.round(baseAtk);
+    // 透過加上 0.05 進行微調，確保 149.999 這種浮點數被正確歸位到 150
+    document.getElementById('resultDisplay').innerText = Math.floor(baseAtk + 0.05);
 }
 
-// 🧮 第二類：裝備純屬性反推（楓星純淨補償版）
+// 🧮 第二類：裝備純屬性反推
 function calculateEquipStat() {
     const elTotal = document.getElementById('statTotal');
     const elBase = document.getElementById('statBaseOnly');
@@ -108,9 +108,9 @@ function calculateEquipStat() {
     const statBaseOnly = parseFloat(elBase.value) || 0;
     const statPercent = (parseFloat(elPercent.value) || 0) / 100;
 
-    // 💡 修正核心：總屬性本身是整數，反推時加上微小補償防止被二進位制截斷
-    const rawEquipStat = ((statTotal + 0.5) / (1 + statPercent)) - statBaseOnly;
-    const finalEquipStat = Math.max(0, Math.floor(rawEquipStat));
+    // 反推純裝備屬性
+    const rawEquipStat = (statTotal / (1 + statPercent)) - statBaseOnly;
+    const finalEquipStat = Math.max(0, Math.floor(rawEquipStat + 0.05));
     
     elDisplay.innerText = finalEquipStat;
 }
@@ -132,35 +132,34 @@ function simulateAtkBenefit() {
     const customAtkPercent = parseFloat(document.getElementById('simAtkPercentInput').value) || 0;
     const customAtkValue = parseFloat(document.getElementById('simAtkValueInput').value) || 0;
 
-    // 1. 還原出高精度的乾淨基礎攻擊力（含中線補償）
-    const totalAtk = (maxAtk + 0.5) / coeff / statFactor;
-    const baseAtk = totalAtk / (1 + percentAtk); 
+    // 重新取得第一類算出的「乾淨基礎攻擊力（整數）」作為絕對基準
+    const baseAtk = Math.floor((maxAtk / coeff / statFactor) / (1 + percentAtk) + 0.05); 
 
-    // 2. 方案 A：只增加 %攻，計算出「新的最大表攻」
+    // 方案 A：只增加 %攻
     const newMaxAtkPercent = baseAtk * (1 + percentAtk + (customAtkPercent / 100)) * coeff * statFactor;
     
-    // 3. 方案 B：只增加固定攻，計算出「新的最大表攻」
+    // 方案 B：只增加固定攻
     const newMaxAtkValue = (baseAtk + customAtkValue) * (1 + percentAtk) * coeff * statFactor;
 
-    // 4. 動態更新標籤文字
+    // 更新標籤
     document.getElementById('lblSimAtkPercent').innerText = `模擬後最大表攻 (+${customAtkPercent}%)`;
     document.getElementById('lblSimAtkValue').innerText = `模擬後最大表攻 (+${customAtkValue} 攻)`;
 
-    // 5. 輸出結果（模擬楓之谷面板，無條件捨去）
+    // 輸出（無條件捨去）
     document.getElementById('atkSimPercent').innerText = Math.floor(newMaxAtkPercent);
     document.getElementById('atkSimValue').innerText = Math.floor(newMaxAtkValue);
 }
 
 // 🧮 第三類：模擬屬性提升後的「全新最大表攻」
 function simulateStatBenefit() {
-    // 連動第一類的攻擊力基底
+    // 1. 抓取第一欄（攻擊力）的所有面板基底
     const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
     const maxAtk = parseFloat(document.getElementById('maxAtk').value) || 0;
     const percentAtk = (parseFloat(document.getElementById('percentAtk').value) || 0) / 100;
     const coeff = parseFloat(document.getElementById('coeff').value);
 
-    // 連動第二類的屬性基底
+    // 2. 抓取第二欄（屬性）的所有面板基底
     const elTotal = document.getElementById('statTotal');
     const elBase = document.getElementById('statBaseOnly');
     const elPercent = document.getElementById('statPercent');
@@ -177,28 +176,30 @@ function simulateStatBenefit() {
     const customStatPercent = parseFloat(document.getElementById('simStatPercentInput').value) || 0;
     const customStatValue = parseFloat(document.getElementById('simStatValueInput').value) || 0;
 
-    // 1. 還原高精度純裝備屬性與純攻擊力
-    const rawEquipStat = ((statTotal + 0.5) / (1 + statPercent)) - statBaseOnly;
-    const finalEquipStat = Math.max(0, rawEquipStat);
-    
-    const totalAtk = (maxAtk + 0.5) / coeff / ((mainStat * 4 + subStat) / 100);
-    const baseAtk = totalAtk / (1 + percentAtk);
+    // 3. 還原精準的乾淨基礎攻擊力（整數）
+    const baseAtk = Math.floor((maxAtk / coeff / ((mainStat * 4 + subStat) / 100)) / (1 + percentAtk) + 0.05);
 
-    // 2. 方案 A：只增加 %屬，計算出「新主屬」，並推回「新表攻」
-    const newMainStatPercent = Math.floor(finalEquipStat * (1 + statPercent + (customStatPercent / 100))) + statBaseOnly;
+    // 4. 💡 解決少很多的關鍵：直接對「主屬性要素（mainStat）」進行增量模擬，不拆解公式
+    
+    // 方案 A（增加 %屬）：新增的主屬性 = 原本總主屬 + (原本總主屬 - 基礎AP) * (新增% / 當前總屬%)
+    // 如果嫌上面太複雜，直接用最穩健的：原本總主屬直接加上洗出來的增量
+    const rawEquipStat = Math.floor((statTotal / (1 + statPercent)) - statBaseOnly + 0.05);
+    
+    // 重新計算加入「新增%屬」後的新總主屬性
+    const newMainStatPercent = mainStat + Math.floor(rawEquipStat * (customStatPercent / 100));
     const newStatFactorPercent = (newMainStatPercent * 4 + subStat) / 100;
     const newMaxAtkPercent = baseAtk * (1 + percentAtk) * coeff * newStatFactorPercent;
     
-    // 3. 方案 B：只增加固定屬，計算出「新主屬」，並推回「新表攻」
-    const newMainStatValue = Math.floor((finalEquipStat + customStatValue) * (1 + statPercent)) + statBaseOnly;
+    // 方案 B（增加 固定屬）：新總主屬 = 原本總主屬 + (新增固定屬性 * (1 + 當前總屬%))
+    const newMainStatValue = mainStat + Math.floor(customStatValue * (1 + statPercent));
     const newStatFactorValue = (newMainStatValue * 4 + subStat) / 100;
     const newMaxAtkValue = baseAtk * (1 + percentAtk) * coeff * newStatFactorValue;
 
-    // 4. 動態更新標籤文字
+    // 更新標籤文字
     document.getElementById('lblSimStatPercent').innerText = `模擬後最大表攻 (+${customStatPercent}%)`;
     document.getElementById('lblSimStatValue').innerText = `模擬後最大表攻 (+${customStatValue} 屬)`;
 
-    // 5. 輸出結果（無條件捨去）
+    // 輸出（無條件捨去）
     document.getElementById('statSimPercent').innerText = Math.floor(newMaxAtkPercent);
     document.getElementById('statSimValue').innerText = Math.floor(newMaxAtkValue);
 }
