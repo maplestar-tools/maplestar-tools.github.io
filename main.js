@@ -66,3 +66,51 @@ window.switchTab = function(tabId) {
         if (btn.getAttribute('onclick').includes(tabId)) { btn.classList.add('active'); }
     });
 }
+// 🔄 切換職業類型 (物理 / 魔法)
+window.toggleJob = function(type) {
+    const weaponGroup = document.getElementById('weaponGroup');
+    const lblMain = document.getElementById('lblMain');
+    const lblSub = document.getElementById('lblSub');
+    const resTitle = document.getElementById('resTitle');
+    
+    if (type === 'magic') {
+        weaponGroup.style.display = 'none';
+        lblMain.innerText = '主屬性 (智力 INT)';
+        lblSub.innerText = '副屬性 (幸運 LUK)';
+        resTitle.innerText = '反推純淨基礎魔法攻擊力';
+    } else {
+        weaponGroup.style.display = 'block';
+        lblMain.innerText = '主屬性 (STR / DEX / LUK)';
+        lblSub.innerText = '副屬性 (DEX / STR)';
+        resTitle.innerText = '反推純淨基礎物理攻擊力';
+    }
+}
+
+// 🧮 核心演算法：反推乾淨攻擊力
+window.calculateBaseAtk = function() {
+    const jobType = document.querySelector('input[name="jobType"]:checked').value;
+    const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
+    const subStat = parseFloat(document.getElementById('subStat').value) || 0;
+    const maxAtk = parseFloat(document.getElementById('maxAtk').value) || 0;
+    const percentAtk = (parseFloat(document.getElementById('percentAtk').value) || 0) / 100;
+    
+    let coeff = 1.0;
+    if (jobType === 'physical') {
+        coeff = parseFloat(document.getElementById('coeff').value);
+    }
+    
+    // 計算屬性基底
+    const statFactor = (mainStat * 4 + subStat) / 100;
+    
+    if (statFactor === 0 || coeff === 0) {
+        alert("請輸入正確的能力值！");
+        return;
+    }
+    
+    // 反推總攻擊力，再扣除 %攻 的加成
+    const totalAtk = maxAtk / coeff / statFactor;
+    const baseAtk = totalAtk / (1 + percentAtk);
+    
+    // 四捨五入輸出
+    document.getElementById('resultDisplay').innerText = Math.round(baseAtk);
+}
