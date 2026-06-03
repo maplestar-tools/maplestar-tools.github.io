@@ -19,14 +19,14 @@
         
         <div id="home" class="tab-content tab-narrow active">
             <h3>歡迎來到楓星工具箱！</h3>
-            <p>專為楓之谷玩家打造的便利小工具基地。</p>
+            <p>專為楓星玩家打造的便利小工具基地。</p>
 
             <div class="cloud-box">
                 <h4>💾 雲端進度同步（免註冊）</h4>
                 <p>輸入你自訂的「自訂字串」，就能在雲端儲存或讀取你的工具箱設定喔！</p>
                 <input type="text" id="userKeyCode" class="cloud-input" placeholder="例如：maple123">
                 <button class="cloud-btn load" onclick="loadFromCloud()">📥 讀取進度</button>
-                <button class="cloud-btn" onclick="saveToCloud()">📤 儲存測試資料</button>
+                <button class="cloud-btn" onclick="saveToCloud()">📤 儲存資料</button>
                 <p id="cloudStatus" style="color: #64b5f6; font-weight: bold; margin-top: 10px;"></p>
             </div>
         </div>
@@ -36,24 +36,37 @@
             
             <div class="calc-card settings-card">
                 <h4 class="title-blue">⚙️ 基礎設定 (個人雲端)</h4>
-                <p class="card-desc">設定匯率與方塊價格，作為所有分紅的計算基準。</p>
+                <p class="card-desc">匯率設定後會自動儲存，下方價格將隨里程匯率即時變動。</p>
                 
                 <div class="sim-input-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: end;">
                     <div class="form-group">
-                        <label>1000萬換算里程</label>
+                        <label style="font-size: 13px;">1000萬楓幣換算里程</label>
                         <input type="number" id="moneyToMileage" class="cloud-input" value="10000">
                     </div>
                     <div class="form-group">
-                        <label>奇幻方塊價格(萬)</label>
+                        <label style="font-size: 13px;">奇幻方塊價格(萬)</label>
                         <input type="number" id="cubeFancyPrice" class="cloud-input" value="500">
                     </div>
                     <div class="form-group">
-                        <label>可疑的方塊價格(萬)</label>
+                        <label style="font-size: 13px;">可疑的方塊價格(萬)</label>
                         <input type="number" id="cubeSuspiciousPrice" class="cloud-input" value="50">
                     </div>
                 </div>
-                
-                <button onclick="saveSettlementRates()" class="calc-btn btn-blue" style="margin-top: 15px; width: 100%;">儲存設定至雲端</button>
+
+                <div style="margin-top: 20px; background: #252525; padding: 15px; border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center;">
+                    <div>
+                        <div style="font-size: 11px; color: #aaa;">白金剪刀(楓幣)</div>
+                        <div id="pricePlatinum" style="font-size: 14px; font-weight: bold; color: #64b5f6;">0 億</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: #aaa;">一般剪刀(楓幣)</div>
+                        <div id="priceNormal" style="font-size: 14px; font-weight: bold; color: #64b5f6;">0 億</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: #aaa;">雪花 11個(楓幣)</div>
+                        <div id="priceSnow" style="font-size: 14px; font-weight: bold; color: #64b5f6;">0 萬</div>
+                    </div>
+                </div>
             </div>
         </div>
 

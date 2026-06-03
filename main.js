@@ -13,53 +13,86 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// ==========================================
-// 🛡️ 團隊分紅系統：基礎設定 (儲存功能)
-// ==========================================
+// ==========================================================================
+// 🛡️ 團隊分紅系統：基礎功能與自動同步邏輯
+// ==========================================================================
+
+// 1. 即時計算價格 (不需登入即可使用)
+function updateDynamicPrices() {
+    const mileageRatio = parseFloat(document.getElementById('moneyToMileage').value) || 10000;
+    const getPrice = (mileage) => (mileage / mileageRatio) * 1000;
+
+    document.getElementById('pricePlatinum').innerText = (getPrice(7100) / 10000).toFixed(2) + " 億";
+    document.getElementById('priceNormal').innerText = (getPrice(3900) / 10000).toFixed(2) + " 億";
+    document.getElementById('priceSnow').innerText = Math.round(getPrice(3500)) + " 萬";
+}
+
+// 2. 自動儲存邏輯 (有代碼時才執行)
+async function triggerAutoSave() {
+    updateDynamicPrices();
+    const keyCode = document.getElementById('userKeyCode').value.trim();
+    if (!keyCode) return;
+    await saveSettlementRates();
+}
+
+// 3. 基礎設定儲存
 window.saveSettlementRates = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) { alert('請先輸入代碼！'); return; }
+    if (!keyCode) return;
 
     const ratesData = {
-        moneyToMileage: parseFloat(document.getElementById('moneyToMileage').value) || 10000,
-        cubeFancyPrice: parseFloat(document.getElementById('cubeFancyPrice').value) || 500,
-        cubeSuspiciousPrice: parseFloat(document.getElementById('cubeSuspiciousPrice').value) || 50
+        moneyToMileage: parseFloat(document.getElementById('moneyToMileage').value),
+        cubeFancyPrice: parseFloat(document.getElementById('cubeFancyPrice').value),
+        cubeSuspiciousPrice: parseFloat(document.getElementById('cubeSuspiciousPrice').value)
     };
 
     try {
-        // 使用 merge: true，這會確保只更新 settlementRates 欄位，而不會影響你其他儲存的資料
         await setDoc(doc(db, "player_data", keyCode), { settlementRates: ratesData }, { merge: true });
-        
-        // 提示語已修正為更通用，不會誤導成只存了匯率
-        alert("✅ 基礎設定已成功更新至雲端！");
+        console.log("✅ 基礎設定已同步");
     } catch (error) {
-        console.error("儲存失敗：", error);
-        alert("❌ 儲存失敗，請檢查網路連線。");
+        console.error("❌ 儲存失敗：", error);
     }
 };
 
+// 4. 讀取資料
 window.loadFromCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
-    const statusText = document.getElementById('cloudStatus');
-    if (!keyCode) { alert('請先輸入你要讀取的自訂字串（代碼）！'); return; }
+    if (!keyCode) { alert('請先輸入代碼！'); return; }
     try {
         const docRef = doc(db, "player_data", keyCode);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             const data = docSnap.data();
-            alert(`【讀取成功！】\n代碼：${data.userCode}\n最後存檔時間：${data.lastSaveTime}`);
+            // 如果有儲存過基礎設定，讀取並顯示
+            if (data.settlementRates) {
+                document.getElementById('moneyToMileage').value = data.settlementRates.moneyToMileage;
+                document.getElementById('cubeFancyPrice').value = data.settlementRates.cubeFancyPrice;
+                document.getElementById('cubeSuspiciousPrice').value = data.settlementRates.cubeSuspiciousPrice;
+                updateDynamicPrices(); // 讀取後更新價格
+            }
+            alert("📥 資料讀取成功！");
         } else {
-            alert("找不到這個代碼的資料！");
+            alert("⚠️ 找不到該代碼的資料。");
         }
     } catch (error) { console.error("讀取失敗：", error); }
-}
+};
 
+// 5. 分頁切換
 window.switchTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
     document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
 }
+
+// 6. 網頁載入初始化
+document.addEventListener('DOMContentLoaded', () => {
+    ['moneyToMileage', 'cubeFancyPrice', 'cubeSuspiciousPrice'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', triggerAutoSave);
+    });
+    updateDynamicPrices();
+});
 
 // 🧮 第一類：基礎攻擊力反推
 function calculateBaseAtk() {
