@@ -93,7 +93,7 @@ window.loadFromCloud = async function() {
    ⚙️ 2. 團隊分紅：基礎設定與計算
    ========================================================================== */
 // A. 專門負責「算數字」的 (給 oninput 用)
-function updateDynamicPrices() {
+window.updateDynamicPrices = function() {
     const mileageRatio = parseFloat(document.getElementById('moneyToMileage').value) || 10000;
     const getPriceInWan = (mileage) => ((mileage / mileageRatio) * 1000).toFixed(1);
     document.getElementById('priceFancy').innerText = getPriceInWan(3900);
@@ -117,6 +117,19 @@ window.autoSaveRates = async function() {
     } catch (e) { console.error("自動儲存失敗", e); }
 };
 
+let saveTimer; // 在檔案最外層宣告一個計時器變數
+
+window.runUpdateAndSave = function() {
+    // 1. 即時更新價格 (這是純計算，立刻執行)
+    window.updateDynamicPrices();
+
+    // 2. 防抖邏輯：儲存的部分延遲執行
+    clearTimeout(saveTimer); // 如果還在輸入中，清除上一次的計時
+    saveTimer = setTimeout(() => {
+        window.autoSaveRates(); // 停止輸入 1 秒後才執行存檔
+        console.log("✅ 已延遲自動儲存至雲端");
+    }, 5000); // 1000 毫秒 = 1 秒
+};
 /* ==========================================================================
    👥 3. 團隊分紅：共用隊員管理區
    ========================================================================== */

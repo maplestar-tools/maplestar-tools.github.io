@@ -41,17 +41,15 @@
                 <div class="sim-input-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: end;">
                     <div class="form-group">
                         <label>1000萬楓幣換算里程</label>
-                        <input type="number" id="moneyToMileage" class="cloud-input" value="10000" 
-                            oninput="updateDynamicPrices()" 
-                            onchange="autoSaveRates()">
+                        <input type="number" id="moneyToMileage" class="cloud-input" value="10000" oninput="runUpdateAndSave()">
                     </div>
                     <div class="form-group">
                         <label>奇幻方塊價格(萬)</label>
-                        <input type="number" id="cubeFancyPrice" class="cloud-input" value="0" onchange="autoSaveRates()">
+                        <input type="number" id="cubeFancyPrice" class="cloud-input" value="500" oninput="runUpdateAndSave()">
                     </div>
                     <div class="form-group">
                         <label>可疑的方塊價格(萬)</label>
-                        <input type="number" id="cubeSuspiciousPrice" class="cloud-input" value="0" onchange="autoSaveRates()">
+                        <input type="number" id="cubeSuspiciousPrice" class="cloud-input" value="50" oninput="runUpdateAndSave()">
                     </div>
                 </div>
 
