@@ -141,7 +141,10 @@ function renderMembers() {
                     <input type="number" value="${member.ratio}" class="cloud-input" onchange="updateMemberData(${index}, 'ratio', parseFloat(this.value))">
                 </td>
                 <td style="text-align: center;">
-                    <button onclick="removeMember(${index})" class="calc-btn btn-red" style="width: 35px; height: 35px; padding: 0; line-height: 35px; font-weight:bold;">X</button>
+                <button onclick="removeMember(${index})" class="calc-btn btn-red" 
+                    style="width: 35px; height: 35px; padding: 0; line-height: 35px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;">
+                    X
+                </button>
                 </td>
             </tr>
         `;
