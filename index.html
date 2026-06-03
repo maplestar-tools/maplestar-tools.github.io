@@ -33,14 +33,27 @@
 
         <div id="money-split" class="tab-content tab-narrow">
             <h3>💰 團隊分紅計算</h3>
-            <div class="card" style="margin: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
-                <h3>⚙️ 基礎設定 (個人雲端)</h3>
-                <div style="display: flex; gap: 15px; margin-bottom: 10px;">
-                    <label>1000萬楓幣換算里程: <input type="number" id="moneyToMileage" value="10000" style="width: 80px;"></label>
-                    <label>奇幻方塊價格(萬): <input type="number" id="cubeFancyPrice" value="500" style="width: 80px;"></label>
-                    <label>可疑方塊價格(萬): <input type="number" id="cubeSuspiciousPrice" value="50" style="width: 80px;"></label>
+            
+            <div class="calc-card">
+                <h4 class="title-blue">⚙️ 基礎設定 (個人雲端)</h4>
+                <p class="card-desc">設定匯率與方塊價格，作為所有分紅的計算基準。</p>
+                
+                <div class="sim-input-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px;">
+                    <div class="form-group">
+                        <label>1000萬換算里程</label>
+                        <input type="number" id="moneyToMileage" class="cloud-input" value="10000">
+                    </div>
+                    <div class="form-group">
+                        <label>奇幻方塊價格(萬)</label>
+                        <input type="number" id="cubeFancyPrice" class="cloud-input" value="500">
+                    </div>
+                    <div class="form-group">
+                        <label>可疑的方塊價格(萬)</label>
+                        <input type="number" id="cubeSuspiciousPrice" class="cloud-input" value="50">
+                    </div>
                 </div>
-                <button onclick="saveSettlementRates()">儲存設定至雲端</button>
+                
+                <button onclick="saveSettlementRates()" class="calc-btn btn-blue" style="margin-top: 15px; width: 100%;">儲存設定至雲端</button>
             </div>
         </div>
 
