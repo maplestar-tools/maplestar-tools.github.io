@@ -14,22 +14,23 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // ==========================================================================
-// 🛡️ 團隊分紅系統：完整整合邏輯
+// 🛡️ 團隊分紅系統：完整整合邏輯 (修正版)
 // ==========================================================================
 
-// 1. 自動計算價格 (保留小數點後一位)
+// 1. 即時計算價格 (修改邏輯：正確顯示萬位楓幣)
 function updateDynamicPrices() {
     const mileageRatio = parseFloat(document.getElementById('moneyToMileage').value) || 10000;
     
-    // 計算函數：(目標里程 / 比例) * 1000萬楓幣，再換算成「萬楓幣」
-    const getPriceInWan = (mileage) => ((mileage / mileageRatio) * 1000 * 1000 / 10000).toFixed(1);
+    // 公式：(目標里程 / 10000里程) * 1000萬楓幣
+    // 例如：3900里程 / 10000 * 1000萬 = 390萬
+    const getPriceInWan = (mileage) => ((mileage / mileageRatio) * 1000).toFixed(1);
 
-    document.getElementById('pricePlatinum').innerText = getPriceInWan(7100);
-    document.getElementById('priceNormal').innerText = getPriceInWan(3900);
-    document.getElementById('priceSnow').innerText = getPriceInWan(3500 / 11);
+    document.getElementById('priceFancy').innerText = getPriceInWan(3900); // 神奇剪刀
+    document.getElementById('pricePlatinum').innerText = getPriceInWan(7100); // 白金剪刀
+    document.getElementById('priceSnow').innerText = getPriceInWan(3500 / 11); // 雪花
 }
 
-// 2. 核心儲存功能 (首頁按鈕與自動同步共用)
+// 2. 核心儲存功能 (首頁按鈕用)
 window.saveToCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
     if (!keyCode) { alert('請輸入代碼！'); return; }
@@ -49,10 +50,10 @@ window.saveToCloud = async function() {
     } catch (e) { alert("儲存失敗：" + e.message); }
 };
 
-// 3. 自動同步邏輯 (在基礎設定變更時自動觸發)
+// 3. 自動同步 (基礎設定變更時觸發)
 window.saveSettlementRates = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) return; // 沒登入就不自動存
+    if (!keyCode) return;
     
     const ratesData = {
         moneyToMileage: parseFloat(document.getElementById('moneyToMileage').value),
@@ -62,25 +63,18 @@ window.saveSettlementRates = async function() {
     await setDoc(doc(db, "player_data", keyCode), { settlementRates: ratesData }, { merge: true });
 };
 
-// 4. 讀取功能
-window.loadFromCloud = async function() {
-    const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) { alert('請先輸入代碼！'); return; }
-    try {
-        const docRef = doc(db, "player_data", keyCode);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            if (data.settlementRates) {
-                document.getElementById('moneyToMileage').value = data.settlementRates.moneyToMileage;
-                document.getElementById('cubeFancyPrice').value = data.settlementRates.cubeFancyPrice;
-                document.getElementById('cubeSuspiciousPrice').value = data.settlementRates.cubeSuspiciousPrice;
-                updateDynamicPrices();
-            }
-            alert("📥 讀取成功！");
-        } else { alert("⚠️ 找不到該代碼資料。"); }
-    } catch (error) { console.error("讀取失敗：", error); }
-};
+// 4. 初始化與自動監聽 (使用 'input' 事件讓反應最靈敏)
+document.addEventListener('DOMContentLoaded', () => {
+    const inputs = ['moneyToMileage', 'cubeFancyPrice', 'cubeSuspiciousPrice'];
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', () => {
+            updateDynamicPrices();
+            saveSettlementRates();
+        });
+    });
+    updateDynamicPrices();
+});
 
 // 5. 初始化與自動監聽
 document.addEventListener('DOMContentLoaded', () => {
