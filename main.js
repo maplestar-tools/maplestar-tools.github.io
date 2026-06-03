@@ -23,11 +23,26 @@ window.switchTab = function(tabId) {
     document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
 };
 
-// 摺疊功能
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. 強制顯示第一個分頁 (確保不是空的)
+    const firstTab = document.querySelector('.tab-content');
+    const firstBtn = document.querySelector('.tab-btn');
+    if (firstTab) firstTab.classList.add('active');
+    if (firstBtn) firstBtn.classList.add('active');
+
+    // 2. 初始化計算與讀取
+    updateDynamicPrices();
+    window.loadSharedMembers();
+});
+
+// 摺疊功能 (最單純的寫法，確保不報錯)
 window.toggleSection = function(el) {
     const content = document.getElementById('member-section');
-    if (content.style.maxHeight) {
-        content.style.maxHeight = null;
+    if (!content) return;
+    
+    // 判斷是否為展開狀態 (用 display 判斷更穩定)
+    if (content.style.maxHeight && content.style.maxHeight !== '0px') {
+        content.style.maxHeight = '0px';
         el.querySelector('span').innerText = '▼';
     } else {
         content.style.maxHeight = content.scrollHeight + "px";
