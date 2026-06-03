@@ -356,7 +356,3 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnCalcEquipStat').addEventListener('click', calculateEquipStat);
     document.getElementById('btnCalcFinal').addEventListener('click', calculateFinalAtk);
 });
-// 測試用，重新整理網頁後，看右下角是否會出現測試提示
-setTimeout(() => {
-    showToast("測試系統是否運作中...");
-}, 2000);
