@@ -74,7 +74,7 @@
                     👥 隊員分紅表格 (共用雲端) <span>▼</span>
                 </h4>
                 
-                <div class="collapsible-content">
+                <div id="member-section" style="overflow: hidden; transition: max-height 0.3s ease-out; max-height: 1000px;">
                     <p class="card-desc">在表格中進行編輯，確認後請點擊「新增至雲端」按鈕。</p>
                     
                     <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
@@ -86,8 +86,7 @@
                                 <th style="text-align: center; padding: 8px; width: 60px;">刪除</th>
                             </tr>
                         </thead>
-                        <tbody id="member-table-body">
-                            </tbody>
+                        <tbody id="member-table-body"></tbody>
                     </table>
                     
                     <div style="display: flex; gap: 10px;">
@@ -96,7 +95,6 @@
                     </div>
                 </div>
             </div>
-        </div>
 
         <div id="equip-calc" class="tab-content">
             <h3>⚔️ 裝備綜合計算工具</h3>

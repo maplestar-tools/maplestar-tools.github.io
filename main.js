@@ -14,7 +14,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 /* ==========================================================================
-   🧱 1. 全域/系統功能區
+   🧱 1. 全域/系統功能區 (包含首頁的存檔與讀取)
    ========================================================================== */
 window.switchTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -23,14 +23,35 @@ window.switchTab = function(tabId) {
     document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
 };
 
-// 展開/收合功能
+// 摺疊功能
 window.toggleSection = function(el) {
-    const content = el.nextElementSibling;
-    const isHidden = content.style.display === 'none';
-    content.style.display = isHidden ? 'block' : 'none';
-    el.querySelector('span').innerText = isHidden ? '▼' : '▲';
+    const content = document.getElementById('member-section');
+    if (content.style.maxHeight) {
+        content.style.maxHeight = null;
+        el.querySelector('span').innerText = '▼';
+    } else {
+        content.style.maxHeight = content.scrollHeight + "px";
+        el.querySelector('span').innerText = '▲';
+    }
 };
 
+// 【首頁儲存按鈕】儲存個人設定
+window.saveSettlementRates = async function() {
+    const keyCode = document.getElementById('userKeyCode').value.trim();
+    if (!keyCode) { alert("請先輸入代碼！"); return; }
+    try {
+        await setDoc(doc(db, "player_data", keyCode), { 
+            settlementRates: {
+                moneyToMileage: parseFloat(document.getElementById('moneyToMileage').value),
+                cubeFancyPrice: parseFloat(document.getElementById('cubeFancyPrice').value),
+                cubeSuspiciousPrice: parseFloat(document.getElementById('cubeSuspiciousPrice').value)
+            } 
+        }, { merge: true });
+        alert("💾 個人設定已儲存！");
+    } catch (e) { alert("儲存失敗：" + e.message); }
+};
+
+// 【首頁讀取按鈕】讀取個人設定
 window.loadFromCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
     if (!keyCode) { alert('請先輸入代碼！'); return; }
@@ -44,19 +65,13 @@ window.loadFromCloud = async function() {
                 document.getElementById('cubeSuspiciousPrice').value = data.settlementRates.cubeSuspiciousPrice;
                 updateDynamicPrices();
             }
+            alert("📥 個人設定讀取成功！");
         }
-        // 讀取共用隊員清單
-        const sharedSnap = await getDoc(doc(db, "shared_data", "team_members"));
-        if (sharedSnap.exists()) {
-            window.members = sharedSnap.data().members || [];
-            renderMembers();
-        }
-        alert(`📥 讀取完成！`);
     } catch (e) { console.error("讀取失敗：", e); }
 };
 
 /* ==========================================================================
-   ⚙️ 2. 團隊分紅：基礎設定區
+   ⚙️ 2. 團隊分紅：基礎設定與計算
    ========================================================================== */
 function updateDynamicPrices() {
     const mileageRatio = parseFloat(document.getElementById('moneyToMileage').value) || 10000;
@@ -66,35 +81,52 @@ function updateDynamicPrices() {
     document.getElementById('priceSnow').innerText = getPriceInWan(3500 / 11);
 }
 
-window.saveSettlementRates = async function() {
-    const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) return;
-    await setDoc(doc(db, "player_data", keyCode), { 
-        settlementRates: {
-            moneyToMileage: parseFloat(document.getElementById('moneyToMileage').value),
-            cubeFancyPrice: parseFloat(document.getElementById('cubeFancyPrice').value),
-            cubeSuspiciousPrice: parseFloat(document.getElementById('cubeSuspiciousPrice').value)
-        } 
-    }, { merge: true });
+/* ==========================================================================
+   👥 3. 團隊分紅：共用隊員管理區
+   ========================================================================== */
+window.members = [];
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateDynamicPrices();
+    window.loadSharedMembers();
+});
+
+window.loadSharedMembers = async function() {
+    try {
+        const sharedSnap = await getDoc(doc(db, "shared_data", "team_members"));
+        if (sharedSnap.exists()) {
+            window.members = sharedSnap.data().members || [];
+            renderMembers();
+        }
+    } catch (e) { console.error("共用讀取失敗：", e); }
 };
 
-/* ==========================================================================
-   👥 3. 團隊分紅：共用隊員管理區 (改為直接在表格新增)
-   ========================================================================== */
+window.saveMembersToCloud = async function() {
+    const keyCode = document.getElementById('userKeyCode').value.trim();
+    if (!keyCode) { alert("🔒 尚未登入代碼，無法同步！"); return; }
+    try {
+        await setDoc(doc(db, "shared_data", "team_members"), { members: window.members }, { merge: false });
+        alert("✅ 共用名單已同步至雲端！");
+    } catch (e) { alert("同步失敗：" + e.message); }
+};
 
-// 新增一個空的隊員列到表格
 window.addMember = function() {
     window.members.push({ name: "", ratio: 1, checked: false });
     renderMembers();
 };
 
-// 更新名稱與比例的暫存
+window.removeMember = function(index) {
+    window.members.splice(index, 1);
+    renderMembers();
+};
+
 window.updateMemberData = function(index, field, value) {
     window.members[index][field] = value;
 };
 
 function renderMembers() {
     const tbody = document.getElementById('member-table-body');
+    if (!tbody) return;
     tbody.innerHTML = '';
     window.members.forEach((member, index) => {
         tbody.innerHTML += `
@@ -103,15 +135,13 @@ function renderMembers() {
                     <input type="checkbox" ${member.checked ? 'checked' : ''} onchange="window.members[${index}].checked = this.checked">
                 </td>
                 <td style="padding: 5px;">
-                    <input type="text" value="${member.name}" class="cloud-input" placeholder="輸入名稱..." 
-                    onchange="updateMemberData(${index}, 'name', this.value)">
+                    <input type="text" value="${member.name}" class="cloud-input" placeholder="名稱..." onchange="updateMemberData(${index}, 'name', this.value)">
                 </td>
                 <td style="padding: 5px;">
-                    <input type="number" value="${member.ratio}" class="cloud-input" 
-                    onchange="updateMemberData(${index}, 'ratio', parseFloat(this.value))">
+                    <input type="number" value="${member.ratio}" class="cloud-input" onchange="updateMemberData(${index}, 'ratio', parseFloat(this.value))">
                 </td>
                 <td style="text-align: center;">
-                    <button onclick="removeMember(${index})" class="calc-btn btn-red" style="padding: 5px 10px;">X</button>
+                    <button onclick="removeMember(${index})" class="calc-btn btn-red" style="width: 35px; height: 35px; padding: 0; line-height: 35px; font-weight:bold;">X</button>
                 </td>
             </tr>
         `;
