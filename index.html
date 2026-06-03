@@ -70,12 +70,26 @@
             </div>
 
             <div class="calc-card settings-card" style="margin-top: 20px;">
-                <h4 class="title-blue">👥 隊員分紅比例設定</h4>
-                <p class="card-desc">新增隊員並設定權重，系統將自動計算分紅。</p>
+                <h4 class="title-blue">👥 隊員分紅表格 (共用雲端)</h4>
+                <p class="card-desc">在表格中進行編輯，確認後請點擊「新增至雲端」按鈕。</p>
                 
-                <div id="member-list" style="margin-bottom: 15px;"></div>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid #444;">
+                            <th style="text-align: center; padding: 8px; width: 40px;">參加</th>
+                            <th style="text-align: left; padding: 8px;">名稱</th>
+                            <th style="text-align: left; padding: 8px; width: 80px;">比例</th>
+                            <th style="text-align: center; padding: 8px; width: 60px;">刪除</th>
+                        </tr>
+                    </thead>
+                    <tbody id="member-table-body">
+                        </tbody>
+                </table>
                 
-                <button onclick="addMember()" class="calc-btn btn-green">+ 新增隊員</button>
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="addMember()" class="calc-btn btn-green">+ 新增隊員</button>
+                    <button onclick="saveMembersToCloud()" class="calc-btn btn-blue">💾 新增至雲端</button>
+                </div>
             </div>
         </div>
 

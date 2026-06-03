@@ -84,55 +84,80 @@ window.saveToCloud = async function() {
 };
 
 /* ==========================================================================
-   👥 3. 團隊分紅：隊員名單管理區
+   👥 3. 團隊分紅：共用雲端隊員管理區
    ========================================================================== */
-window.members = [];
+window.members = []; // 這是從雲端讀取的共用清單
 
+// 新增隊員到網頁暫存表
 window.addMember = function() {
     const name = prompt("請輸入隊員名稱:");
     if (!name) return;
-    window.members.push({ name: name, ratio: 1 });
+    window.members.push({ name: name, ratio: 1, checked: false });
     renderMembers();
 };
 
+// 刪除表格隊員
 window.removeMember = function(index) {
     window.members.splice(index, 1);
     renderMembers();
 };
 
-window.updateRatio = function(index, value) {
-    window.members[index].ratio = parseFloat(value);
-};
-
+// 渲染表格 (包含勾選框)
 function renderMembers() {
-    const container = document.getElementById('member-list');
-    container.innerHTML = '';
+    const tbody = document.getElementById('member-table-body');
+    tbody.innerHTML = '';
     window.members.forEach((member, index) => {
-        const div = document.createElement('div');
-        div.style.display = 'flex';
-        div.style.gap = '10px';
-        div.style.marginBottom = '10px';
-        div.innerHTML = `
-            <input type="text" value="${member.name}" class="cloud-input" disabled>
-            <input type="number" value="${member.ratio}" class="cloud-input" style="width: 80px;" onchange="updateRatio(${index}, this.value)">
-            <button onclick="removeMember(${index})" class="calc-btn btn-red" style="width: 50px; margin: 0; padding: 10px;">X</button>
+        tbody.innerHTML += `
+            <tr>
+                <td style="text-align: center;"><input type="checkbox" ${member.checked ? 'checked' : ''} onchange="window.members[${index}].checked = this.checked"></td>
+                <td style="padding: 5px;"><input type="text" value="${member.name}" class="cloud-input" disabled></td>
+                <td style="padding: 5px;"><input type="number" value="${member.ratio}" class="cloud-input" onchange="window.members[${index}].ratio = this.value"></td>
+                <td style="text-align: center;"><button onclick="removeMember(${index})" class="calc-btn btn-red">X</button></td>
+            </tr>
         `;
-        container.appendChild(div);
     });
 }
 
-// 初始化綁定
-document.addEventListener('DOMContentLoaded', () => {
-    // 綁定基礎設定輸入框事件
-    ['moneyToMileage', 'cubeFancyPrice', 'cubeSuspiciousPrice'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('input', () => {
-            updateDynamicPrices();
-            saveSettlementRates();
-        });
-    });
-    updateDynamicPrices();
-});
+// 核心比對儲存邏輯：比對雲端與表格，將新隊員補上，刪除被移除的隊員
+window.saveMembersToCloud = async function() {
+    const keyCode = document.getElementById('userKeyCode').value.trim();
+    if (!keyCode) {
+        alert("🔒 尚未登入代碼！請先至首頁輸入代碼。");
+        return;
+    }
+
+    try {
+        // 準備送出的資料 (加入 addedBy 標記)
+        const updatedList = window.members.map(m => ({
+            name: m.name,
+            ratio: m.ratio,
+            addedBy: m.addedBy || keyCode // 若已有則保留，無則標記為當前代碼
+        }));
+
+        await setDoc(doc(db, "shared_data", "team_members"), { 
+            members: updatedList 
+        }, { merge: false }); // merge: false 表示直接覆蓋以確保刪除動作同步
+        
+        alert("✅ 共用雲端名單已同步！");
+    } catch (e) {
+        alert("同步失敗：" + e.message);
+    }
+};
+
+// 讀取共用雲端
+window.loadFromCloud = async function() {
+    const keyCode = document.getElementById('userKeyCode').value.trim();
+    if (!keyCode) { alert('請先輸入代碼！'); return; }
+    
+    try {
+        const docSnap = await getDoc(doc(db, "shared_data", "team_members"));
+        if (docSnap.exists()) {
+            window.members = docSnap.data().members || [];
+            renderMembers();
+            alert("📥 已讀取共用名單。");
+        }
+    } catch (e) { console.error("讀取失敗：", e); }
+};
 
 // 🧮 第一類：基礎攻擊力反推
 function calculateBaseAtk() {
