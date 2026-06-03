@@ -13,24 +13,30 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// 🌐 雲端儲存與讀取 (邏輯不變)
-window.saveToCloud = async function() {
+// ==========================================
+// 🛡️ 團隊分紅系統：基礎設定 (儲存功能)
+// ==========================================
+window.saveSettlementRates = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
-    const statusText = document.getElementById('cloudStatus');
-    if (!keyCode) { alert('請先輸入一個自訂字串（代碼）再儲存喔！'); return; }
-    statusText.innerText = "正在連線到 Google 雲端儲存中...";
+    if (!keyCode) { alert('請先輸入代碼！'); return; }
+
+    const ratesData = {
+        moneyToMileage: parseFloat(document.getElementById('moneyToMileage').value) || 10000,
+        cubeFancyPrice: parseFloat(document.getElementById('cubeFancyPrice').value) || 500,
+        cubeSuspiciousPrice: parseFloat(document.getElementById('cubeSuspiciousPrice').value) || 50
+    };
+
     try {
-        await setDoc(doc(db, "player_data", keyCode), {
-            userCode: keyCode,
-            lastSaveTime: new Date().toLocaleString(),
-            testMessage: "哈囉！這是你用神祕代碼存在 Google 雲端的測試資料！"
-        });
-        statusText.innerText = `🎉 儲存成功！時間：${new Date().toLocaleTimeString()}`;
+        // 使用 merge: true，這會確保只更新 settlementRates 欄位，而不會影響你其他儲存的資料
+        await setDoc(doc(db, "player_data", keyCode), { settlementRates: ratesData }, { merge: true });
+        
+        // 提示語已修正為更通用，不會誤導成只存了匯率
+        alert("✅ 基礎設定已成功更新至雲端！");
     } catch (error) {
         console.error("儲存失敗：", error);
-        statusText.innerText = "❌ 儲存失敗。";
+        alert("❌ 儲存失敗，請檢查網路連線。");
     }
-}
+};
 
 window.loadFromCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
