@@ -55,7 +55,7 @@ window.switchTab = function(tabId) {
     document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
 }
 
-// 🧮 計算核心邏輯
+// 🧮 第一類：基礎攻擊力反推
 function calculateBaseAtk() {
     const mainStat = parseFloat(document.getElementById('mainStat').value) || 0;
     const subStat = parseFloat(document.getElementById('subStat').value) || 0;
@@ -75,67 +75,49 @@ function calculateBaseAtk() {
     }
     document.getElementById('resultDisplay').innerText = matchedBaseAtk;
     
-    // 自動填入基準值欄位
-    document.getElementById('baseAtkOverride').value = matchedBaseAtk;
-    document.getElementById('mainStatOverride').value = mainStat;
+    document.getElementById('calcBaseAtk').value = matchedBaseAtk;
+    document.getElementById('calcAtkPercent').value = document.getElementById('percentAtk').value;
+    document.getElementById('calcMainBase').value = mainStat;
+    document.getElementById('calcMainEquip').value = 0;
+    document.getElementById('calcMainPercent').value = 0;
+    document.getElementById('calcSubStat').value = subStat;
 }
 
+// 🧮 第二類：裝備純屬性反推
 function calculateEquipStat() {
     const statTotal = parseFloat(document.getElementById('statTotal').value) || 0;
     const statBaseOnly = parseFloat(document.getElementById('statBaseOnly').value) || 0;
     const statPercent = (parseFloat(document.getElementById('statPercent').value) || 0) / 100;
+    const elDisplay = document.getElementById('equipStatDisplay');
 
     let matchedEquipStat = Math.max(0, Math.round((statTotal / (1 + statPercent)) - statBaseOnly));
-    document.getElementById('equipStatDisplay').innerText = matchedEquipStat;
+    elDisplay.innerText = matchedEquipStat;
+
+    document.getElementById('calcMainBase').value = statBaseOnly;
+    document.getElementById('calcMainEquip').value = matchedEquipStat;
+    document.getElementById('calcMainPercent').value = document.getElementById('statPercent').value;
 }
 
-// 🧮 模擬邏輯 (已加入基準值優先級判斷)
-function simulateAtkBenefit() {
-    const mainStat = parseFloat(document.getElementById('mainStatOverride').value) || parseFloat(document.getElementById('mainStat').value) || 0;
-    const subStat = parseFloat(document.getElementById('subStat').value) || 0;
-    const percentAtk = (parseFloat(document.getElementById('percentAtk').value) || 0) / 100;
-    const coeff = parseFloat(document.getElementById('coeff').value);
-    
-    let baseAtk = parseFloat(document.getElementById('baseAtkOverride').value) || parseFloat(document.getElementById('resultDisplay').innerText) || 0;
-    const statFactor = (mainStat * 4 + subStat) / 100;
-    
-    const customAtkPercent = parseFloat(document.getElementById('simAtkPercentInput').value) || 0;
-    const customAtkValue = parseFloat(document.getElementById('simAtkValueInput').value) || 0;
+// 🧮 第三類：完整表攻計算器
+function calculateFinalAtk() {
+    const baseAtk = parseFloat(document.getElementById('calcBaseAtk').value) || 0;
+    const atkPercent = (parseFloat(document.getElementById('calcAtkPercent').value) || 0) / 100;
+    const mainBase = parseFloat(document.getElementById('calcMainBase').value) || 0;
+    const mainEquip = parseFloat(document.getElementById('calcMainEquip').value) || 0;
+    const mainPercent = (parseFloat(document.getElementById('calcMainPercent').value) || 0) / 100;
+    const subStat = parseFloat(document.getElementById('calcSubStat').value) || 0;
+    const coeff = parseFloat(document.getElementById('coeff').value) || 4;
 
-    let newMaxAtkPercent = Math.round(Math.floor(baseAtk * (1 + percentAtk + (customAtkPercent / 100))) * coeff * statFactor);
-    let newMaxAtkValue = Math.round(Math.floor((baseAtk + customAtkValue) * (1 + percentAtk)) * coeff * statFactor);
+    const totalMainStat = (mainBase + mainEquip) * (1 + mainPercent);
+    const statFactor = (totalMainStat * 4 + subStat) / 100;
+    const totalAtk = Math.floor(baseAtk * (1 + atkPercent));
+    const finalAtk = Math.round(totalAtk * coeff * statFactor);
 
-    document.getElementById('atkSimPercent').innerText = newMaxAtkPercent;
-    document.getElementById('atkSimValue').innerText = newMaxAtkValue;
-}
-
-function simulateStatBenefit() {
-    const subStat = parseFloat(document.getElementById('subStat').value) || 0;
-    const percentAtk = (parseFloat(document.getElementById('percentAtk').value) || 0) / 100;
-    const coeff = parseFloat(document.getElementById('coeff').value);
-    
-    let baseAtk = parseFloat(document.getElementById('baseAtkOverride').value) || parseFloat(document.getElementById('resultDisplay').innerText) || 0;
-    let mainStat = parseFloat(document.getElementById('mainStatOverride').value) || parseFloat(document.getElementById('mainStat').value) || 0;
-    const statPercent = (parseFloat(document.getElementById('statPercent').value) || 0) / 100;
-
-    const customStatPercent = parseFloat(document.getElementById('simStatPercentInput').value) || 0;
-    const customStatValue = parseFloat(document.getElementById('simStatValueInput').value) || 0;
-
-    let finalEquipStat = parseFloat(document.getElementById('equipStatDisplay').innerText) || 0;
-
-    let newStatFactorPercent = ((mainStat + Math.floor(finalEquipStat * (customStatPercent / 100))) * 4 + subStat) / 100;
-    let newMaxAtkPercent = Math.round(Math.floor(baseAtk * (1 + percentAtk)) * coeff * newStatFactorPercent);
-    
-    let newStatFactorValue = ((mainStat + Math.floor(customStatValue * (1 + statPercent))) * 4 + subStat) / 100;
-    let newMaxAtkValue = Math.round(Math.floor(baseAtk * (1 + percentAtk)) * coeff * newStatFactorValue);
-
-    document.getElementById('statSimPercent').innerText = newMaxAtkPercent;
-    document.getElementById('statSimValue').innerText = newMaxAtkValue;
+    document.getElementById('finalMaxAtkDisplay').innerText = finalAtk.toLocaleString();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnCalcBaseAtk').addEventListener('click', calculateBaseAtk);
     document.getElementById('btnCalcEquipStat').addEventListener('click', calculateEquipStat);
-    document.getElementById('btnSimAtk').addEventListener('click', simulateAtkBenefit);
-    document.getElementById('btnSimStat').addEventListener('click', simulateStatBenefit);
+    document.getElementById('btnCalcFinal').addEventListener('click', calculateFinalAtk);
 });
