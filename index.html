@@ -96,7 +96,7 @@
                 </div>
             </div>
         </div>
-    </div>
+
         <div id="equip-calc" class="tab-content">
             <h3>⚔️ 裝備綜合計算工具</h3>
             <p>全方位反推各項面版數據，點擊下方各工具即可開始計算。</p>
@@ -179,46 +179,44 @@
                 </div>
 
                 <div class="calc-card">
-    <h4 class="title-blue">📊 完整表攻計算器</h4>
-    <p class="card-desc">輸入各項細節參數，精準計算最大表攻。</p>
+                    <h4 class="title-blue">📊 完整表攻計算器</h4>
+                    <p class="card-desc">輸入各項細節參數，精準計算最大表攻。</p>
 
-    <div class="sim-input-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-        <div class="form-group"><label>基礎攻擊力:</label><input type="number" id="calcBaseAtk" class="cloud-input" value="0"></div>
-        <div class="form-group"><label>攻擊力 %:</label><input type="number" id="calcAtkPercent" class="cloud-input" value="0"></div>
-        <div class="form-group"><label>基礎主屬性:</label><input type="number" id="calcMainBase" class="cloud-input" value="0"></div>
-        <div class="form-group"><label>裝備主屬性:</label><input type="number" id="calcMainEquip" class="cloud-input" value="0"></div>
-        <div class="form-group"><label>主屬性 %:</label><input type="number" id="calcMainPercent" class="cloud-input" value="0"></div>
-        <div class="form-group"><label>總副屬性:</label><input type="number" id="calcSubStat" class="cloud-input" value="0"></div>
+                    <div class="sim-input-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                        <div class="form-group"><label>基礎攻擊力:</label><input type="number" id="calcBaseAtk" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>攻擊力 %:</label><input type="number" id="calcAtkPercent" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>基礎主屬性:</label><input type="number" id="calcMainBase" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>裝備主屬性:</label><input type="number" id="calcMainEquip" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>主屬性 %:</label><input type="number" id="calcMainPercent" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>總副屬性:</label><input type="number" id="calcSubStat" class="cloud-input" value="0"></div>
+                    </div>
+                    
+                    <button id="btnCalcFinal" class="calc-btn btn-blue" style="margin-top: 15px;">計算當前總表攻</button>
+                    
+                    <div class="result-box" style="margin-top: 15px; padding: 10px; background: #333; text-align: center;">
+                        <div style="font-size: 14px; color: #aaa;">計算結果最大表攻:</div>
+                        <div id="finalMaxAtkDisplay" style="font-size: 24px; color: #00d2ff; font-weight: bold;">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div> <div id="toast" style="position: fixed; bottom: 20px; right: 20px; padding: 15px 25px; background: #333; color: #fff; border-radius: 5px; display: none; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+        💾 資料已同步
     </div>
-    
-    <button id="btnCalcFinal" class="calc-btn btn-blue" style="margin-top: 15px;">計算當前總表攻</button>
-    
-    <div class="result-box" style="margin-top: 15px; padding: 10px; background: #333; text-align: center;">
-        <div style="font-size: 14px; color: #aaa;">計算結果最大表攻:</div>
-        <div id="finalMaxAtkDisplay" style="font-size: 24px; color: #00d2ff; font-weight: bold;">0</div>
-    </div>
-</div>
 
-<div id="toast" style="position: fixed; bottom: 20px; right: 20px; padding: 15px 25px; background: #333; color: #fff; border-radius: 5px; display: none; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
-    💾 資料已同步
-</div>
     <script type="module" src="main.js"></script>
     <script>
-    // 這段腳本會自動抓取所有需要的 input 並綁定事件
-    document.addEventListener("DOMContentLoaded", () => {
-        const idsToBind = [
-            'moneyToMileage', 'cubeFancyPrice', 'cubeSuspiciousPrice',
-            'calcBaseAtk', 'calcAtkPercent', 'calcMainBase', 
-            'calcMainEquip', 'calcMainPercent', 'calcSubStat', 'coeff'
-        ];
-
-        idsToBind.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) {
-                el.addEventListener('input', window.triggerAutoSave);
-            }
+        document.addEventListener("DOMContentLoaded", () => {
+            const idsToBind = [
+                'moneyToMileage', 'cubeFancyPrice', 'cubeSuspiciousPrice',
+                'calcBaseAtk', 'calcAtkPercent', 'calcMainBase', 
+                'calcMainEquip', 'calcMainPercent', 'calcSubStat', 'coeff'
+            ];
+            idsToBind.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('input', window.triggerAutoSave);
+            });
         });
-    });
     </script>
 </body>
 </html>
