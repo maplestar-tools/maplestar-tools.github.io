@@ -36,18 +36,22 @@ window.toggleSection = function(el) {
 };
 
 // 【首頁儲存按鈕】儲存個人設定
-window.saveSettlementRates = async function() {
+window.saveToCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
     if (!keyCode) { alert("請先輸入代碼！"); return; }
+    
     try {
+        // 這裡是你原本的手動儲存區，未來若要增加儲存欄位，直接往這物件裡加
         await setDoc(doc(db, "player_data", keyCode), { 
             settlementRates: {
                 moneyToMileage: parseFloat(document.getElementById('moneyToMileage').value),
                 cubeFancyPrice: parseFloat(document.getElementById('cubeFancyPrice').value),
                 cubeSuspiciousPrice: parseFloat(document.getElementById('cubeSuspiciousPrice').value)
-            } 
+            },
+            // 例如：未來你要加什麼設定，就在下面繼續加
+            // lastUpdated: new Date()
         }, { merge: true });
-        alert("💾 個人設定已儲存！");
+        alert("💾 全面儲存完成！");
     } catch (e) { alert("儲存失敗：" + e.message); }
 };
 
@@ -73,6 +77,22 @@ window.loadFromCloud = async function() {
 /* ==========================================================================
    ⚙️ 2. 團隊分紅：基礎設定與計算
    ========================================================================== */
+window.autoSaveRates = async function() {
+    const keyCode = document.getElementById('userKeyCode').value.trim();
+    if (!keyCode) return; // 沒代碼就不自動存，避免報錯
+    
+    try {
+        await setDoc(doc(db, "player_data", keyCode), { 
+            settlementRates: {
+                moneyToMileage: parseFloat(document.getElementById('moneyToMileage').value),
+                cubeFancyPrice: parseFloat(document.getElementById('cubeFancyPrice').value),
+                cubeSuspiciousPrice: parseFloat(document.getElementById('cubeSuspiciousPrice').value)
+            } 
+        }, { merge: true });
+        console.log("✅ 基礎設定已自動備份");
+    } catch (e) { console.error("自動儲存失敗", e); }
+};
+
 function updateDynamicPrices() {
     const mileageRatio = parseFloat(document.getElementById('moneyToMileage').value) || 10000;
     const getPriceInWan = (mileage) => ((mileage / mileageRatio) * 1000).toFixed(1);
