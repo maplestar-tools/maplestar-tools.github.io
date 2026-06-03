@@ -50,74 +50,33 @@ window.toggleSection = function(el) {
     }
 };
 
-// 【首頁儲存按鈕】儲存個人設定
-window.saveToCloud = async function() {
-    const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) { alert("請先輸入代碼！"); return; }
+
+// 雲端儲存與讀取系統
+
+// 【全域變數】儲存計時器
+let saveTimer;
+
+/**
+ * 【自動儲存觸發器】綁定於 input 的 oninput 事件
+ * 當使用者停止輸入 5 秒後，自動將資料同步至雲端
+ */
+window.triggerAutoSave = function() {
+    // 即時更新價格計算 (若函式存在)
+    if (typeof updateDynamicPrices === 'function') updateDynamicPrices();
     
-    try {
-        await setDoc(doc(db, "player_data", keyCode), { 
-            // 1. 原有的結算設定 (這些你已經有了)
-            settlementRates: {
-                moneyToMileage: parseFloat(document.getElementById('moneyToMileage').value) || 0,
-                cubeFancyPrice: parseFloat(document.getElementById('cubeFancyPrice').value) || 0,
-                cubeSuspiciousPrice: parseFloat(document.getElementById('cubeSuspiciousPrice').value) || 0
-            },
-            // 2. 這一塊是你「還沒加入」的，必須補上才能存計算機數據
-            calcSettings: {
-                baseAtk: parseFloat(document.getElementById('calcBaseAtk').value) || 0,
-                atkPercent: parseFloat(document.getElementById('calcAtkPercent').value) || 0,
-                mainBase: parseFloat(document.getElementById('calcMainBase').value) || 0,
-                mainEquip: parseFloat(document.getElementById('calcMainEquip').value) || 0,
-                mainPercent: parseFloat(document.getElementById('calcMainPercent').value) || 0,
-                subStat: parseFloat(document.getElementById('calcSubStat').value) || 0,
-                coeff: parseFloat(document.getElementById('coeff').value) || 1.0
-            },
-            lastUpdated: new Date()
-        }, { merge: true }); // merge: true 確保不會覆蓋掉舊資料
-        alert("💾 全面儲存完成！");
-    } catch (e) { alert("儲存失敗：" + e.message); }
+    // 清除舊計時器並重新啟動 (防抖機制)
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+        window.saveAllToCloud();
+    }, 5000); // 設定為 5 秒
 };
 
-// 【首頁讀取按鈕】讀取個人設定
-window.loadFromCloud = async function() {
-    const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) { alert('請先輸入代碼！'); return; }
-    
-    try {
-        const docSnap = await getDoc(doc(db, "player_data", keyCode));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            
-            // 讀取並還原結算數據
-            if (data.settlementRates) {
-                document.getElementById('moneyToMileage').value = data.settlementRates.moneyToMileage || 0;
-                document.getElementById('cubeFancyPrice').value = data.settlementRates.cubeFancyPrice || 0;
-                document.getElementById('cubeSuspiciousPrice').value = data.settlementRates.cubeSuspiciousPrice || 0;
-                updateDynamicPrices();
-            }
-
-            // 讀取並還原計算機數據
-            if (data.calcSettings) {
-                document.getElementById('calcBaseAtk').value = data.calcSettings.baseAtk || 0;
-                document.getElementById('calcAtkPercent').value = data.calcSettings.atkPercent || 0;
-                document.getElementById('calcMainBase').value = data.calcSettings.mainBase || 0;
-                document.getElementById('calcMainEquip').value = data.calcSettings.mainEquip || 0;
-                document.getElementById('calcMainPercent').value = data.calcSettings.mainPercent || 0;
-                document.getElementById('calcSubStat').value = data.calcSettings.subStat || 0;
-                document.getElementById('coeff').value = data.calcSettings.coeff || 1.0;
-                
-                // 讀取完畢後，強制執行一次計算，更新畫面
-                calculateFinalAtk(); 
-            }
-            alert("📥 個人設定讀取成功！");
-        }
-    } catch (e) { alert("讀取失敗：" + e.message); }
-};
-// 【統一的雲端儲存函式】
+/**
+ * 【雲端同步功能】將結算與計算設定統一儲存至雲端
+ */
 window.saveAllToCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) return; // 沒有代碼就不自動觸發
+    if (!keyCode) return;
 
     try {
         await setDoc(doc(db, "player_data", keyCode), { 
@@ -143,22 +102,61 @@ window.saveAllToCloud = async function() {
     }
 };
 
-// 全域計時器
-let saveTimer;
-
-// 通用的自動儲存觸發器 (綁定給所有 input 的 oninput)
-window.triggerAutoSave = function() {
-    // 1. 若有價格更新需求，立刻執行
-    if(typeof updateDynamicPrices === 'function') updateDynamicPrices();
+/**
+ * 【首頁讀取按鈕】讀取個人設定
+ * 從雲端拉取資料並還原至各輸入框，隨後觸發重算
+ */
+window.loadFromCloud = async function() {
+    const keyCode = document.getElementById('userKeyCode').value.trim();
+    if (!keyCode) { alert('請先輸入代碼！'); return; }
     
-    // 2. 防抖邏輯：停止輸入 5 秒後才存檔
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-        window.saveAllToCloud();
-    }, 5000); 
+    try {
+        const docSnap = await getDoc(doc(db, "player_data", keyCode));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            
+            // 讀取並填入數值
+            if (data.settlementRates) {
+                document.getElementById('moneyToMileage').value = data.settlementRates.moneyToMileage || 0;
+                document.getElementById('cubeFancyPrice').value = data.settlementRates.cubeFancyPrice || 0;
+                document.getElementById('cubeSuspiciousPrice').value = data.settlementRates.cubeSuspiciousPrice || 0;
+            }
+            if (data.calcSettings) {
+                document.getElementById('calcBaseAtk').value = data.calcSettings.baseAtk || 0;
+                document.getElementById('calcAtkPercent').value = data.calcSettings.atkPercent || 0;
+                document.getElementById('calcMainBase').value = data.calcSettings.mainBase || 0;
+                document.getElementById('calcMainEquip').value = data.calcSettings.mainEquip || 0;
+                document.getElementById('calcMainPercent').value = data.calcSettings.mainPercent || 0;
+                document.getElementById('calcSubStat').value = data.calcSettings.subStat || 0;
+                document.getElementById('coeff').value = data.calcSettings.coeff || 1.0;
+            }
+
+            // 強制重算畫面
+            if (typeof updateDynamicPrices === 'function') updateDynamicPrices();
+            if (typeof calculateFinalAtk === 'function') calculateFinalAtk();
+            
+            alert("📥 個人設定讀取成功！");
+        } else {
+            alert("❌ 找不到此代碼的資料。");
+        }
+    } catch (e) { 
+        console.error("讀取失敗：", e);
+        alert("讀取失敗：" + e.message); 
+    }
 };
 /* ==========================================================================
-   👥 2. 團隊分紅：共用隊員管理區
+   ⚙️ 2. 團隊分紅：基礎設定與計算
+   ========================================================================== */
+// A. 專門負責「算數字」的 (給 oninput 用)
+window.updateDynamicPrices = function() {
+    const mileageRatio = parseFloat(document.getElementById('moneyToMileage').value) || 10000;
+    const getPriceInWan = (mileage) => ((mileage / mileageRatio) * 1000).toFixed(1);
+    document.getElementById('priceFancy').innerText = getPriceInWan(3900);
+    document.getElementById('pricePlatinum').innerText = getPriceInWan(7100);
+    document.getElementById('priceSnow').innerText = getPriceInWan(3500 / 11);
+}
+/* ==========================================================================
+   👥 3. 團隊分紅：共用隊員管理區
    ========================================================================== */
 window.members = [];
 
