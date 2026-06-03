@@ -14,47 +14,55 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // ==========================================================================
-// 🛡️ 團隊分紅系統：基礎功能與自動同步邏輯
+// 🛡️ 團隊分紅系統：完整整合邏輯
 // ==========================================================================
 
-// 1. 即時計算價格 (不需登入即可使用)
+// 1. 自動計算價格 (保留小數點後一位)
 function updateDynamicPrices() {
     const mileageRatio = parseFloat(document.getElementById('moneyToMileage').value) || 10000;
-    const getPrice = (mileage) => (mileage / mileageRatio) * 1000;
+    
+    // 計算函數：(目標里程 / 比例) * 1000萬楓幣，再換算成「萬楓幣」
+    const getPriceInWan = (mileage) => ((mileage / mileageRatio) * 1000 * 1000 / 10000).toFixed(1);
 
-    document.getElementById('pricePlatinum').innerText = (getPrice(7100) / 10000).toFixed(2) + " 億";
-    document.getElementById('priceNormal').innerText = (getPrice(3900) / 10000).toFixed(2) + " 億";
-    document.getElementById('priceSnow').innerText = Math.round(getPrice(3500)) + " 萬";
+    document.getElementById('pricePlatinum').innerText = getPriceInWan(7100);
+    document.getElementById('priceNormal').innerText = getPriceInWan(3900);
+    document.getElementById('priceSnow').innerText = getPriceInWan(3500 / 11);
 }
 
-// 2. 自動儲存邏輯 (有代碼時才執行)
-async function triggerAutoSave() {
-    updateDynamicPrices();
+// 2. 核心儲存功能 (首頁按鈕與自動同步共用)
+window.saveToCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) return;
-    await saveSettlementRates();
-}
+    if (!keyCode) { alert('請輸入代碼！'); return; }
+    
+    try {
+        const docRef = doc(db, "player_data", keyCode);
+        await setDoc(docRef, {
+            userCode: keyCode,
+            lastSaveTime: new Date().toLocaleString(),
+            settlementRates: {
+                moneyToMileage: parseFloat(document.getElementById('moneyToMileage').value),
+                cubeFancyPrice: parseFloat(document.getElementById('cubeFancyPrice').value),
+                cubeSuspiciousPrice: parseFloat(document.getElementById('cubeSuspiciousPrice').value)
+            }
+        }, { merge: true });
+        alert("✅ 資料已成功儲存至雲端！");
+    } catch (e) { alert("儲存失敗：" + e.message); }
+};
 
-// 3. 基礎設定儲存
+// 3. 自動同步邏輯 (在基礎設定變更時自動觸發)
 window.saveSettlementRates = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) return;
-
+    if (!keyCode) return; // 沒登入就不自動存
+    
     const ratesData = {
         moneyToMileage: parseFloat(document.getElementById('moneyToMileage').value),
         cubeFancyPrice: parseFloat(document.getElementById('cubeFancyPrice').value),
         cubeSuspiciousPrice: parseFloat(document.getElementById('cubeSuspiciousPrice').value)
     };
-
-    try {
-        await setDoc(doc(db, "player_data", keyCode), { settlementRates: ratesData }, { merge: true });
-        console.log("✅ 基礎設定已同步");
-    } catch (error) {
-        console.error("❌ 儲存失敗：", error);
-    }
+    await setDoc(doc(db, "player_data", keyCode), { settlementRates: ratesData }, { merge: true });
 };
 
-// 4. 讀取資料
+// 4. 讀取功能
 window.loadFromCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
     if (!keyCode) { alert('請先輸入代碼！'); return; }
@@ -63,36 +71,36 @@ window.loadFromCloud = async function() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             const data = docSnap.data();
-            // 如果有儲存過基礎設定，讀取並顯示
             if (data.settlementRates) {
                 document.getElementById('moneyToMileage').value = data.settlementRates.moneyToMileage;
                 document.getElementById('cubeFancyPrice').value = data.settlementRates.cubeFancyPrice;
                 document.getElementById('cubeSuspiciousPrice').value = data.settlementRates.cubeSuspiciousPrice;
-                updateDynamicPrices(); // 讀取後更新價格
+                updateDynamicPrices();
             }
-            alert("📥 資料讀取成功！");
-        } else {
-            alert("⚠️ 找不到該代碼的資料。");
-        }
+            alert("📥 讀取成功！");
+        } else { alert("⚠️ 找不到該代碼資料。"); }
     } catch (error) { console.error("讀取失敗：", error); }
 };
 
-// 5. 分頁切換
+// 5. 初始化與自動監聽
+document.addEventListener('DOMContentLoaded', () => {
+    ['moneyToMileage', 'cubeFancyPrice', 'cubeSuspiciousPrice'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', () => {
+            updateDynamicPrices();
+            saveSettlementRates();
+        });
+    });
+    updateDynamicPrices();
+});
+
+// 6. 分頁切換 (保留你的功能)
 window.switchTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
     document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
 }
-
-// 6. 網頁載入初始化
-document.addEventListener('DOMContentLoaded', () => {
-    ['moneyToMileage', 'cubeFancyPrice', 'cubeSuspiciousPrice'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('change', triggerAutoSave);
-    });
-    updateDynamicPrices();
-});
 
 // 🧮 第一類：基礎攻擊力反推
 function calculateBaseAtk() {
