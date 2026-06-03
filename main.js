@@ -228,18 +228,31 @@ function calculateBaseAtk() {
     document.getElementById('calcSubStat').value = subStat;
 }
 
-// 🧮 第二類：裝備純屬性反推
+// 🧮 第二類：裝備純屬性反推 (使用窮舉法，杜絕誤差)
 function calculateEquipStat() {
     const statTotal = parseFloat(document.getElementById('statTotal').value) || 0;
     const statBaseOnly = parseFloat(document.getElementById('statBaseOnly').value) || 0;
     const statPercent = (parseFloat(document.getElementById('statPercent').value) || 0) / 100;
     const elDisplay = document.getElementById('equipStatDisplay');
 
-    let matchedEquipStat = Math.max(0, Math.round((statTotal / (1 + statPercent)) - statBaseOnly));
-    elDisplay.innerText = matchedEquipStat;
+    let foundStat = 0;
+    
+    // 從 0 到 10000 窮舉可能的裝備屬性 (範圍視需求調整)
+    for (let testStat = 0; testStat <= 10000; testStat++) {
+        // 使用與遊戲一模一樣的公式：Floor((基礎+裝備) * (1+%) )
+        const calculated = Math.floor((statBaseOnly + testStat) * (1 + statPercent));
+        
+        if (calculated === statTotal) {
+            foundStat = testStat;
+            break; // 找到第一個符合的就停止
+        }
+    }
 
+    elDisplay.innerText = foundStat;
+
+    // 自動帶入第三部分
     document.getElementById('calcMainBase').value = statBaseOnly;
-    document.getElementById('calcMainEquip').value = matchedEquipStat;
+    document.getElementById('calcMainEquip').value = foundStat;
     document.getElementById('calcMainPercent').value = document.getElementById('statPercent').value;
 }
 
