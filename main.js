@@ -53,6 +53,22 @@ window.toggleSection = function(el) {
 
 // 雲端儲存與讀取系統
 
+/**
+ * 【懸浮通知功能】在畫面右下角顯示提示訊息
+ */
+function showToast(message) {
+    let toast = document.getElementById('toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast';
+        toast.style.cssText = 'position:fixed; bottom:20px; right:20px; padding:15px 25px; background:#333; color:#fff; border-radius:5px; z-index:9999; display:none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);';
+        document.body.appendChild(toast);
+    }
+    toast.innerText = message;
+    toast.style.display = 'block';
+    setTimeout(() => { toast.style.display = 'none'; }, 3000);
+}
+
 // 【全域變數】儲存計時器
 let saveTimer;
 
@@ -61,20 +77,18 @@ let saveTimer;
  * 當使用者停止輸入 5 秒後，自動將資料同步至雲端
  */
 window.triggerAutoSave = function() {
-    // 即時更新價格計算 (若函式存在)
     if (typeof updateDynamicPrices === 'function') updateDynamicPrices();
     
-    // 清除舊計時器並重新啟動 (防抖機制)
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-        window.saveAllToCloud();
-    }, 5000); // 設定為 5 秒
+        window.saveAllToCloud(false); // 自動儲存傳入 false
+    }, 5000); // 抖動時間設為 5 秒
 };
 
 /**
  * 【雲端同步功能】將結算與計算設定統一儲存至雲端
  */
-window.saveAllToCloud = async function() {
+window.saveAllToCloud = async function(isManual = false) {
     const keyCode = document.getElementById('userKeyCode').value.trim();
     if (!keyCode) return;
 
@@ -96,9 +110,12 @@ window.saveAllToCloud = async function() {
             },
             lastUpdated: new Date()
         }, { merge: true });
-        console.log("💾 全部資料已同步至雲端");
+        
+        showToast("💾 資料已同步至雲端");
+        if (isManual) alert("✅ 手動同步成功！");
     } catch (e) {
-        console.error("自動儲存失敗", e);
+        console.error("儲存失敗", e);
+        showToast("❌ 同步失敗");
     }
 };
 
@@ -115,7 +132,6 @@ window.loadFromCloud = async function() {
         if (docSnap.exists()) {
             const data = docSnap.data();
             
-            // 讀取並填入數值
             if (data.settlementRates) {
                 document.getElementById('moneyToMileage').value = data.settlementRates.moneyToMileage || 0;
                 document.getElementById('cubeFancyPrice').value = data.settlementRates.cubeFancyPrice || 0;
@@ -131,7 +147,6 @@ window.loadFromCloud = async function() {
                 document.getElementById('coeff').value = data.calcSettings.coeff || 1.0;
             }
 
-            // 強制重算畫面
             if (typeof updateDynamicPrices === 'function') updateDynamicPrices();
             if (typeof calculateFinalAtk === 'function') calculateFinalAtk();
             
