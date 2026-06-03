@@ -79,7 +79,10 @@ window.loadFromCloud = async function() {
    ========================================================================== */
 window.autoSaveRates = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) return; // 沒代碼就不自動存，避免報錯
+    if (!keyCode) return;
+    
+    // 【新增這行】每次變動時，強制更新計算公式
+    updateDynamicPrices(); 
     
     try {
         await setDoc(doc(db, "player_data", keyCode), { 
@@ -89,7 +92,6 @@ window.autoSaveRates = async function() {
                 cubeSuspiciousPrice: parseFloat(document.getElementById('cubeSuspiciousPrice').value)
             } 
         }, { merge: true });
-        console.log("✅ 基礎設定已自動備份");
     } catch (e) { console.error("自動儲存失敗", e); }
 };
 
@@ -160,11 +162,11 @@ function renderMembers() {
                 <td style="padding: 5px;">
                     <input type="number" value="${member.ratio}" class="cloud-input" onchange="updateMemberData(${index}, 'ratio', parseFloat(this.value))">
                 </td>
-                <td style="text-align: center;">
-                <button onclick="removeMember(${index})" class="calc-btn btn-red" 
-                    style="width: 35px; height: 35px; padding: 0; line-height: 35px; display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;">
-                    X
-                </button>
+                <td style="text-align: center; vertical-align: middle;">
+                    <button onclick="removeMember(${index})" class="calc-btn btn-red" 
+                    style="width: 35px; height: 35px; padding: 0; line-height: 35px; margin: 0 auto; display: block; font-weight:bold;">
+                        X
+                    </button>
                 </td>
             </tr>
         `;
