@@ -36,19 +36,19 @@
             
             <div class="calc-card settings-card">
                 <h4 class="title-blue">⚙️ 基礎設定 (個人雲端)</h4>
-                <p class="card-desc">匯率設定後會自動儲存，下方價格將隨里程匯率即時變動。</p>
+                <p class="card-desc">設定匯率與方塊價格，下方價格將隨里程匯率即時變動。</p>
                 
                 <div class="sim-input-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: end;">
                     <div class="form-group">
-                        <label style="font-size: 13px;">1000萬楓幣換算里程</label>
+                        <label>1000萬楓幣換算里程</label>
                         <input type="number" id="moneyToMileage" class="cloud-input" value="10000">
                     </div>
                     <div class="form-group">
-                        <label style="font-size: 13px;">奇幻方塊價格(萬)</label>
+                        <label>奇幻方塊價格(萬)</label>
                         <input type="number" id="cubeFancyPrice" class="cloud-input" value="500">
                     </div>
                     <div class="form-group">
-                        <label style="font-size: 13px;">可疑的方塊價格(萬)</label>
+                        <label>可疑的方塊價格(萬)</label>
                         <input type="number" id="cubeSuspiciousPrice" class="cloud-input" value="50">
                     </div>
                 </div>
@@ -67,6 +67,15 @@
                         <div id="priceSnow" style="font-size: 16px; font-weight: bold; color: #64b5f6;">0</div>
                     </div>
                 </div>
+            </div>
+
+            <div class="calc-card settings-card" style="margin-top: 20px;">
+                <h4 class="title-blue">👥 隊員分紅比例設定</h4>
+                <p class="card-desc">新增隊員並設定權重，系統將自動計算分紅。</p>
+                
+                <div id="member-list" style="margin-bottom: 15px;"></div>
+                
+                <button onclick="addMember()" class="calc-btn btn-green">+ 新增隊員</button>
             </div>
         </div>
 
