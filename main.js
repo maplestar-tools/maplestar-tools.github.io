@@ -92,13 +92,19 @@ window.loadFromCloud = async function() {
 /* ==========================================================================
    ⚙️ 2. 團隊分紅：基礎設定與計算
    ========================================================================== */
+// A. 專門負責「算數字」的 (給 oninput 用)
+function updateDynamicPrices() {
+    const mileageRatio = parseFloat(document.getElementById('moneyToMileage').value) || 10000;
+    const getPriceInWan = (mileage) => ((mileage / mileageRatio) * 1000).toFixed(1);
+    document.getElementById('priceFancy').innerText = getPriceInWan(3900);
+    document.getElementById('pricePlatinum').innerText = getPriceInWan(7100);
+    document.getElementById('priceSnow').innerText = getPriceInWan(3500 / 11);
+}
+
+// B. 專門負責「寫入雲端」的 (給 onchange 用)
 window.autoSaveRates = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
     if (!keyCode) return;
-    
-    // 【新增這行】每次變動時，強制更新計算公式
-    updateDynamicPrices(); 
-    
     try {
         await setDoc(doc(db, "player_data", keyCode), { 
             settlementRates: {
@@ -107,16 +113,9 @@ window.autoSaveRates = async function() {
                 cubeSuspiciousPrice: parseFloat(document.getElementById('cubeSuspiciousPrice').value)
             } 
         }, { merge: true });
+        console.log("✅ 自動儲存成功");
     } catch (e) { console.error("自動儲存失敗", e); }
 };
-
-function updateDynamicPrices() {
-    const mileageRatio = parseFloat(document.getElementById('moneyToMileage').value) || 10000;
-    const getPriceInWan = (mileage) => ((mileage / mileageRatio) * 1000).toFixed(1);
-    document.getElementById('priceFancy').innerText = getPriceInWan(3900);
-    document.getElementById('pricePlatinum').innerText = getPriceInWan(7100);
-    document.getElementById('priceSnow').innerText = getPriceInWan(3500 / 11);
-}
 
 /* ==========================================================================
    👥 3. 團隊分紅：共用隊員管理區
