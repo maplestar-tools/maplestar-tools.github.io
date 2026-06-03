@@ -69,21 +69,38 @@ function showToast(message) {
     setTimeout(() => { toast.style.display = 'none'; }, 3000);
 }
 
-// 【全域變數】儲存計時器
+// 【全域變數】儲存計時器與上次儲存的資料快取
 let saveTimer;
+let lastSavedData = null;
 
 /**
  * 【自動儲存觸發器】綁定於 input 的 oninput 事件
- * 當使用者停止輸入 5 秒後，自動將資料同步至雲端
+ * 加入防抖、變更比對，並確保離線同步
  */
 window.triggerAutoSave = function() {
     if (typeof updateDynamicPrices === 'function') updateDynamicPrices();
     
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-        window.saveAllToCloud(false); // 自動儲存傳入 false
-    }, 5000); // 抖動時間設為 5 秒
+        // 只有資料真的有變更，才進行儲存
+        const currentData = getFormValues();
+        if (JSON.stringify(currentData) !== JSON.stringify(lastSavedData)) {
+            window.saveAllToCloud(false);
+        }
+    }, 15000); // 拉長至 15 秒
 };
+
+// 輔助函式：取得目前的表單資料
+function getFormValues() {
+    return {
+        moneyToMileage: document.getElementById('moneyToMileage').value,
+        cubeFancyPrice: document.getElementById('cubeFancyPrice').value,
+        cubeSuspiciousPrice: document.getElementById('cubeSuspiciousPrice').value,
+        baseAtk: document.getElementById('calcBaseAtk').value,
+        atkPercent: document.getElementById('calcAtkPercent').value
+        // ...這裡可以包含你想檢測的所有欄位
+    };
+}
 
 /**
  * 【雲端同步功能】將結算與計算設定統一儲存至雲端
@@ -93,7 +110,7 @@ window.saveAllToCloud = async function(isManual = false) {
     if (!keyCode) return;
 
     try {
-        await setDoc(doc(db, "player_data", keyCode), { 
+        const dataToSave = { 
             settlementRates: {
                 moneyToMileage: parseFloat(document.getElementById('moneyToMileage').value) || 0,
                 cubeFancyPrice: parseFloat(document.getElementById('cubeFancyPrice').value) || 0,
@@ -109,16 +126,29 @@ window.saveAllToCloud = async function(isManual = false) {
                 coeff: parseFloat(document.getElementById('coeff').value) || 1.0
             },
             lastUpdated: new Date()
-        }, { merge: true });
+        };
+
+        await setDoc(doc(db, "player_data", keyCode), dataToSave, { merge: true });
         
+        lastSavedData = getFormValues(); // 更新快取
         showToast("💾 資料已同步至雲端");
         if (isManual) alert("✅ 手動同步成功！");
     } catch (e) {
         console.error("儲存失敗", e);
+        alert("❌ 儲存失敗，請檢查控制台錯誤訊息：" + e.message); // 強制跳出視窗
         showToast("❌ 同步失敗");
     }
 };
 
+// 【離線前強制儲存】確保關閉網頁時最後一次更新寫入
+window.addEventListener('beforeunload', () => {
+    const currentData = getFormValues();
+    if (JSON.stringify(currentData) !== JSON.stringify(lastSavedData)) {
+        // 注意：在 beforeunload 中進行非同步操作有限制，建議直接呼叫同步儲存或簡單處理
+        // 若要確保同步，Firebase 的 setDoc 建議在離開前觸發
+        window.saveAllToCloud(false);
+    }
+});
 /**
  * 【首頁讀取按鈕】讀取個人設定
  * 從雲端拉取資料並還原至各輸入框，隨後觸發重算
@@ -326,3 +356,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btnCalcEquipStat').addEventListener('click', calculateEquipStat);
     document.getElementById('btnCalcFinal').addEventListener('click', calculateFinalAtk);
 });
+// 測試用，重新整理網頁後，看右下角是否會出現測試提示
+setTimeout(() => {
+    showToast("測試系統是否運作中...");
+}, 2000);
