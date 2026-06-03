@@ -14,30 +14,33 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 // ==========================================================================
-// 🛡️ 團隊分紅系統：完整整合邏輯 (修正版)
+// 🛡️ 團隊分紅系統：全功能整合版 (請將此段貼入 main.js)
 // ==========================================================================
 
-// 1. 即時計算價格 (修改邏輯：正確顯示萬位楓幣)
+// 1. 即時計算價格 (顯示單位：萬楓幣)
 function updateDynamicPrices() {
     const mileageRatio = parseFloat(document.getElementById('moneyToMileage').value) || 10000;
     
-    // 公式：(目標里程 / 10000里程) * 1000萬楓幣
-    // 例如：3900里程 / 10000 * 1000萬 = 390萬
+    // 計算函數：(目標里程 / 比例) * 1000萬楓幣
     const getPriceInWan = (mileage) => ((mileage / mileageRatio) * 1000).toFixed(1);
 
-    document.getElementById('priceFancy').innerText = getPriceInWan(3900); // 神奇剪刀
-    document.getElementById('pricePlatinum').innerText = getPriceInWan(7100); // 白金剪刀
-    document.getElementById('priceSnow').innerText = getPriceInWan(3500 / 11); // 雪花
+    // 顯示到 HTML，請確保 ID 對應正確
+    const fancyEl = document.getElementById('priceFancy');
+    const platinumEl = document.getElementById('pricePlatinum');
+    const snowEl = document.getElementById('priceSnow');
+
+    if(fancyEl) fancyEl.innerText = getPriceInWan(3900);
+    if(platinumEl) platinumEl.innerText = getPriceInWan(7100);
+    if(snowEl) snowEl.innerText = getPriceInWan(3500 / 11);
 }
 
-// 2. 核心儲存功能 (首頁按鈕用)
+// 2. 首頁儲存按鈕專用 (手動觸發儲存)
 window.saveToCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
     if (!keyCode) { alert('請輸入代碼！'); return; }
     
     try {
-        const docRef = doc(db, "player_data", keyCode);
-        await setDoc(docRef, {
+        await setDoc(doc(db, "player_data", keyCode), {
             userCode: keyCode,
             lastSaveTime: new Date().toLocaleString(),
             settlementRates: {
@@ -63,32 +66,41 @@ window.saveSettlementRates = async function() {
     await setDoc(doc(db, "player_data", keyCode), { settlementRates: ratesData }, { merge: true });
 };
 
-// 4. 初始化與自動監聽 (使用 'input' 事件讓反應最靈敏)
+// 4. 首頁讀取功能
+window.loadFromCloud = async function() {
+    const keyCode = document.getElementById('userKeyCode').value.trim();
+    if (!keyCode) { alert('請先輸入代碼！'); return; }
+    
+    try {
+        const docSnap = await getDoc(doc(db, "player_data", keyCode));
+        if (docSnap.exists()) {
+            const data = docSnap.data();
+            if (data.settlementRates) {
+                document.getElementById('moneyToMileage').value = data.settlementRates.moneyToMileage;
+                document.getElementById('cubeFancyPrice').value = data.settlementRates.cubeFancyPrice;
+                document.getElementById('cubeSuspiciousPrice').value = data.settlementRates.cubeSuspiciousPrice;
+                updateDynamicPrices(); // 讀取後立即更新價格
+            }
+            alert(`📥 讀取成功！\n上次存檔：${data.lastSaveTime || '無'}`);
+        } else {
+            alert("⚠️ 找不到該代碼資料。");
+        }
+    } catch (error) { console.error("讀取失敗：", error); }
+};
+
+// 5. 初始化事件監聽 (自動計算與自動儲存)
 document.addEventListener('DOMContentLoaded', () => {
-    const inputs = ['moneyToMileage', 'cubeFancyPrice', 'cubeSuspiciousPrice'];
-    inputs.forEach(id => {
+    ['moneyToMileage', 'cubeFancyPrice', 'cubeSuspiciousPrice'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', () => {
             updateDynamicPrices();
             saveSettlementRates();
         });
     });
-    updateDynamicPrices();
+    updateDynamicPrices(); // 頁面載入時先執行
 });
 
-// 5. 初始化與自動監聽
-document.addEventListener('DOMContentLoaded', () => {
-    ['moneyToMileage', 'cubeFancyPrice', 'cubeSuspiciousPrice'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.addEventListener('change', () => {
-            updateDynamicPrices();
-            saveSettlementRates();
-        });
-    });
-    updateDynamicPrices();
-});
-
-// 6. 分頁切換 (保留你的功能)
+// 6. 分頁切換 (你的原始功能)
 window.switchTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
