@@ -79,22 +79,18 @@ window.saveSettlementRates = async function() {
 };
 
 /* ==========================================================================
-   👥 3. 團隊分紅：共用隊員管理區
+   👥 3. 團隊分紅：共用隊員管理區 (改為直接在表格新增)
    ========================================================================== */
-window.members = [];
 
+// 新增一個空的隊員列到表格
 window.addMember = function() {
-    const name = prompt("請輸入隊員名稱:");
-    if (!name) return;
-    // 新增時標記是誰新增的
-    const keyCode = document.getElementById('userKeyCode').value.trim();
-    window.members.push({ name: name, ratio: 1, checked: false, addedBy: keyCode || "Unknown" });
+    window.members.push({ name: "", ratio: 1, checked: false });
     renderMembers();
 };
 
-window.removeMember = function(index) {
-    window.members.splice(index, 1);
-    renderMembers();
+// 更新名稱與比例的暫存
+window.updateMemberData = function(index, field, value) {
+    window.members[index][field] = value;
 };
 
 function renderMembers() {
@@ -103,32 +99,24 @@ function renderMembers() {
     window.members.forEach((member, index) => {
         tbody.innerHTML += `
             <tr style="vertical-align: middle;">
-                <td style="text-align: center;"><input type="checkbox" ${member.checked ? 'checked' : ''} onchange="window.members[${index}].checked = this.checked"></td>
-                <td style="padding: 5px;"><input type="text" value="${member.name}" class="cloud-input" disabled></td>
-                <td style="padding: 5px;"><input type="number" value="${member.ratio}" class="cloud-input" onchange="window.members[${index}].ratio = this.value"></td>
-                <td style="text-align: center;"><button onclick="removeMember(${index})" class="calc-btn btn-red" style="padding: 5px 10px;">X</button></td>
+                <td style="text-align: center;">
+                    <input type="checkbox" ${member.checked ? 'checked' : ''} onchange="window.members[${index}].checked = this.checked">
+                </td>
+                <td style="padding: 5px;">
+                    <input type="text" value="${member.name}" class="cloud-input" placeholder="輸入名稱..." 
+                    onchange="updateMemberData(${index}, 'name', this.value)">
+                </td>
+                <td style="padding: 5px;">
+                    <input type="number" value="${member.ratio}" class="cloud-input" 
+                    onchange="updateMemberData(${index}, 'ratio', parseFloat(this.value))">
+                </td>
+                <td style="text-align: center;">
+                    <button onclick="removeMember(${index})" class="calc-btn btn-red" style="padding: 5px 10px;">X</button>
+                </td>
             </tr>
         `;
     });
 }
-
-// 核心：點擊按鈕後，將網頁表格狀態同步至雲端共用區
-window.saveMembersToCloud = async function() {
-    const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) { alert("🔒 尚未登入代碼，無法同步！"); return; }
-    
-    try {
-        // 直接將目前表格狀態 (包含所有新增/刪除後的成員) 送出覆蓋雲端
-        await setDoc(doc(db, "shared_data", "team_members"), { 
-            members: window.members 
-        }, { merge: false });
-        alert("✅ 共用名單已同步至雲端！");
-    } catch (e) { alert("同步失敗：" + e.message); }
-};
-
-document.addEventListener('DOMContentLoaded', () => {
-    updateDynamicPrices();
-});
 
 // 🧮 第一類：基礎攻擊力反推
 function calculateBaseAtk() {
