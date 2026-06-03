@@ -14,10 +14,8 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 /* ==========================================================================
-   🧱 1. 全域/系統功能區 (頁面初始化、頁面切換、雲端基礎連線)
+   🧱 1. 全域/系統功能區
    ========================================================================== */
-
-// 頁面切換功能
 window.switchTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -25,7 +23,14 @@ window.switchTab = function(tabId) {
     document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
 };
 
-// 雲端讀取功能 (首頁使用)
+// 展開/收合功能
+window.toggleSection = function(el) {
+    const content = el.nextElementSibling;
+    const isHidden = content.style.display === 'none';
+    content.style.display = isHidden ? 'block' : 'none';
+    el.querySelector('span').innerText = isHidden ? '▼' : '▲';
+};
+
 window.loadFromCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
     if (!keyCode) { alert('請先輸入代碼！'); return; }
@@ -37,32 +42,30 @@ window.loadFromCloud = async function() {
                 document.getElementById('moneyToMileage').value = data.settlementRates.moneyToMileage;
                 document.getElementById('cubeFancyPrice').value = data.settlementRates.cubeFancyPrice;
                 document.getElementById('cubeSuspiciousPrice').value = data.settlementRates.cubeSuspiciousPrice;
-                updateDynamicPrices(); // 同步更新計算結果
+                updateDynamicPrices();
             }
-            alert(`📥 讀取成功！上次存檔：${data.lastSaveTime || '無'}`);
-        } else { alert("⚠️ 找不到該代碼資料。"); }
+        }
+        // 讀取共用隊員清單
+        const sharedSnap = await getDoc(doc(db, "shared_data", "team_members"));
+        if (sharedSnap.exists()) {
+            window.members = sharedSnap.data().members || [];
+            renderMembers();
+        }
+        alert(`📥 讀取完成！`);
     } catch (e) { console.error("讀取失敗：", e); }
 };
 
 /* ==========================================================================
-   ⚙️ 2. 團隊分紅：基礎設定區 (匯率計算、自動同步)
+   ⚙️ 2. 團隊分紅：基礎設定區
    ========================================================================== */
-
-// 自動計算剪刀與雪花價格
 function updateDynamicPrices() {
     const mileageRatio = parseFloat(document.getElementById('moneyToMileage').value) || 10000;
     const getPriceInWan = (mileage) => ((mileage / mileageRatio) * 1000).toFixed(1);
-
-    const fancyEl = document.getElementById('priceFancy');
-    const platinumEl = document.getElementById('pricePlatinum');
-    const snowEl = document.getElementById('priceSnow');
-
-    if(fancyEl) fancyEl.innerText = getPriceInWan(3900);
-    if(platinumEl) platinumEl.innerText = getPriceInWan(7100);
-    if(snowEl) snowEl.innerText = getPriceInWan(3500 / 11);
+    document.getElementById('priceFancy').innerText = getPriceInWan(3900);
+    document.getElementById('pricePlatinum').innerText = getPriceInWan(7100);
+    document.getElementById('priceSnow').innerText = getPriceInWan(3500 / 11);
 }
 
-// 基礎設定儲存邏輯 (自動同步用)
 window.saveSettlementRates = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
     if (!keyCode) return;
@@ -75,89 +78,57 @@ window.saveSettlementRates = async function() {
     }, { merge: true });
 };
 
-// 儲存按鈕專用 (首頁按鈕)
-window.saveToCloud = async function() {
-    const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) { alert('請輸入代碼！'); return; }
-    await saveSettlementRates(); // 呼叫基礎儲存
-    alert("✅ 資料已成功儲存！");
-};
-
 /* ==========================================================================
-   👥 3. 團隊分紅：共用雲端隊員管理區
+   👥 3. 團隊分紅：共用隊員管理區
    ========================================================================== */
-window.members = []; // 這是從雲端讀取的共用清單
+window.members = [];
 
-// 新增隊員到網頁暫存表
 window.addMember = function() {
     const name = prompt("請輸入隊員名稱:");
     if (!name) return;
-    window.members.push({ name: name, ratio: 1, checked: false });
+    // 新增時標記是誰新增的
+    const keyCode = document.getElementById('userKeyCode').value.trim();
+    window.members.push({ name: name, ratio: 1, checked: false, addedBy: keyCode || "Unknown" });
     renderMembers();
 };
 
-// 刪除表格隊員
 window.removeMember = function(index) {
     window.members.splice(index, 1);
     renderMembers();
 };
 
-// 渲染表格 (包含勾選框)
 function renderMembers() {
     const tbody = document.getElementById('member-table-body');
     tbody.innerHTML = '';
     window.members.forEach((member, index) => {
         tbody.innerHTML += `
-            <tr>
+            <tr style="vertical-align: middle;">
                 <td style="text-align: center;"><input type="checkbox" ${member.checked ? 'checked' : ''} onchange="window.members[${index}].checked = this.checked"></td>
                 <td style="padding: 5px;"><input type="text" value="${member.name}" class="cloud-input" disabled></td>
                 <td style="padding: 5px;"><input type="number" value="${member.ratio}" class="cloud-input" onchange="window.members[${index}].ratio = this.value"></td>
-                <td style="text-align: center;"><button onclick="removeMember(${index})" class="calc-btn btn-red">X</button></td>
+                <td style="text-align: center;"><button onclick="removeMember(${index})" class="calc-btn btn-red" style="padding: 5px 10px;">X</button></td>
             </tr>
         `;
     });
 }
 
-// 核心比對儲存邏輯：比對雲端與表格，將新隊員補上，刪除被移除的隊員
+// 核心：點擊按鈕後，將網頁表格狀態同步至雲端共用區
 window.saveMembersToCloud = async function() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) {
-        alert("🔒 尚未登入代碼！請先至首頁輸入代碼。");
-        return;
-    }
-
-    try {
-        // 準備送出的資料 (加入 addedBy 標記)
-        const updatedList = window.members.map(m => ({
-            name: m.name,
-            ratio: m.ratio,
-            addedBy: m.addedBy || keyCode // 若已有則保留，無則標記為當前代碼
-        }));
-
-        await setDoc(doc(db, "shared_data", "team_members"), { 
-            members: updatedList 
-        }, { merge: false }); // merge: false 表示直接覆蓋以確保刪除動作同步
-        
-        alert("✅ 共用雲端名單已同步！");
-    } catch (e) {
-        alert("同步失敗：" + e.message);
-    }
-};
-
-// 讀取共用雲端
-window.loadFromCloud = async function() {
-    const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) { alert('請先輸入代碼！'); return; }
+    if (!keyCode) { alert("🔒 尚未登入代碼，無法同步！"); return; }
     
     try {
-        const docSnap = await getDoc(doc(db, "shared_data", "team_members"));
-        if (docSnap.exists()) {
-            window.members = docSnap.data().members || [];
-            renderMembers();
-            alert("📥 已讀取共用名單。");
-        }
-    } catch (e) { console.error("讀取失敗：", e); }
+        // 直接將目前表格狀態 (包含所有新增/刪除後的成員) 送出覆蓋雲端
+        await setDoc(doc(db, "shared_data", "team_members"), { 
+            members: window.members 
+        }, { merge: false });
+        alert("✅ 共用名單已同步至雲端！");
+    } catch (e) { alert("同步失敗：" + e.message); }
 };
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateDynamicPrices();
+});
 
 // 🧮 第一類：基礎攻擊力反推
 function calculateBaseAtk() {
