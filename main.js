@@ -98,7 +98,7 @@ function calculateEquipStat() {
     document.getElementById('calcMainPercent').value = document.getElementById('statPercent').value;
 }
 
-// 🧮 第三類：完整表攻計算器
+// 🧮 第三類：完整表攻計算器 (針對正向計算的精準修正)
 function calculateFinalAtk() {
     const baseAtk = parseFloat(document.getElementById('calcBaseAtk').value) || 0;
     const atkPercent = (parseFloat(document.getElementById('calcAtkPercent').value) || 0) / 100;
@@ -106,11 +106,19 @@ function calculateFinalAtk() {
     const mainEquip = parseFloat(document.getElementById('calcMainEquip').value) || 0;
     const mainPercent = (parseFloat(document.getElementById('calcMainPercent').value) || 0) / 100;
     const subStat = parseFloat(document.getElementById('calcSubStat').value) || 0;
-    const coeff = parseFloat(document.getElementById('coeff').value) || 4;
+    const coeff = parseFloat(document.getElementById('coeff').value) || 1.0;
 
-    const totalMainStat = (mainBase + mainEquip) * (1 + mainPercent);
+    // 1. 先計算總主屬，遊戲內面板通常會四捨五入顯示總主屬
+    const totalMainStat = Math.round((mainBase + mainEquip) * (1 + mainPercent));
+    
+    // 2. 屬性因子：(總主屬 * 4 + 副屬) / 100
     const statFactor = (totalMainStat * 4 + subStat) / 100;
+    
+    // 3. 攻擊力因子：基礎攻擊力 * (1 + 攻擊%)，遊戲內計算會取整數 (無條件捨去)
     const totalAtk = Math.floor(baseAtk * (1 + atkPercent));
+    
+    // 4. 最後計算最大表攻：總攻擊力因子 * 職業係數 * 屬性因子
+    // 遊戲最後的表攻結果是四捨五入取整數
     const finalAtk = Math.round(totalAtk * coeff * statFactor);
 
     document.getElementById('finalMaxAtkDisplay').innerText = finalAtk.toLocaleString();
