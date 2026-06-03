@@ -25,8 +25,8 @@
                 <h4>💾 雲端進度同步（免註冊）</h4>
                 <p>輸入你自訂的「自訂字串」，就能在雲端儲存或讀取你的工具箱設定喔！</p>
                 <input type="text" id="userKeyCode" class="cloud-input" placeholder="例如：maple123">
-                <button class="cloud-btn load" onclick="loadFromCloud()">📥 讀取進度</button>
-                <button class="cloud-btn" onclick="saveToCloud()">📤 儲存資料</button>
+                <button class="cloud-btn load" onclick="loadFromCloud()">📥 載入設定</button>
+                <button onclick="saveAllToCloud()">💾 同步雲端</button>
                 <p id="cloudStatus" style="color: #64b5f6; font-weight: bold; margin-top: 10px;"></p>
             </div>
         </div>
@@ -41,15 +41,15 @@
                 <div class="sim-input-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: end;">
                     <div class="form-group">
                         <label>1000萬楓幣換算里程</label>
-                        <input type="number" id="moneyToMileage" class="cloud-input" value="10000" oninput="runUpdateAndSave()">
+                        <input type="number" id="moneyToMileage" class="cloud-input" value="10000">
                     </div>
                     <div class="form-group">
                         <label>奇幻方塊價格(萬)</label>
-                        <input type="number" id="cubeFancyPrice" class="cloud-input" value="500" oninput="runUpdateAndSave()">
+                        <input type="number" id="cubeFancyPrice" class="cloud-input" value="500">
                     </div>
                     <div class="form-group">
                         <label>可疑的方塊價格(萬)</label>
-                        <input type="number" id="cubeSuspiciousPrice" class="cloud-input" value="50" oninput="runUpdateAndSave()">
+                        <input type="number" id="cubeSuspiciousPrice" class="cloud-input" value="50">
                     </div>
                 </div>
 
@@ -200,5 +200,22 @@
 </div>
 
     <script type="module" src="main.js"></script>
+    <script>
+    // 這段腳本會自動抓取所有需要的 input 並綁定事件
+    document.addEventListener("DOMContentLoaded", () => {
+        const idsToBind = [
+            'moneyToMileage', 'cubeFancyPrice', 'cubeSuspiciousPrice',
+            'calcBaseAtk', 'calcAtkPercent', 'calcMainBase', 
+            'calcMainEquip', 'calcMainPercent', 'calcSubStat', 'coeff'
+        ];
+
+        idsToBind.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('input', window.triggerAutoSave);
+            }
+        });
+    });
+    </script>
 </body>
 </html>
