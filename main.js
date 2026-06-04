@@ -1,7 +1,8 @@
+// 1. 從模組匯入函式
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-import { getFirestore, doc, getDoc, setDoc, collection } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
 
-// 直接使用 firebase 物件 (因為你在 HTML 已經引入了)
+// 2. 初始化
 const firebaseConfig = {
     apiKey: "AIzaSyD1dONez4mPFyoQpIgxN0aSGCKYiUvbyxU",
     authDomain: "maplestar-tools.firebaseapp.com",
@@ -12,8 +13,8 @@ const firebaseConfig = {
 };
 
 // 使用 firebase.initializeApp 初始化
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 /* ==========================================================================
    🧱 1. 全域/系統功能區 (包含首頁的存檔與讀取)
    ========================================================================== */
