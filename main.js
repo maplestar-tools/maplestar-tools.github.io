@@ -49,27 +49,49 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // 3. 系統功能初始化
     updateDynamicPrices();
-    window.loadSharedMembers();
+    loadSharedMembers();
 
     // 4. 事件監聽：總守門員 (全域 input 監聽)
     document.addEventListener('input', (event) => {
         // 排除掉不該自動觸發儲存的欄位 (例如 KeyCode)
         if ((event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT') && event.target.id !== 'userKeyCode') {
-            window.triggerAutoSave();
+            triggerAutoSave();
         }
     });
 
     // 5. 按鈕點擊事件綁定
+    // 1. 分頁切換
     document.getElementById('btn-tab-home').addEventListener('click', () => switchTab('home'));
     document.getElementById('btn-tab-money').addEventListener('click', () => switchTab('money-split'));
     document.getElementById('btn-tab-equip').addEventListener('click', () => switchTab('equip-calc'));
-    document.getElementById('btnCalcBaseAtk')?.addEventListener('click', calculateBaseAtk);
-    document.getElementById('btnCalcEquipStat')?.addEventListener('click', calculateEquipStat);
-    document.getElementById('btnCalcFinal')?.addEventListener('click', calculateFinalAtk);
+    // 2. 雲端同步區塊
+    document.getElementById('btn-load-cloud').addEventListener('click', loadFromCloud);
+    document.getElementById('btn-manual-sync').addEventListener('click', () => saveAllToCloud(true));
+    // 3. 團隊成員管理
+    // 注意：toggleSection 需要傳入點擊的元素，這裡用事件對象 e 取得
+    document.getElementById('btn-toggle-member').addEventListener('click', (e) => toggleSection(e.currentTarget));
+    document.getElementById('btn-add-member').addEventListener('click', addMember);
+    document.getElementById('btn-save-members').addEventListener('click', saveMembersToCloud);
+    // 4. 計算器綁定
+    document.getElementById('btnCalcBaseAtk').addEventListener('click', calculateBaseAtk);
+    document.getElementById('btnCalcEquipStat').addEventListener('click', calculateEquipStat);
+    document.getElementById('btnCalcFinal').addEventListener('click', calculateFinalAtk);
+
+    // 6.處理動態成員表格的輸入與刪除
+    document.getElementById('member-table-body').addEventListener('change', (e) => {
+        const idx = e.target.dataset.index;
+        if (e.target.classList.contains('mem-check')) members[idx].checked = e.target.checked;
+        if (e.target.classList.contains('mem-name')) updateMemberData(idx, 'name', e.target.value);
+        if (e.target.classList.contains('mem-ratio')) updateMemberData(idx, 'ratio', parseFloat(e.target.value));
+    });
+
+    document.getElementById('member-table-body').addEventListener('click', (e) => {
+        if (e.target.classList.contains('mem-del')) removeMember(e.target.dataset.index);
+    });
 });
 
 // 摺疊功能 (最單純的寫法，確保不報錯)
-window.toggleSection = function(el) {
+function toggleSection(el) {
     const content = document.getElementById('member-section');
     if (!content) return;
     
@@ -104,7 +126,7 @@ function updateSyncUI(status, message = "") {
 }
 
 /* --- 自動儲存觸發器：所有 input 變動時會自動呼叫此函式 --- */
-window.triggerAutoSave = function() {
+function triggerAutoSave() {
     if (typeof updateDynamicPrices === 'function') updateDynamicPrices();
     
     // 1. 本地即時備份：確保無論網路狀況如何，資料都不會流失
@@ -122,7 +144,7 @@ window.triggerAutoSave = function() {
         saveTimer = setTimeout(() => {
             // 只有內容真的有變更，才進行雲端寫入
             if (JSON.stringify(currentData) !== JSON.stringify(lastSavedData)) {
-                window.saveAllToCloud(false);
+                saveAllToCloud(false);
             } else {
                 updateSyncUI('synced'); // 無變更則維持綠燈
             }
@@ -131,7 +153,7 @@ window.triggerAutoSave = function() {
 };
 
 /* --- 雲端同步核心：執行寫入動作 --- */
-window.saveAllToCloud = async function(isManual = false) {
+async function saveAllToCloud(isManual = false) {
     const keyCode = document.getElementById('userKeyCode')?.value.trim();
     if (!keyCode) {
         if (isManual) alert("請先輸入代碼！");
@@ -162,7 +184,7 @@ window.saveAllToCloud = async function(isManual = false) {
 };
 
 /* --- 資料讀取功能 --- */
-window.loadFromCloud = async function() {
+async function loadFromCloud() {
     const keyCode = document.getElementById('userKeyCode')?.value.trim();
     if (!keyCode) { alert('請先輸入代碼！'); return; }
     
@@ -230,7 +252,7 @@ function getFormValues() {
    ⚙️ 2. 團隊分紅：基礎設定與計算
    ========================================================================== */
 // A. 專門負責「算數字」的 (給 oninput 用)
-window.updateDynamicPrices = function() {
+function updateDynamicPrices() = function() {
     const mileageRatio = parseFloat(document.getElementById('moneyToMileage').value) || 10000;
     const getPriceInWan = (mileage) => ((mileage / mileageRatio) * 1000).toFixed(1);
     document.getElementById('priceFancy').innerText = getPriceInWan(3900);
@@ -240,65 +262,55 @@ window.updateDynamicPrices = function() {
 /* ==========================================================================
    👥 3. 團隊分紅：共用隊員管理區
    ========================================================================== */
-window.members = [];
+let members = []; = [];
 
-window.loadSharedMembers = async function() {
+async function loadSharedMembers() {
     try {
         const sharedSnap = await getDoc(doc(db, "shared_data", "team_members"));
         if (sharedSnap.exists()) {
-            window.members = sharedSnap.data().members || [];
+            members = sharedSnap.data().members || [];
             renderMembers();
         }
     } catch (e) { console.error("共用讀取失敗：", e); }
 };
 
-window.saveMembersToCloud = async function() {
+async function saveMembersToCloud() {
     const keyCode = document.getElementById('userKeyCode').value.trim();
     if (!keyCode) { alert("🔒 尚未登入代碼，無法同步！"); return; }
     try {
-        await setDoc(doc(db, "shared_data", "team_members"), { members: window.members }, { merge: false });
+        await setDoc(doc(db, "shared_data", "team_members"), { members: members }, { merge: false });
         alert("✅ 共用名單已同步至雲端！");
     } catch (e) { alert("同步失敗：" + e.message); }
 };
 
-window.addMember = function() {
-    window.members.push({ name: "", ratio: 1, checked: false });
+function addMember() {
+    members.push({ name: "", ratio: 1, checked: false });
     renderMembers();
 };
 
-window.removeMember = function(index) {
-    window.members.splice(index, 1);
+function removeMember(index) {
+    members.splice(index, 1);
     renderMembers();
 };
 
-window.updateMemberData = function(index, field, value) {
-    window.members[index][field] = value;
+function updateMemberData(index, field, value) {
+    members[index][field] = value;
 };
 
 function renderMembers() {
     const tbody = document.getElementById('member-table-body');
     if (!tbody) return;
     tbody.innerHTML = '';
-    window.members.forEach((member, index) => {
-        tbody.innerHTML += `
-            <tr style="vertical-align: middle;">
-                <td style="text-align: center;">
-                    <input type="checkbox" ${member.checked ? 'checked' : ''} onchange="window.members[${index}].checked = this.checked">
-                </td>
-                <td style="padding: 5px;">
-                    <input type="text" value="${member.name}" class="cloud-input" placeholder="名稱..." onchange="updateMemberData(${index}, 'name', this.value)">
-                </td>
-                <td style="padding: 5px;">
-                    <input type="number" value="${member.ratio}" class="cloud-input" onchange="updateMemberData(${index}, 'ratio', parseFloat(this.value))">
-                </td>
-                <td style="text-align: center; vertical-align: middle;">
-                    <button onclick="removeMember(${index})" class="calc-btn btn-red" 
-                    style="width: 35px; height: 35px; padding: 0; line-height: 35px; margin: 0 auto; display: block; font-weight:bold;">
-                        X
-                    </button>
-                </td>
-            </tr>
+    members.forEach((member, index) => {
+        const tr = document.createElement('tr');
+        tr.style.verticalAlign = "middle";
+        tr.innerHTML = `
+            <td style="text-align: center;"><input type="checkbox" class="mem-check" data-index="${index}" ${member.checked ? 'checked' : ''}></td>
+            <td style="padding: 5px;"><input type="text" value="${member.name}" class="cloud-input mem-name" data-index="${index}" placeholder="名稱..."></td>
+            <td style="padding: 5px;"><input type="number" value="${member.ratio}" class="cloud-input mem-ratio" data-index="${index}"></td>
+            <td style="text-align: center;"><button class="calc-btn btn-red mem-del" data-index="${index}" style="width:35px;height:35px;padding:0;font-weight:bold;">X</button></td>
         `;
+        tbody.appendChild(tr);
     });
 }
 

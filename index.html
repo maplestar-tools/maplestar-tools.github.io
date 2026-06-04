@@ -29,7 +29,7 @@
                 <h4>💾 雲端進度同步（免註冊）</h4>
                 <p>輸入你自訂的「自訂字串」，就能在雲端儲存或讀取你的工具箱設定喔！</p>
                 <input type="text" id="userKeyCode" class="cloud-input" placeholder="例如：maple123">
-                <button class="cloud-btn" onclick="loadFromCloud()">📥 載入設定</button>
+                <button class="cloud-btn" id="btn-load-cloud">📥 載入設定</button>
                 <p id="cloudStatus" style="color: #64b5f6; font-weight: bold; margin-top: 10px;"></p>
             </div>
         </div>
@@ -73,7 +73,7 @@
             </div>
 
             <div class="calc-card settings-card" style="margin-top: 20px;">
-                <h4 class="title-blue" onclick="toggleSection(this)" style="cursor: pointer; display: flex; justify-content: space-between;">
+                <h4 class="title-blue" id="btn-toggle-member" style="cursor: pointer; display: flex; justify-content: space-between;">
                     👥 隊員分紅表格 (共用雲端) <span>▼</span>
                 </h4>
                 
@@ -93,8 +93,8 @@
                     </table>
                     
                     <div style="display: flex; gap: 10px;">
-                        <button onclick="addMember()" class="calc-btn btn-green">+ 新增隊員</button>
-                        <button onclick="saveMembersToCloud()" class="calc-btn btn-blue">💾 新增至雲端</button>
+                        <button id="btn-add-member" class="calc-btn btn-green">+ 新增隊員</button>
+                        <button id="btn-save-members" class="calc-btn btn-blue">💾 新增至雲端</button>
                     </div>
                 </div>
             </div>
@@ -216,7 +216,7 @@
         <div style="font-size: 11px; color: #aaa; margin-bottom: 8px;">
             帳號: <span id="display-keycode" style="color: #fff;">無</span>
         </div>
-        <button onclick="window.saveAllToCloud(true)" style="width: 100%; background: #4a90e2; border: none; color: white; padding: 5px; border-radius: 6px; cursor: pointer; font-size: 12px;">手動同步</button>
+        <button id="btn-manual-sync" style="width: 100%; background: #4a90e2; border: none; color: white; padding: 5px; border-radius: 6px; cursor: pointer; font-size: 12px;">手動同步</button>
     </div>
 
     <script type="module" src="main.js"></script>
