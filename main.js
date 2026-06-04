@@ -1,8 +1,7 @@
-// 1. 從模組匯入函式
+// 從模組匯入函式
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
 
-// 2. 初始化
 const firebaseConfig = {
     apiKey: "AIzaSyD1dONez4mPFyoQpIgxN0aSGCKYiUvbyxU",
     authDomain: "maplestar-tools.firebaseapp.com",
@@ -12,7 +11,6 @@ const firebaseConfig = {
     appId: "1:109052078453:web:31dd776acaed7ed0828b3c"
 };
 
-// 使用 firebase.initializeApp 初始化
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 /* ==========================================================================
