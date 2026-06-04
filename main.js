@@ -252,7 +252,7 @@ function getFormValues() {
    ⚙️ 2. 團隊分紅：基礎設定與計算
    ========================================================================== */
 // A. 專門負責「算數字」的 (給 oninput 用)
-function updateDynamicPrices() = function() {
+function updateDynamicPrices() {
     const mileageRatio = parseFloat(document.getElementById('moneyToMileage').value) || 10000;
     const getPriceInWan = (mileage) => ((mileage / mileageRatio) * 1000).toFixed(1);
     document.getElementById('priceFancy').innerText = getPriceInWan(3900);
