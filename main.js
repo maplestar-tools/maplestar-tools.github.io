@@ -52,17 +52,17 @@ window.toggleSection = function(el) {
 
 // 雲端儲存與讀取系統
 /* --- 全域變數 --- */
-let saveTimer;
-let lastSavedData = null;
+let saveTimer;         // 用於 15 秒自動儲存的計時器
+let lastSavedData = null; // 用於比對資料是否變更，避免無意義的雲端寫入
 
-/* --- UI 更新函式：狀態燈與提示 --- */
+/* --- UI 更新函式：負責狀態燈顯示 --- */
 function updateSyncUI(status, message = "") {
     const dot = document.getElementById('sync-dot');
     const text = document.getElementById('sync-status-text');
     const states = {
-        synced: { color: '#4caf50', label: '已同步' },
-        pending: { color: '#ff9800', label: '同步中...' },
-        error: { color: '#f44336', label: '同步失敗' }
+        synced: { color: '#4caf50', label: '已同步' },   // 綠色：正常
+        pending: { color: '#ff9800', label: '同步中...' }, // 黃色：變更中
+        error: { color: '#f44336', label: '同步失敗' }   // 紅色：錯誤
     };
     if (dot && text) {
         dot.style.backgroundColor = states[status].color;
@@ -70,40 +70,34 @@ function updateSyncUI(status, message = "") {
     }
 }
 
-function showToast(message) {
-    let toast = document.getElementById('toast');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'toast';
-        toast.style.cssText = 'position:fixed; bottom:20px; right:20px; padding:15px 25px; background:#333; color:#fff; border-radius:5px; z-index:9999; display:none; box-shadow: 0 4px 6px rgba(0,0,0,0.3);';
-        document.body.appendChild(toast);
-    }
-    toast.innerText = message;
-    toast.style.display = 'block';
-    setTimeout(() => { toast.style.display = 'none'; }, 3000);
-}
-
-/* --- 自動儲存觸發器 (Input 事件綁定) --- */
+/* --- 自動儲存觸發器：所有 input 變動時會自動呼叫此函式 --- */
 window.triggerAutoSave = function() {
     if (typeof updateDynamicPrices === 'function') updateDynamicPrices();
     
-    // 1. 變動即存入本地
+    // 1. 本地即時備份：確保無論網路狀況如何，資料都不會流失
     const currentData = getFormValues();
     localStorage.setItem('maple_tool_data', JSON.stringify(currentData));
     
-    // 2. 顯示等待狀態
-    updateSyncUI('pending');
+    // 2. 獲取當前 KeyCode，決定是否要上傳雲端
+    const keyCode = document.getElementById('userKeyCode')?.value.trim();
     
-    // 3. 15秒防抖上傳雲端
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-        if (JSON.stringify(currentData) !== JSON.stringify(lastSavedData)) {
-            window.saveAllToCloud(false);
-        }
-    }, 15000);
+    if (keyCode) {
+        updateSyncUI('pending'); // 開始進入同步等待
+        
+        // 3. 15 秒防抖延遲：避免頻繁操作導致寫入資料庫過載
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => {
+            // 只有內容真的有變更，才進行雲端寫入
+            if (JSON.stringify(currentData) !== JSON.stringify(lastSavedData)) {
+                window.saveAllToCloud(false);
+            } else {
+                updateSyncUI('synced'); // 無變更則維持綠燈
+            }
+        }, 15000);
+    }
 };
 
-/* --- 雲端同步核心 (含本地備份) --- */
+/* --- 雲端同步核心：執行寫入動作 --- */
 window.saveAllToCloud = async function(isManual = false) {
     const keyCode = document.getElementById('userKeyCode')?.value.trim();
     if (!keyCode) {
@@ -117,13 +111,16 @@ window.saveAllToCloud = async function(isManual = false) {
         const dataToSave = getFormValues();
         dataToSave.lastUpdated = new Date().toISOString();
         
+        // 寫入雲端
         await setDoc(doc(db, "player_data", keyCode), dataToSave, { merge: true });
         
-        // 存雲端成功後更新本地
-        localStorage.setItem('maple_tool_data', JSON.stringify(dataToSave));
+        // 同步狀態更新
         lastSavedData = JSON.parse(JSON.stringify(dataToSave));
-        
+        localStorage.setItem('maple_tool_data', JSON.stringify(dataToSave));
         updateSyncUI('synced');
+        
+        // 更新 UI 顯示的帳號代碼
+        document.getElementById('display-keycode').innerText = keyCode;
         if (isManual) showToast("💾 手動同步成功");
     } catch (e) {
         updateSyncUI('error', '同步失敗');
@@ -131,7 +128,7 @@ window.saveAllToCloud = async function(isManual = false) {
     }
 };
 
-/* --- 讀取邏輯 (含填寫邏輯) --- */
+/* --- 資料讀取功能 --- */
 window.loadFromCloud = async function() {
     const keyCode = document.getElementById('userKeyCode')?.value.trim();
     if (!keyCode) { alert('請先輸入代碼！'); return; }
@@ -141,13 +138,14 @@ window.loadFromCloud = async function() {
         if (!docSnap.exists()) { alert("找不到資料"); return; }
         
         const data = docSnap.data();
-        fillValues(data);
+        fillValues(data); // 呼叫你的填充欄位函式
         
-        // 同步存入本地
+        // 讀取後寫入本地備份並更新狀態
         localStorage.setItem('maple_tool_data', JSON.stringify(data));
         lastSavedData = JSON.parse(JSON.stringify(data));
         updateSyncUI('synced');
         
+        document.getElementById('display-keycode').innerText = keyCode;
         if (typeof updateDynamicPrices === 'function') updateDynamicPrices();
         if (typeof calculateFinalAtk === 'function') calculateFinalAtk();
         
@@ -157,9 +155,8 @@ window.loadFromCloud = async function() {
     }
 };
 
-/* --- 初始化 --- */
+/* --- 頁面初始化：網頁載入時從本地還原資料 --- */
 window.addEventListener('DOMContentLoaded', () => {
-    // 優先讀取本地資料
     const localData = localStorage.getItem('maple_tool_data');
     if (localData) {
         try {
