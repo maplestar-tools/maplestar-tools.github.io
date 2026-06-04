@@ -180,17 +180,6 @@ window.loadFromCloud = async function() {
     }
 };
 
-/* --- 頁面初始化：網頁載入時從本地還原資料 --- */
-window.addEventListener('DOMContentLoaded', () => {
-    const localData = localStorage.getItem('maple_tool_data');
-    if (localData) {
-        try {
-            fillValues(JSON.parse(localData));
-            updateSyncUI('synced');
-        } catch (e) { console.error("本地資料還原失敗", e); }
-    }
-});
-
 /* --- 輔助：填寫資料 --- */
 function fillValues(obj) {
     for (let key in obj) {
@@ -244,11 +233,6 @@ window.updateDynamicPrices = function() {
    👥 3. 團隊分紅：共用隊員管理區
    ========================================================================== */
 window.members = [];
-
-document.addEventListener('DOMContentLoaded', () => {
-    updateDynamicPrices();
-    window.loadSharedMembers();
-});
 
 window.loadSharedMembers = async function() {
     try {
@@ -390,9 +374,3 @@ function calculateFinalAtk() {
 
     document.getElementById('finalMaxAtkDisplay').innerText = finalAtk.toLocaleString();
 }
-
-document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('btnCalcBaseAtk').addEventListener('click', calculateBaseAtk);
-    document.getElementById('btnCalcEquipStat').addEventListener('click', calculateEquipStat);
-    document.getElementById('btnCalcFinal').addEventListener('click', calculateFinalAtk);
-});
