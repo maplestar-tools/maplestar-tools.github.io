@@ -50,12 +50,26 @@ window.toggleSection = function(el) {
     }
 };
 
-
 // 雲端儲存與讀取系統
+/* --- 全域變數 --- */
+let saveTimer;
+let lastSavedData = null;
 
-/**
- * 【懸浮通知功能】在畫面右下角顯示提示訊息
- */
+/* --- UI 更新函式：狀態燈與提示 --- */
+function updateSyncUI(status, message = "") {
+    const dot = document.getElementById('sync-dot');
+    const text = document.getElementById('sync-status-text');
+    const states = {
+        synced: { color: '#4caf50', label: '已同步' },
+        pending: { color: '#ff9800', label: '同步中...' },
+        error: { color: '#f44336', label: '同步失敗' }
+    };
+    if (dot && text) {
+        dot.style.backgroundColor = states[status].color;
+        text.innerText = message || states[status].label;
+    }
+}
+
 function showToast(message) {
     let toast = document.getElementById('toast');
     if (!toast) {
@@ -69,31 +83,107 @@ function showToast(message) {
     setTimeout(() => { toast.style.display = 'none'; }, 3000);
 }
 
-// 【全域變數】儲存計時器與上次儲存的資料快取
-let saveTimer;
-let lastSavedData = null;
-
-/**
- * 【自動儲存觸發器】綁定於 input 的 oninput 事件
- * 加入防抖、變更比對，並確保離線同步
- */
+/* --- 自動儲存觸發器 (Input 事件綁定) --- */
 window.triggerAutoSave = function() {
     if (typeof updateDynamicPrices === 'function') updateDynamicPrices();
     
+    // 1. 變動即存入本地
+    const currentData = getFormValues();
+    localStorage.setItem('maple_tool_data', JSON.stringify(currentData));
+    
+    // 2. 顯示等待狀態
+    updateSyncUI('pending');
+    
+    // 3. 15秒防抖上傳雲端
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
-        // 只有資料真的有變更，才進行儲存
-        const currentData = getFormValues();
         if (JSON.stringify(currentData) !== JSON.stringify(lastSavedData)) {
             window.saveAllToCloud(false);
         }
-    }, 15000); // 拉長至 15 秒
+    }, 15000);
 };
 
-// 輔助函式：取得目前的表單資料
+/* --- 雲端同步核心 (含本地備份) --- */
+window.saveAllToCloud = async function(isManual = false) {
+    const keyCode = document.getElementById('userKeyCode')?.value.trim();
+    if (!keyCode) {
+        if (isManual) alert("請先輸入代碼！");
+        return;
+    }
+
+    updateSyncUI('pending', isManual ? '同步中...' : '自動同步...');
+
+    try {
+        const dataToSave = getFormValues();
+        dataToSave.lastUpdated = new Date().toISOString();
+        
+        await setDoc(doc(db, "player_data", keyCode), dataToSave, { merge: true });
+        
+        // 存雲端成功後更新本地
+        localStorage.setItem('maple_tool_data', JSON.stringify(dataToSave));
+        lastSavedData = JSON.parse(JSON.stringify(dataToSave));
+        
+        updateSyncUI('synced');
+        if (isManual) showToast("💾 手動同步成功");
+    } catch (e) {
+        updateSyncUI('error', '同步失敗');
+        alert("❌ 儲存失敗：" + e.message);
+    }
+};
+
+/* --- 讀取邏輯 (含填寫邏輯) --- */
+window.loadFromCloud = async function() {
+    const keyCode = document.getElementById('userKeyCode')?.value.trim();
+    if (!keyCode) { alert('請先輸入代碼！'); return; }
+    
+    try {
+        const docSnap = await getDoc(doc(db, "player_data", keyCode));
+        if (!docSnap.exists()) { alert("找不到資料"); return; }
+        
+        const data = docSnap.data();
+        fillValues(data);
+        
+        // 同步存入本地
+        localStorage.setItem('maple_tool_data', JSON.stringify(data));
+        lastSavedData = JSON.parse(JSON.stringify(data));
+        updateSyncUI('synced');
+        
+        if (typeof updateDynamicPrices === 'function') updateDynamicPrices();
+        if (typeof calculateFinalAtk === 'function') calculateFinalAtk();
+        
+        alert("📥 設定讀取成功！");
+    } catch (e) { 
+        alert("讀取失敗：" + e.message); 
+    }
+};
+
+/* --- 初始化 --- */
+window.addEventListener('DOMContentLoaded', () => {
+    // 優先讀取本地資料
+    const localData = localStorage.getItem('maple_tool_data');
+    if (localData) {
+        try {
+            fillValues(JSON.parse(localData));
+            updateSyncUI('synced');
+        } catch (e) { console.error("本地資料還原失敗", e); }
+    }
+});
+
+/* --- 輔助：填寫資料 --- */
+function fillValues(obj) {
+    for (let key in obj) {
+        if (typeof obj[key] === 'object' && obj[key] !== null) {
+            fillValues(obj[key]);
+        } else {
+            const el = document.getElementById(key);
+            if (el) el.value = obj[key];
+        }
+    }
+}
+
+/* --- 輔助：取得資料 --- */
 function getFormValues() {
     return {
-        // 這裡設定好你的層級，以後要加欄位只要加在這裡，讀寫都會自動運作
         settlementRates: {
             moneyToMileage: document.getElementById('moneyToMileage')?.value || 0,
             cubeFancyPrice: document.getElementById('cubeFancyPrice')?.value || 0,
@@ -117,73 +207,6 @@ function getFormValues() {
         }
     };
 }
-
-/**
- * 【雲端同步功能】將結算與計算設定統一儲存至雲端
- */
-window.saveAllToCloud = async function(isManual = false) {
-    const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) return;
-
-    try {
-        const dataToSave = getFormValues();
-        dataToSave.lastUpdated = new Date().toISOString();
-        
-        await setDoc(doc(db, "player_data", keyCode), dataToSave, { merge: true });
-        
-        lastSavedData = JSON.parse(JSON.stringify(dataToSave));
-        showToast("💾 雲端同步成功");
-    } catch (e) {
-        alert("❌ 儲存失敗：" + e.message);
-    }
-};
-
-// 【離線前強制儲存】確保關閉網頁時最後一次更新寫入
-window.addEventListener('beforeunload', () => {
-    const currentData = getFormValues();
-    if (JSON.stringify(currentData) !== JSON.stringify(lastSavedData)) {
-        // 注意：在 beforeunload 中進行非同步操作有限制，建議直接呼叫同步儲存或簡單處理
-        // 若要確保同步，Firebase 的 setDoc 建議在離開前觸發
-        window.saveAllToCloud(false);
-    }
-});
-/**
- * 【首頁讀取按鈕】讀取個人設定
- * 從雲端拉取資料並還原至各輸入框，隨後觸發重算
- */
-window.loadFromCloud = async function() {
-    const keyCode = document.getElementById('userKeyCode').value.trim();
-    if (!keyCode) { alert('請先輸入代碼！'); return; }
-    
-    try {
-        const docSnap = await getDoc(doc(db, "player_data", keyCode));
-        if (!docSnap.exists()) { alert("找不到資料"); return; }
-        
-        const data = docSnap.data();
-        
-        // 自動遞迴填寫所有欄位
-        function fillValues(obj) {
-            for (let key in obj) {
-                if (typeof obj[key] === 'object' && obj[key] !== null) {
-                    fillValues(obj[key]); // 往深層找
-                } else {
-                    const el = document.getElementById(key);
-                    if (el) el.value = obj[key];
-                }
-            }
-        }
-        
-        fillValues(data);
-        
-        // 執行必要的重算
-        if (typeof updateDynamicPrices === 'function') updateDynamicPrices();
-        if (typeof calculateFinalAtk === 'function') calculateFinalAtk();
-        
-        alert("📥 設定讀取成功！");
-    } catch (e) { 
-        alert("讀取失敗：" + e.message); 
-    }
-};
 /* ==========================================================================
    ⚙️ 2. 團隊分紅：基礎設定與計算
    ========================================================================== */

@@ -201,12 +201,20 @@
                 </div>
             </div>
         </div>
-    </div> <div id="toast" style="position: fixed; bottom: 20px; right: 20px; padding: 15px 25px; background: #333; color: #fff; border-radius: 5px; display: none; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
+    </div> 
+    <div id="toast" style="position: fixed; bottom: 20px; right: 20px; padding: 15px 25px; background: #333; color: #fff; border-radius: 5px; display: none; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
         💾 資料已同步
+    </div>
+
+    <div id="sync-panel" style="position: fixed; top: 20px; right: 20px; background: rgba(40, 44, 52, 0.9); color: white; padding: 10px 15px; border-radius: 20px; z-index: 9999; display: flex; align-items: center; gap: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); font-family: sans-serif;">
+        <div id="sync-dot" style="width: 10px; height: 10px; border-radius: 50%; background-color: #ccc;"></div>
+        <span id="sync-status-text" style="font-size: 13px; min-width: 65px;">準備就緒</span>
+        <button onclick="window.saveAllToCloud(true)" style="background: #4a90e2; border: none; color: white; padding: 4px 10px; border-radius: 12px; cursor: pointer; font-size: 12px;">手動同步</button>
     </div>
 
     <script type="module" src="main.js"></script>
     <script>
+        // 綁定輸入事件：當使用者修改欄位時，自動觸發本地存檔
         document.addEventListener("DOMContentLoaded", () => {
             const idsToBind = [
                 'moneyToMileage', 'cubeFancyPrice', 'cubeSuspiciousPrice',
