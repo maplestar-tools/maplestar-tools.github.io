@@ -93,12 +93,30 @@ window.triggerAutoSave = function() {
 // 輔助函式：取得目前的表單資料
 function getFormValues() {
     return {
-        moneyToMileage: document.getElementById('moneyToMileage').value,
-        cubeFancyPrice: document.getElementById('cubeFancyPrice').value,
-        cubeSuspiciousPrice: document.getElementById('cubeSuspiciousPrice').value,
-        baseAtk: document.getElementById('calcBaseAtk').value,
-        atkPercent: document.getElementById('calcAtkPercent').value
-        // ...這裡可以包含你想檢測的所有欄位
+        // 基礎設定
+        moneyToMileage: document.getElementById('moneyToMileage')?.value || 0,
+        cubeFancyPrice: document.getElementById('cubeFancyPrice')?.value || 0,
+        cubeSuspiciousPrice: document.getElementById('cubeSuspiciousPrice')?.value || 0,
+        
+        // 裝備反推
+        coeff: document.getElementById('coeff')?.value || 1.0,
+        mainStat: document.getElementById('mainStat')?.value || 0,
+        subStat: document.getElementById('subStat')?.value || 0,
+        maxAtk: document.getElementById('maxAtk')?.value || 0,
+        percentAtk: document.getElementById('percentAtk')?.value || 0,
+        
+        // 裝備屬性反推
+        statTotal: document.getElementById('statTotal')?.value || 0,
+        statBaseOnly: document.getElementById('statBaseOnly')?.value || 0,
+        statPercent: document.getElementById('statPercent')?.value || 0,
+        
+        // 表攻計算器
+        calcBaseAtk: document.getElementById('calcBaseAtk')?.value || 0,
+        calcAtkPercent: document.getElementById('calcAtkPercent')?.value || 0,
+        calcMainBase: document.getElementById('calcMainBase')?.value || 0,
+        calcMainEquip: document.getElementById('calcMainEquip')?.value || 0,
+        calcMainPercent: document.getElementById('calcMainPercent')?.value || 0,
+        calcSubStat: document.getElementById('calcSubStat')?.value || 0
     };
 }
 
