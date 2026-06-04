@@ -16,23 +16,48 @@ const db = getFirestore(app);
 /* ==========================================================================
    🧱 1. 全域/系統功能區 (包含首頁的存檔與讀取)
    ========================================================================== */
+// 【修正模組化問題】明確將函式綁定到 window 物件，HTML 才找得到
 window.switchTab = function(tabId) {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-    document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
+    // 注意：這裡假設你的按鈕上有 onclick 屬性，此處選取器改為更通用的方式
+    document.querySelector(`button[onclick="switchTab('${tabId}')"]`)?.classList.add('active');
 };
 
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. 強制顯示第一個分頁 (確保不是空的)
+/* --- 統一初始化中心：頁面載入後依序執行 --- */
+window.addEventListener('DOMContentLoaded', () => {
+    // 1. 本地資料還原 (優先權最高)
+    const localData = localStorage.getItem('maple_tool_data');
+    if (localData) {
+        try {
+            fillValues(JSON.parse(localData));
+            updateSyncUI('synced');
+        } catch (e) { console.error("本地資料還原失敗", e); }
+    }
+
+    // 2. 初始化分頁狀態
     const firstTab = document.querySelector('.tab-content');
     const firstBtn = document.querySelector('.tab-btn');
     if (firstTab) firstTab.classList.add('active');
     if (firstBtn) firstBtn.classList.add('active');
 
-    // 2. 初始化計算與讀取
+    // 3. 系統功能初始化
     updateDynamicPrices();
     window.loadSharedMembers();
+
+    // 4. 事件監聽：總守門員 (全域 input 監聽)
+    document.addEventListener('input', (event) => {
+        // 排除掉不該自動觸發儲存的欄位 (例如 KeyCode)
+        if ((event.target.tagName === 'INPUT' || event.target.tagName === 'SELECT') && event.target.id !== 'userKeyCode') {
+            window.triggerAutoSave();
+        }
+    });
+
+    // 5. 按鈕點擊事件綁定
+    document.getElementById('btnCalcBaseAtk')?.addEventListener('click', calculateBaseAtk);
+    document.getElementById('btnCalcEquipStat')?.addEventListener('click', calculateEquipStat);
+    document.getElementById('btnCalcFinal')?.addEventListener('click', calculateFinalAtk);
 });
 
 // 摺疊功能 (最單純的寫法，確保不報錯)
