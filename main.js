@@ -16,13 +16,20 @@ const db = firebase.firestore();
    🧱 1. 全域/系統功能區 (包含首頁的存檔與讀取)
    ========================================================================== */
 // 【修正模組化問題】明確將函式綁定到 window 物件，HTML 才找得到
-window.switchTab = function(tabId) {
+function switchTab(tabId) {
+    // 1. 隱藏所有內容與移除所有按鈕的 active
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+    // 2. 顯示目標分頁內容
     document.getElementById(tabId).classList.add('active');
-    // 注意：這裡假設你的按鈕上有 onclick 屬性，此處選取器改為更通用的方式
-    document.querySelector(`button[onclick="switchTab('${tabId}')"]`)?.classList.add('active');
-};
+
+    // 3. 根據 tabId 來點亮對應的按鈕
+    // 這裡我們直接透過對應的 id 來加 active，這比原本的寫法更準確
+    if (tabId === 'home') document.getElementById('btn-tab-home').classList.add('active');
+    if (tabId === 'money-split') document.getElementById('btn-tab-money').classList.add('active');
+    if (tabId === 'equip-calc') document.getElementById('btn-tab-equip').classList.add('active');
+}
 
 /* --- 統一初始化中心：頁面載入後依序執行 --- */
 window.addEventListener('DOMContentLoaded', () => {
