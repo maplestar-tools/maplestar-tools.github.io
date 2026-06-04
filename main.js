@@ -11,7 +11,6 @@ const firebaseConfig = {
 // 使用 firebase.initializeApp 初始化
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
-window.switchTab = switchTab;
 /* ==========================================================================
    🧱 1. 全域/系統功能區 (包含首頁的存檔與讀取)
    ========================================================================== */
