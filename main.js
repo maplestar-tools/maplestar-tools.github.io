@@ -93,30 +93,28 @@ window.triggerAutoSave = function() {
 // 輔助函式：取得目前的表單資料
 function getFormValues() {
     return {
-        // 基礎設定
-        moneyToMileage: document.getElementById('moneyToMileage')?.value || 0,
-        cubeFancyPrice: document.getElementById('cubeFancyPrice')?.value || 0,
-        cubeSuspiciousPrice: document.getElementById('cubeSuspiciousPrice')?.value || 0,
-        
-        // 裝備反推
-        coeff: document.getElementById('coeff')?.value || 1.0,
-        mainStat: document.getElementById('mainStat')?.value || 0,
-        subStat: document.getElementById('subStat')?.value || 0,
-        maxAtk: document.getElementById('maxAtk')?.value || 0,
-        percentAtk: document.getElementById('percentAtk')?.value || 0,
-        
-        // 裝備屬性反推
-        statTotal: document.getElementById('statTotal')?.value || 0,
-        statBaseOnly: document.getElementById('statBaseOnly')?.value || 0,
-        statPercent: document.getElementById('statPercent')?.value || 0,
-        
-        // 表攻計算器
-        calcBaseAtk: document.getElementById('calcBaseAtk')?.value || 0,
-        calcAtkPercent: document.getElementById('calcAtkPercent')?.value || 0,
-        calcMainBase: document.getElementById('calcMainBase')?.value || 0,
-        calcMainEquip: document.getElementById('calcMainEquip')?.value || 0,
-        calcMainPercent: document.getElementById('calcMainPercent')?.value || 0,
-        calcSubStat: document.getElementById('calcSubStat')?.value || 0
+        // 這裡設定好你的層級，以後要加欄位只要加在這裡，讀寫都會自動運作
+        settlementRates: {
+            moneyToMileage: document.getElementById('moneyToMileage')?.value || 0,
+            cubeFancyPrice: document.getElementById('cubeFancyPrice')?.value || 0,
+            cubeSuspiciousPrice: document.getElementById('cubeSuspiciousPrice')?.value || 0
+        },
+        calcSettings: {
+            coeff: document.getElementById('coeff')?.value || 1.0,
+            mainStat: document.getElementById('mainStat')?.value || 0,
+            subStat: document.getElementById('subStat')?.value || 0,
+            maxAtk: document.getElementById('maxAtk')?.value || 0,
+            percentAtk: document.getElementById('percentAtk')?.value || 0,
+            statTotal: document.getElementById('statTotal')?.value || 0,
+            statBaseOnly: document.getElementById('statBaseOnly')?.value || 0,
+            statPercent: document.getElementById('statPercent')?.value || 0,
+            calcBaseAtk: document.getElementById('calcBaseAtk')?.value || 0,
+            calcAtkPercent: document.getElementById('calcAtkPercent')?.value || 0,
+            calcMainBase: document.getElementById('calcMainBase')?.value || 0,
+            calcMainEquip: document.getElementById('calcMainEquip')?.value || 0,
+            calcMainPercent: document.getElementById('calcMainPercent')?.value || 0,
+            calcSubStat: document.getElementById('calcSubStat')?.value || 0
+        }
     };
 }
 
@@ -128,33 +126,15 @@ window.saveAllToCloud = async function(isManual = false) {
     if (!keyCode) return;
 
     try {
-        const dataToSave = { 
-            settlementRates: {
-                moneyToMileage: parseFloat(document.getElementById('moneyToMileage').value) || 0,
-                cubeFancyPrice: parseFloat(document.getElementById('cubeFancyPrice').value) || 0,
-                cubeSuspiciousPrice: parseFloat(document.getElementById('cubeSuspiciousPrice').value) || 0
-            },
-            calcSettings: {
-                baseAtk: parseFloat(document.getElementById('calcBaseAtk').value) || 0,
-                atkPercent: parseFloat(document.getElementById('calcAtkPercent').value) || 0,
-                mainBase: parseFloat(document.getElementById('calcMainBase').value) || 0,
-                mainEquip: parseFloat(document.getElementById('calcMainEquip').value) || 0,
-                mainPercent: parseFloat(document.getElementById('calcMainPercent').value) || 0,
-                subStat: parseFloat(document.getElementById('calcSubStat').value) || 0,
-                coeff: parseFloat(document.getElementById('coeff').value) || 1.0
-            },
-            lastUpdated: new Date()
-        };
-
+        const dataToSave = getFormValues();
+        dataToSave.lastUpdated = new Date().toISOString();
+        
         await setDoc(doc(db, "player_data", keyCode), dataToSave, { merge: true });
         
-        lastSavedData = getFormValues(); // 更新快取
-        showToast("💾 資料已同步至雲端");
-        if (isManual) alert("✅ 手動同步成功！");
+        lastSavedData = JSON.parse(JSON.stringify(dataToSave));
+        showToast("💾 雲端同步成功");
     } catch (e) {
-        console.error("儲存失敗", e);
-        alert("❌ 儲存失敗，請檢查控制台錯誤訊息：" + e.message); // 強制跳出視窗
-        showToast("❌ 同步失敗");
+        alert("❌ 儲存失敗：" + e.message);
     }
 };
 
@@ -177,33 +157,30 @@ window.loadFromCloud = async function() {
     
     try {
         const docSnap = await getDoc(doc(db, "player_data", keyCode));
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            
-            if (data.settlementRates) {
-                document.getElementById('moneyToMileage').value = data.settlementRates.moneyToMileage || 0;
-                document.getElementById('cubeFancyPrice').value = data.settlementRates.cubeFancyPrice || 0;
-                document.getElementById('cubeSuspiciousPrice').value = data.settlementRates.cubeSuspiciousPrice || 0;
+        if (!docSnap.exists()) { alert("找不到資料"); return; }
+        
+        const data = docSnap.data();
+        
+        // 自動遞迴填寫所有欄位
+        function fillValues(obj) {
+            for (let key in obj) {
+                if (typeof obj[key] === 'object' && obj[key] !== null) {
+                    fillValues(obj[key]); // 往深層找
+                } else {
+                    const el = document.getElementById(key);
+                    if (el) el.value = obj[key];
+                }
             }
-            if (data.calcSettings) {
-                document.getElementById('calcBaseAtk').value = data.calcSettings.baseAtk || 0;
-                document.getElementById('calcAtkPercent').value = data.calcSettings.atkPercent || 0;
-                document.getElementById('calcMainBase').value = data.calcSettings.mainBase || 0;
-                document.getElementById('calcMainEquip').value = data.calcSettings.mainEquip || 0;
-                document.getElementById('calcMainPercent').value = data.calcSettings.mainPercent || 0;
-                document.getElementById('calcSubStat').value = data.calcSettings.subStat || 0;
-                document.getElementById('coeff').value = data.calcSettings.coeff || 1.0;
-            }
-
-            if (typeof updateDynamicPrices === 'function') updateDynamicPrices();
-            if (typeof calculateFinalAtk === 'function') calculateFinalAtk();
-            
-            alert("📥 個人設定讀取成功！");
-        } else {
-            alert("❌ 找不到此代碼的資料。");
         }
+        
+        fillValues(data);
+        
+        // 執行必要的重算
+        if (typeof updateDynamicPrices === 'function') updateDynamicPrices();
+        if (typeof calculateFinalAtk === 'function') calculateFinalAtk();
+        
+        alert("📥 設定讀取成功！");
     } catch (e) { 
-        console.error("讀取失敗：", e);
         alert("讀取失敗：" + e.message); 
     }
 };
