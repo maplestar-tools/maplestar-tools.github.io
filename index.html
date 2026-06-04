@@ -14,9 +14,9 @@
     <h1>🍁 楓星工具箱 🍁</h1>
 
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('home')">首頁</button>
-        <button class="tab-btn" onclick="switchTab('money-split')">💰 團隊分紅</button>
-        <button class="tab-btn" onclick="switchTab('equip-calc')">⚔️ 裝備計算</button>
+        <button class="tab-btn active" id="btn-tab-home">首頁</button>
+        <button class="tab-btn" id="btn-tab-money">💰 團隊分紅</button>
+        <button class="tab-btn" id="btn-tab-equip">⚔️ 裝備計算</button>
     </div>
 
     <div class="content">
@@ -219,7 +219,7 @@
         <button onclick="window.saveAllToCloud(true)" style="width: 100%; background: #4a90e2; border: none; color: white; padding: 5px; border-radius: 6px; cursor: pointer; font-size: 12px;">手動同步</button>
     </div>
 
-    <script src="main.js"></script>
+    <script type="module" src="main.js"></script>
     
 </body>
 </html>

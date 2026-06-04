@@ -54,6 +54,9 @@ window.addEventListener('DOMContentLoaded', () => {
     });
 
     // 5. 按鈕點擊事件綁定
+    document.getElementById('btn-tab-home').addEventListener('click', () => window.switchTab('home'));
+    document.getElementById('btn-tab-money').addEventListener('click', () => window.switchTab('money-split'));
+    document.getElementById('btn-tab-equip').addEventListener('click', () => window.switchTab('equip-calc'));
     document.getElementById('btnCalcBaseAtk')?.addEventListener('click', calculateBaseAtk);
     document.getElementById('btnCalcEquipStat')?.addEventListener('click', calculateEquipStat);
     document.getElementById('btnCalcFinal')?.addEventListener('click', calculateFinalAtk);
