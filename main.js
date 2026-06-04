@@ -1,6 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore.js";
-
+// 直接使用 firebase 物件 (因為你在 HTML 已經引入了)
 const firebaseConfig = {
     apiKey: "AIzaSyD1dONez4mPFyoQpIgxN0aSGCKYiUvbyxU",
     authDomain: "maplestar-tools.firebaseapp.com",
@@ -10,8 +8,9 @@ const firebaseConfig = {
     appId: "1:109052078453:web:31dd776acaed7ed0828b3c"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+// 使用 firebase.initializeApp 初始化
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
 
 /* ==========================================================================
    🧱 1. 全域/系統功能區 (包含首頁的存檔與讀取)
