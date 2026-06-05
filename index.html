@@ -57,7 +57,10 @@
                         <input type="number" id="cubeSuspiciousPrice" class="cloud-input" value="50">
                     </div>
                 </div>
-                <div style="margin-top:20px;background:#252525;padding:15px;border-radius:8px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center;">
+                <div style="margin-top:16px;">
+                    <button id="btn-open-list-manager" class="calc-btn btn-orange" style="max-width:220px;">⚙️ 管理王／物品清單</button>
+                </div>
+                <div style="margin-top:16px;background:#252525;padding:15px;border-radius:8px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center;">
                     <div>
                         <div style="font-size:12px;color:#aaa;">神奇剪刀(萬)</div>
                         <div id="priceFancy" style="font-size:16px;font-weight:bold;color:#64b5f6;">0</div>
@@ -116,10 +119,10 @@
                 <!-- 掉落物表格 -->
                 <div style="font-size:13px;color:#aaa;margin-bottom:8px;font-weight:bold;">📦 掉落物清單</div>
                 <div style="overflow-x:auto;">
-                    <table style="width:100%;border-collapse:collapse;min-width:480px;">
+                    <table style="width:100%;border-collapse:collapse;min-width:620px;">
                         <thead>
                             <tr style="border-bottom:1px solid #444;font-size:12px;color:#aaa;">
-                                <th style="padding:8px 4px;text-align:left;">掉落物名稱</th>
+                                <th style="padding:8px 4px;text-align:left;min-width:250px;">掉落物名稱</th>
                                 <th style="padding:8px 4px;width:90px;">售/估價(萬)</th>
                                 <th style="padding:8px 4px;width:65px;">手續費</th>
                                 <th style="padding:8px 4px;width:70px;">剪刀</th>
@@ -308,6 +311,34 @@
     </div>
     <div style="font-size:11px;color:#aaa;margin-bottom:8px;">帳號: <span id="display-keycode" style="color:#fff;">無</span></div>
     <button id="btn-manual-sync" style="width:100%;background:#4a90e2;border:none;color:white;padding:5px;border-radius:6px;cursor:pointer;font-size:12px;">手動同步</button>
+</div>
+
+<!-- 管理王／物品清單 Modal -->
+<div id="modal-list-manager" class="modal-overlay">
+    <div class="modal-box">
+        <h4>⚙️ 管理王／物品清單</h4>
+
+        <!-- 王名單 -->
+        <div style="margin-bottom:20px;">
+            <div style="font-size:13px;font-weight:bold;color:#ff9f43;margin-bottom:8px;">👑 王名單</div>
+            <div id="modal-boss-list"></div>
+        </div>
+
+        <!-- 掉落物清單 -->
+        <div>
+            <div style="font-size:13px;font-weight:bold;color:#64b5f6;margin-bottom:8px;">📦 掉落物清單</div>
+            <div style="margin-bottom:10px;">
+                <select id="modal-boss-filter" class="cloud-input" style="font-size:13px;padding:8px;">
+                    <option value="">— 選擇王查看物品 —</option>
+                </select>
+            </div>
+            <div id="modal-item-list"></div>
+        </div>
+
+        <div style="margin-top:20px;">
+            <button id="btn-close-list-manager" class="calc-btn btn-blue">關閉</button>
+        </div>
+    </div>
 </div>
 
 <script type="module" src="main.js"></script>

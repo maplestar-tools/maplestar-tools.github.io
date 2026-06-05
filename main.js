@@ -981,3 +981,105 @@ function calculateFinalAtk() {
     const totalAtk  = Math.floor(base * (1 + atkPct));
     document.getElementById('finalMaxAtkDisplay').innerText = Math.round(totalAtk * coeff * statFactor).toLocaleString();
 }
+
+// ==========================================================================
+// 🪟 管理王／物品清單 Modal
+// ==========================================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // 綁定開關按鈕（延遲綁定確保 DOM 已載入）
+    const openBtn  = document.getElementById('btn-open-list-manager');
+    const closeBtn = document.getElementById('btn-close-list-manager');
+    if (openBtn)  openBtn.addEventListener('click',  openListManager);
+    if (closeBtn) closeBtn.addEventListener('click', closeListManager);
+
+    // 點擊遮罩關閉
+    document.getElementById('modal-list-manager')?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeListManager();
+    });
+
+    // 王篩選切換
+    document.getElementById('modal-boss-filter')?.addEventListener('change', renderModalItemList);
+});
+
+function openListManager() {
+    const kc = document.getElementById('userKeyCode')?.value.trim();
+    if (!kc) { alert("🔒 請先輸入代碼才能管理清單！"); return; }
+    renderModalBossList();
+    renderModalBossFilter();
+    renderModalItemList();
+    document.getElementById('modal-list-manager').classList.add('active');
+}
+
+function closeListManager() {
+    document.getElementById('modal-list-manager').classList.remove('active');
+}
+
+// 渲染王名單
+function renderModalBossList() {
+    const el = document.getElementById('modal-boss-list');
+    if (!el) return;
+    if (bossList.length === 0) {
+        el.innerHTML = '<div style="color:#666;font-size:13px;">尚無王名單</div>';
+        return;
+    }
+    el.innerHTML = bossList.map((boss, i) => `
+        <div class="modal-list-item">
+            <span>${boss}</span>
+            <button class="del-btn modal-del-boss" data-index="${i}">✕</button>
+        </div>
+    `).join('');
+
+    el.querySelectorAll('.modal-del-boss').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const idx = parseInt(btn.dataset.index);
+            const bossName = bossList[idx];
+            if (!confirm(`確定要刪除「${bossName}」及其所有掉落物嗎？`)) return;
+            bossList.splice(idx, 1);
+            delete bossItemMap[bossName];
+            await saveSharedLists();
+            renderBossSelect();
+            renderModalBossList();
+            renderModalBossFilter();
+            renderModalItemList();
+            showToast(`🗑 已刪除「${bossName}」`);
+        });
+    });
+}
+
+// 渲染王篩選下拉
+function renderModalBossFilter() {
+    const sel = document.getElementById('modal-boss-filter');
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— 選擇王查看物品 —</option>';
+    bossList.forEach(b => { sel.innerHTML += `<option value="${b}" ${cur === b ? 'selected' : ''}>${b}</option>`; });
+}
+
+// 渲染掉落物清單
+function renderModalItemList() {
+    const el   = document.getElementById('modal-item-list');
+    const boss = document.getElementById('modal-boss-filter')?.value;
+    if (!el) return;
+    if (!boss) { el.innerHTML = '<div style="color:#666;font-size:13px;">請先選擇王</div>'; return; }
+    const items = bossItemMap[boss] || [];
+    if (items.length === 0) { el.innerHTML = '<div style="color:#666;font-size:13px;">此王尚無掉落物</div>'; return; }
+    el.innerHTML = items.map((item, i) => `
+        <div class="modal-list-item">
+            <span>${item}</span>
+            <button class="del-btn modal-del-item" data-boss="${boss}" data-index="${i}">✕</button>
+        </div>
+    `).join('');
+
+    el.querySelectorAll('.modal-del-item').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const b   = btn.dataset.boss;
+            const idx = parseInt(btn.dataset.index);
+            if (!confirm(`確定要刪除「${bossItemMap[b][idx]}」嗎？`)) return;
+            bossItemMap[b].splice(idx, 1);
+            await saveSharedLists();
+            renderAllDropItemSelects();
+            renderModalItemList();
+            showToast("🗑 已刪除物品");
+        });
+    });
+}
