@@ -326,7 +326,9 @@ function renderMembers() {
             <td style="text-align: center;"><input type="checkbox" class="mem-check" data-index="${index}" ${member.checked ? 'checked' : ''}></td>
             <td style="padding: 5px;"><input type="text" value="${member.name}" class="cloud-input mem-name" data-index="${index}" placeholder="名稱..."></td>
             <td style="padding: 5px;"><input type="number" value="${member.ratio}" class="cloud-input mem-ratio" data-index="${index}"></td>
-            <td style="text-align: center;"><button class="calc-btn btn-red mem-del" data-index="${index}" style="width:35px;height:35px;padding:0;font-weight:bold;">X</button></td>
+            <td style="text-align: center;"><button class="calc-btn btn-red mem-del" data-index="${index}" 
+            style="width:35px;height:35px;padding:0;font-weight:bold;
+            display:flex;align-items:center;justify-content:center;margin:0;">X</button>
         `;
         tbody.appendChild(tr);
     });
