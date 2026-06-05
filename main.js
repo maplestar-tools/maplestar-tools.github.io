@@ -19,16 +19,16 @@ const db  = getFirestore(app);
 // ==========================================================================
 // 🌐 全域狀態
 // ==========================================================================
-let saveTimer        = null;   // 15 秒自動儲存計時器
-let lastSavedData    = null;   // 上次儲存快照（比對用）
-let members          = [];     // 隊員名單
-let bossList         = [];     // 王名單
-let itemList         = [];     // 掉落物名單
-let dropRows         = [];     // 掉落物登記
-let snowRows         = [];     // 雪花消耗
-let settlementHistory = [];    // 結算歷史
-let lastSettlementResult = null; // 最後一次結算結果（用於儲存）
-let currentHistoryIndex  = -1;   // 目前查看的歷史索引（-1 = 非歷史模式）
+let saveTimer            = null;   // 15 秒自動儲存計時器
+let lastSavedData        = null;   // 上次儲存快照
+let members              = [];     // 隊員名單
+let bossList             = [];     // 王名單
+let bossItemMap          = {};     // 每隻王的掉落物清單 { 王名: [物品, ...] }
+let dropRows             = [];     // 掉落物登記
+let snowRows             = [];     // 雪花消耗
+let settlementHistory    = [];     // 結算歷史
+let lastSettlementResult = null;   // 最後一次結算結果
+let currentHistoryIndex  = -1;     // 目前查看的歷史索引（-1 = 非歷史模式）
 
 // ==========================================================================
 // 🚀 初始化
@@ -71,10 +71,10 @@ function bindEvents() {
     document.getElementById('btn-manual-sync').addEventListener('click', () => saveAllToCloud(true));
 
     // 折疊
-    document.getElementById('btn-toggle-settings').addEventListener('click',    (e) => toggleSection(e.currentTarget, 'settings-section'));
-    document.getElementById('btn-toggle-member').addEventListener('click',      (e) => toggleSection(e.currentTarget, 'member-section'));
-    document.getElementById('btn-toggle-drops').addEventListener('click',       (e) => toggleSection(e.currentTarget, 'drops-section'));
-    document.getElementById('btn-toggle-settlement').addEventListener('click',  (e) => toggleSection(e.currentTarget, 'settlement-section'));
+    document.getElementById('btn-toggle-settings').addEventListener('click',   (e) => toggleSection(e.currentTarget, 'settings-section'));
+    document.getElementById('btn-toggle-member').addEventListener('click',     (e) => toggleSection(e.currentTarget, 'member-section'));
+    document.getElementById('btn-toggle-drops').addEventListener('click',      (e) => toggleSection(e.currentTarget, 'drops-section'));
+    document.getElementById('btn-toggle-settlement').addEventListener('click', (e) => toggleSection(e.currentTarget, 'settlement-section'));
 
     // 隊員
     document.getElementById('btn-add-member').addEventListener('click', addMember);
@@ -104,11 +104,11 @@ function bindEvents() {
     document.getElementById('history-select').addEventListener('change', loadHistoryRecord);
 
     // 裝備計算
-    document.getElementById('btnCalcBaseAtk').addEventListener('click',  calculateBaseAtk);
+    document.getElementById('btnCalcBaseAtk').addEventListener('click',   calculateBaseAtk);
     document.getElementById('btnCalcEquipStat').addEventListener('click', calculateEquipStat);
-    document.getElementById('btnCalcFinal').addEventListener('click',    calculateFinalAtk);
+    document.getElementById('btnCalcFinal').addEventListener('click',     calculateFinalAtk);
 
-    // keyCode 變更時刷新下拉選單（新增王/物品選項）
+    // keyCode 變更時刷新下拉選單（登入後顯示新增選項）
     document.getElementById('userKeyCode').addEventListener('input', () => {
         renderBossSelect();
         renderAllDropItemSelects();
@@ -163,7 +163,7 @@ function updateSyncUI(status, message = '') {
     const dot  = document.getElementById('sync-dot');
     const text = document.getElementById('sync-status-text');
     const s = { synced: ['#4caf50','已同步'], pending: ['#ff9800','同步中...'], error: ['#f44336','同步失敗'] };
-    if (dot && s[status])  dot.style.backgroundColor = s[status][0];
+    if (dot  && s[status]) dot.style.backgroundColor = s[status][0];
     if (text && s[status]) text.innerText = message || s[status][1];
 }
 
@@ -291,15 +291,15 @@ async function loadSharedData() {
     try {
         const snap = await getDoc(doc(db, "shared_data", "team_data"));
         if (snap.exists()) {
-            const d = snap.data();
-            members  = d.members  || [];
-            bossList = d.bossList || [];
-            itemList = d.itemList || [];
+            const d    = snap.data();
+            members    = d.members     || [];
+            bossList   = d.bossList    || [];
+            bossItemMap = d.bossItemMap || {};
         }
     } catch (e) {
         console.error("共用資料讀取失敗：", e);
-        bossList = ['混沌哈卡斯','混沌紫克圖斯','黑魔法師','希拉'];
-        itemList = ['楓葉勳章','強化卷軸','100%白卷','記憶玫瑰','惡魔羽翼'];
+        bossList    = ['混沌哈卡斯','混沌紫克圖斯','黑魔法師','希拉'];
+        bossItemMap = {};
     } finally {
         renderMembers();
         renderBossSelect();
@@ -311,7 +311,7 @@ async function saveMembersToCloud() {
     const kc = document.getElementById('userKeyCode').value.trim();
     if (!kc) { alert("🔒 尚未登入代碼，無法同步！"); return; }
     try {
-        await setDoc(doc(db, "shared_data", "team_data"), { members, bossList, itemList }, { merge: false });
+        await setDoc(doc(db, "shared_data", "team_data"), { members, bossList, bossItemMap }, { merge: false });
         alert("✅ 共用名單已同步至雲端！");
     } catch (e) { alert("同步失敗：" + e.message); }
 }
@@ -352,26 +352,34 @@ function getActiveMembers() { return members.filter(m => m.checked && m.name.tri
 // ==========================================================================
 // 👑 王選擇
 // ==========================================================================
+function getCurrentBoss() {
+    const sel = document.getElementById('boss-select');
+    const val = sel?.value;
+    return (val && val !== '__add_new__') ? val : '';
+}
+
 function onBossSelectChange(e) {
     const val = e.target.value;
     if (val === '__add_new__') { handleAddNew('boss', e.target); return; }
+
     // 切換王時清空掉落物（雪花保留）
     if (dropRows.length > 0) {
         if (confirm("切換王將清空目前的掉落物清單，是否繼續？")) {
             dropRows = [];
             document.getElementById('drops-table-body').innerHTML = '';
         } else {
-            e.target.value = dropRows.length > 0 ? (document.getElementById('boss-select').dataset.prev || '') : '';
+            e.target.value = e.target.dataset.prev || '';
             return;
         }
     }
     e.target.dataset.prev = val;
     updateDropButtons();
+    // 切換王時更新所有掉落物名稱選單
+    renderAllDropItemSelects();
 }
 
 function updateDropButtons() {
-    const hasBoss = document.getElementById('boss-select')?.value &&
-                    document.getElementById('boss-select').value !== '__add_new__';
+    const hasBoss = !!getCurrentBoss();
     ['btn-add-drop-sell','btn-add-drop-self','btn-add-snow'].forEach(id => {
         const btn = document.getElementById(id);
         if (btn) btn.disabled = !hasBoss;
@@ -381,7 +389,7 @@ function updateDropButtons() {
 function renderBossSelect() {
     const sel = document.getElementById('boss-select');
     if (!sel) return;
-    const cur = sel.value === '__add_new__' ? '' : sel.value;
+    const cur = getCurrentBoss();
     sel.innerHTML = '<option value="">— 選擇王 —</option>';
     bossList.forEach(b => { sel.innerHTML += `<option value="${b}" ${cur === b ? 'selected' : ''}>${b}</option>`; });
     const kc = document.getElementById('userKeyCode')?.value.trim();
@@ -390,39 +398,55 @@ function renderBossSelect() {
 }
 
 // ==========================================================================
-// 📦 掉落物名稱下拉
+// 📦 掉落物名稱下拉（依當前王）
 // ==========================================================================
+function getCurrentBossItems() {
+    const boss = getCurrentBoss();
+    if (!boss) return [];
+    return bossItemMap[boss] || [];
+}
+
 function buildItemOptions(selected = '') {
-    const kc = document.getElementById('userKeyCode')?.value.trim();
+    const kc    = document.getElementById('userKeyCode')?.value.trim();
+    const items = getCurrentBossItems();
     let html = '<option value="">— 選擇物品 —</option>';
-    itemList.forEach(item => { html += `<option value="${item}" ${selected === item ? 'selected' : ''}>${item}</option>`; });
+    items.forEach(item => { html += `<option value="${item}" ${selected === item ? 'selected' : ''}>${item}</option>`; });
     if (kc) html += `<option value="__add_new__">＋ 新增物品...</option>`;
     return html;
 }
 
 function renderAllDropItemSelects() {
     document.querySelectorAll('.drop-item').forEach(sel => {
-        const cur = sel.value === '__add_new__' ? '' : sel.value;
+        const cur = (sel.value === '__add_new__') ? '' : sel.value;
         sel.innerHTML = buildItemOptions(cur);
     });
 }
 
 async function handleAddNew(type, selectEl) {
     const label = type === 'boss' ? '王名稱' : '物品名稱';
-    const name = prompt(`請輸入新的${label}：`);
+    const name  = prompt(`請輸入新的${label}：`);
     if (!name || !name.trim()) { selectEl.value = selectEl.dataset.prev || ''; return; }
     const trimmed = name.trim();
+
     if (type === 'boss') {
         if (!bossList.includes(trimmed)) bossList.push(trimmed);
         await saveSharedLists();
         renderBossSelect();
-        document.getElementById('boss-select').value = trimmed;
+        document.getElementById('boss-select').value       = trimmed;
         document.getElementById('boss-select').dataset.prev = trimmed;
     } else {
-        if (!itemList.includes(trimmed)) itemList.push(trimmed);
+        const boss = getCurrentBoss();
+        if (!boss) { selectEl.value = ''; return; }
+        if (!bossItemMap[boss]) bossItemMap[boss] = [];
+        if (!bossItemMap[boss].includes(trimmed)) bossItemMap[boss].push(trimmed);
         await saveSharedLists();
-        selectEl.innerHTML = buildItemOptions(trimmed);
+        // 更新所有掉落物名稱選單
+        renderAllDropItemSelects();
+        // 將當前這格選到新物品
         selectEl.value = trimmed;
+        // 同步到 dropRows
+        const idx = parseInt(selectEl.dataset.index);
+        if (!isNaN(idx) && dropRows[idx]) dropRows[idx].item = trimmed;
     }
     updateDropButtons();
 }
@@ -430,7 +454,7 @@ async function handleAddNew(type, selectEl) {
 async function saveSharedLists() {
     const kc = document.getElementById('userKeyCode')?.value.trim();
     if (!kc) return;
-    try { await setDoc(doc(db, "shared_data", "team_data"), { members, bossList, itemList }, { merge: false }); }
+    try { await setDoc(doc(db, "shared_data", "team_data"), { members, bossList, bossItemMap }, { merge: false }); }
     catch (e) { console.error("名單儲存失敗：", e); }
 }
 
@@ -465,45 +489,43 @@ function appendDropRow(i) {
     tr.id = `drop-row-${i}`;
     tr.style.borderBottom = '1px solid #2a2a2a';
     tr.innerHTML = `
-        <td style="padding:6px 4px;text-align:center;vertical-align:middle;">
-            <span class="drop-type-badge ${isSell ? 'badge-sell' : 'badge-self'}">${isSell ? '賣' : '自'}</span>
-        </td>
-        <td class="drop-col-name" style="padding:6px 4px;vertical-align:middle;">
+        <td style="padding:6px 4px;vertical-align:middle;">
             <select class="cloud-input drop-item" data-index="${i}" style="font-size:13px;padding:6px 8px;">
                 ${buildItemOptions(row.item)}
             </select>
         </td>
-        <td class="drop-col-price" style="padding:6px 4px;vertical-align:middle;">
-            <input type="number" class="cloud-input drop-price" data-index="${i}" value="${row.price}" style="font-size:13px;padding:6px 8px;">
+        <td style="padding:6px 4px;vertical-align:middle;">
+            <input type="number" class="cloud-input drop-price" data-index="${i}"
+                value="" placeholder="0"
+                style="font-size:13px;padding:6px 8px;">
         </td>
-        <td class="drop-col-fee" style="padding:6px 4px;vertical-align:middle;">
+        <td style="padding:6px 4px;vertical-align:middle;">
             <select class="cloud-input drop-fee ${isSell ? '' : 'field-disabled'}" data-index="${i}" style="font-size:13px;padding:6px 8px;" ${isSell ? '' : 'disabled'}>
-                <option value="0" ${row.fee===0?'selected':''}>0%</option>
-                <option value="3" ${row.fee===3?'selected':''}>3%</option>
-                <option value="6" ${row.fee===6?'selected':''}>6%</option>
+                <option value="0">0%</option>
+                <option value="3">3%</option>
+                <option value="6" ${isSell ? 'selected' : ''}>6%</option>
             </select>
         </td>
-        <td class="drop-col-scissor" style="padding:6px 4px;vertical-align:middle;">
+        <td style="padding:6px 4px;vertical-align:middle;">
             <select class="cloud-input drop-scissor ${isSell ? '' : 'field-disabled'}" data-index="${i}" style="font-size:13px;padding:6px 8px;" ${isSell ? '' : 'disabled'}>
-                <option value="none">無</option>
-                <option value="fancy" ${row.scissor==='fancy'?'selected':''}>神奇</option>
-                <option value="platinum" ${row.scissor==='platinum'?'selected':''}>白金</option>
+                <option value="none" selected>無</option>
+                <option value="fancy">神奇</option>
+                <option value="platinum">白金</option>
             </select>
         </td>
-        <td class="drop-col-seller" style="padding:6px 4px;vertical-align:middle;">
+        <td style="padding:6px 4px;vertical-align:middle;">
             <select class="cloud-input drop-seller" data-index="${i}" style="font-size:13px;padding:6px 8px;">
                 ${buildSellerOptions(row.seller)}
             </select>
         </td>
-        <td class="drop-col-net" style="padding:6px 4px;text-align:right;vertical-align:middle;">
-            <span id="drop-net-${i}" style="color:${isSell?'#64b5f6':'#b39ddb'};font-weight:bold;font-size:13px;white-space:nowrap;">0萬</span>
+        <td style="padding:6px 4px;text-align:right;vertical-align:middle;">
+            <span id="drop-net-${i}" style="color:${isSell?'#64b5f6':'#b39ddb'};font-weight:bold;font-size:13px;white-space:nowrap;">—</span>
         </td>
-        <td class="drop-col-del" style="padding:6px 4px;text-align:center;vertical-align:middle;">
+        <td style="padding:6px 4px;text-align:center;vertical-align:middle;">
             <button class="del-btn drop-del" data-index="${i}">✕</button>
         </td>
     `;
     document.getElementById('drops-table-body').appendChild(tr);
-    recalcDropRow(i);
 }
 
 function recalcDropRow(i) {
@@ -577,17 +599,18 @@ function appendSnowRow(i) {
             </select>
         </td>
         <td style="padding:6px 4px;vertical-align:middle;">
-            <input type="number" class="cloud-input snow-count" data-index="${i}" value="${row.count}" min="0" style="font-size:13px;padding:6px 8px;">
+            <input type="number" class="cloud-input snow-count" data-index="${i}"
+                value="" placeholder="0" min="0"
+                style="font-size:13px;padding:6px 8px;">
         </td>
         <td style="padding:6px 4px;text-align:right;vertical-align:middle;">
-            <span id="snow-cost-${i}" style="color:#ff6b6b;font-weight:bold;font-size:13px;">0萬</span>
+            <span id="snow-cost-${i}" style="color:#ff6b6b;font-weight:bold;font-size:13px;">—</span>
         </td>
         <td style="padding:6px 4px;text-align:center;vertical-align:middle;">
             <button class="del-btn snow-del" data-index="${i}">✕</button>
         </td>
     `;
     document.getElementById('snow-table-body').appendChild(tr);
-    recalcSnowRow(i);
 }
 
 function recalcSnowRow(i) {
@@ -625,7 +648,7 @@ function clearDrops() {
     dropRows = [];
     snowRows = [];
     document.getElementById('drops-table-body').innerHTML = '';
-    document.getElementById('snow-table-body').innerHTML = '';
+    document.getElementById('snow-table-body').innerHTML  = '';
     showToast("🗑 已清空本次資料");
 }
 
@@ -633,19 +656,16 @@ function clearDrops() {
 // ✅ 結算前驗證
 // ==========================================================================
 function validateBeforeSettle() {
-    // 檢查掉落物必填欄位
     for (let i = 0; i < dropRows.length; i++) {
         const row = dropRows[i];
         if (!row.item)   { alert(`第 ${i+1} 筆掉落物尚未選擇名稱！`);       return false; }
         if (!row.seller) { alert(`第 ${i+1} 筆掉落物尚未選擇賣家/自用者！`); return false; }
     }
-    // 檢查雪花必填欄位
     for (let i = 0; i < snowRows.length; i++) {
         if (!snowRows[i].user) { alert(`第 ${i+1} 筆雪花紀錄尚未選擇使用者！`); return false; }
     }
-    const active = getActiveMembers();
-    if (active.length === 0) { alert("請先在隊員表格勾選參加的隊員！"); return false; }
-    if (dropRows.length === 0 && snowRows.length === 0) { alert("請先登記掉落物或雪花！"); return false; }
+    if (getActiveMembers().length === 0)               { alert("請先在隊員表格勾選參加的隊員！"); return false; }
+    if (dropRows.length === 0 && snowRows.length === 0) { alert("請先登記掉落物或雪花！");         return false; }
     return true;
 }
 
@@ -658,25 +678,25 @@ function executeSettlement() {
     const active = getActiveMembers();
     const prices = getPrices();
 
-    // --- 1. 每人實際現金收入（只算賣出的淨收入） ---
+    // --- 1. 每人實際收入（賣出淨收入 + 自用估價，兩者都算進來） ---
     const actualIncome = {};
     active.forEach(m => { actualIncome[m.name] = 0; });
     dropRows.forEach(row => {
-        if (row.type === 'sell' && row.seller && actualIncome.hasOwnProperty(row.seller)) {
-            actualIncome[row.seller] += row.net;
-        }
+        if (!row.seller || !actualIncome.hasOwnProperty(row.seller)) return;
+        // 自用和賣出都直接加入實際收入
+        actualIncome[row.seller] += row.net;
     });
 
-    // --- 2. 總池 = 所有掉落物淨收入（含自用估價）---
+    // --- 2. 總池 = 所有掉落物淨收入加總 ---
     let totalPool = 0;
     dropRows.forEach(row => { totalPool += row.net; });
 
-    // --- 3. 雪花：從總池扣除，並記錄每人雪花成本 ---
+    // --- 3. 雪花：從總池扣除，記錄每人雪花成本 ---
     const snowCostPerMember = {};
     active.forEach(m => { snowCostPerMember[m.name] = 0; });
     let totalSnowCost = 0;
     snowRows.forEach(row => {
-        totalPool -= row.cost;
+        totalPool    -= row.cost;
         totalSnowCost += row.cost;
         if (row.user && snowCostPerMember.hasOwnProperty(row.user)) {
             snowCostPerMember[row.user] += row.cost;
@@ -691,38 +711,32 @@ function executeSettlement() {
         shouldGet[m.name] = Math.round((base + (snowCostPerMember[m.name] || 0)) * 10) / 10;
     });
 
-    // --- 5. 差額 = 實際收入 - 應得（自用者還要額外付估價） ---
+    // --- 5. 差額 = 實際收入 - 應得（正=多拿了要付出，負=少拿了要收回） ---
     const diff = {};
-    active.forEach(m => { diff[m.name] = Math.round((actualIncome[m.name] - shouldGet[m.name]) * 10) / 10; });
-    dropRows.forEach(row => {
-        if (row.type === 'self' && row.seller && diff.hasOwnProperty(row.seller)) {
-            diff[row.seller] = Math.round((diff[row.seller] - row.net) * 10) / 10;
-        }
+    active.forEach(m => {
+        diff[m.name] = Math.round((actualIncome[m.name] - shouldGet[m.name]) * 10) / 10;
     });
 
-    // --- 6. 付款指示（正差額 = 付出方，負差額 = 收入方） ---
+    // --- 6. 付款指示 ---
     const payments = calcPayments(diff, active, prices);
 
     // --- 7. 渲染結果 ---
     const result = { totalPool, totalSnowCost, shouldGet, actualIncome, diff, payments };
     renderSettlementResult(result, active);
 
-    // 儲存本次結果供「儲存紀錄」按鈕使用
     lastSettlementResult = result;
     document.getElementById('btn-save-record').disabled = false;
 }
 
-// 計算付款指示（貪心，正差額=付出方）
+// 計算付款指示（正差額=付出方，負差額=收入方）
 function calcPayments(diff, active, prices) {
-    // 正差額：實際多拿了，要付出去
-    // 負差額：實際少拿了，要收回來
     let payers    = active.filter(m => diff[m.name] >  0.01).map(m => ({ name: m.name, amount:  diff[m.name] }));
     let receivers = active.filter(m => diff[m.name] < -0.01).map(m => ({ name: m.name, amount: -diff[m.name] }));
 
     const payments = [];
     let pi = 0, ri = 0;
     while (pi < payers.length && ri < receivers.length) {
-        const p = payers[pi], r = receivers[ri];
+        const p      = payers[pi], r = receivers[ri];
         const amount = Math.round(Math.min(p.amount, r.amount) * 10) / 10;
         payments.push({ from: p.name, to: r.name, amount, ...suggestBlocks(amount, prices) });
         p.amount = Math.round((p.amount - amount) * 10) / 10;
@@ -735,8 +749,7 @@ function calcPayments(diff, active, prices) {
 
 // 方塊組合建議（奇幻優先）
 function suggestBlocks(amount, prices) {
-    let rem = amount;
-    let fancyCount = 0, suspCount = 0;
+    let rem = amount, fancyCount = 0, suspCount = 0;
     if (prices.cubeFancy > 0) {
         fancyCount = Math.floor(rem / prices.cubeFancy);
         rem = Math.round((rem - fancyCount * prices.cubeFancy) * 10) / 10;
@@ -755,19 +768,22 @@ function renderSettlementResult(result, active) {
     const { totalPool, totalSnowCost, shouldGet, actualIncome, diff, payments } = result;
     document.getElementById('settlement-detail').style.display = 'block';
 
-    // 收支明細
+    // 收支明細 - 掉落物
     let dropsHtml = '<div class="detail-section-title">📦 掉落物收入</div>';
     if (dropRows.length === 0) {
         dropsHtml += '<div class="detail-row" style="color:#666;">（無）</div>';
     } else {
         dropRows.forEach(d => {
-            const label = d.type === 'sell' ? `${d.item}（${d.seller}）` : `${d.item}（${d.seller} 自用）`;
+            const label = d.type === 'sell'
+                ? `${d.item}（${d.seller}）`
+                : `${d.item}（${d.seller} 自用）`;
             const color = d.type === 'sell' ? '#64b5f6' : '#b39ddb';
             dropsHtml += `<div class="detail-row"><span>${label}</span><span style="color:${color};">${d.net.toFixed(1)}萬</span></div>`;
         });
     }
     document.getElementById('detail-drops').innerHTML = dropsHtml;
 
+    // 收支明細 - 雪花
     let snowHtml = '<div class="detail-section-title">❄️ 雪花消耗</div>';
     if (snowRows.length === 0) {
         snowHtml += '<div class="detail-row" style="color:#666;">（無）</div>';
@@ -784,7 +800,8 @@ function renderSettlementResult(result, active) {
     tbody.innerHTML = '';
     active.forEach(m => {
         const d     = diff[m.name];
-        const color = d >= 0 ? '#ff9f43' : '#64b5f6'; // 正=付出(橘)，負=收入(藍)
+        // 正差額 = 多拿了要付出（橘色警示），負差額 = 少拿了要收回（藍色）
+        const color = d >= 0 ? '#ff9f43' : '#64b5f6';
         const sign  = d >= 0 ? '+' : '';
         const tr    = document.createElement('tr');
         tr.style.borderBottom = '1px solid #2a2a2a';
@@ -829,22 +846,18 @@ function renderSettlementResult(result, active) {
 function saveSettlementRecord() {
     if (!lastSettlementResult) { alert("請先執行結算！"); return; }
     const record = {
-        date:   document.getElementById('settlement-date')?.value || new Date().toISOString().split('T')[0],
-        boss:   document.getElementById('boss-select')?.value || '未知',
-        result: lastSettlementResult,
-        // 儲存快照供查看
-        drops:  JSON.parse(JSON.stringify(dropRows)),
-        snows:  JSON.parse(JSON.stringify(snowRows)),
+        date:    document.getElementById('settlement-date')?.value || new Date().toISOString().split('T')[0],
+        boss:    document.getElementById('boss-select')?.value || '未知',
+        result:  lastSettlementResult,
+        drops:   JSON.parse(JSON.stringify(dropRows)),
+        snows:   JSON.parse(JSON.stringify(snowRows)),
         members: JSON.parse(JSON.stringify(getActiveMembers()))
     };
 
-    // 若目前是查看歷史模式，則覆蓋該筆；否則新增
-    if (currentHistoryIndex >= 0) {
-        settlementHistory[currentHistoryIndex] = record;
-    } else {
-        settlementHistory.unshift(record);
-        if (settlementHistory.length > 50) settlementHistory.pop();
-    }
+    // 每筆獨立儲存，不覆蓋
+    settlementHistory.unshift(record);
+    if (settlementHistory.length > 50) settlementHistory.pop();
+    currentHistoryIndex = 0; // 剛儲存的在最前面
 
     localStorage.setItem('maple_settlement_history', JSON.stringify(settlementHistory));
 
@@ -855,27 +868,27 @@ function saveSettlementRecord() {
     }
 
     renderHistorySelect();
-    showToast("💾 紀錄已儲存！");
     document.getElementById('btn-delete-record').disabled = false;
+    showToast("💾 紀錄已儲存！");
 }
 
 function deleteHistoryRecord() {
     if (!confirm("確定要刪除此筆紀錄嗎？")) return;
-    if (currentHistoryIndex >= 0) {
-        settlementHistory.splice(currentHistoryIndex, 1);
-    } else if (settlementHistory.length > 0) {
-        settlementHistory.shift(); // 刪除最新那筆
-    }
+    const idx = currentHistoryIndex >= 0 ? currentHistoryIndex : 0;
+    settlementHistory.splice(idx, 1);
+
     localStorage.setItem('maple_settlement_history', JSON.stringify(settlementHistory));
     const kc = document.getElementById('userKeyCode')?.value.trim();
     if (kc) {
         setDoc(doc(db, "player_history", kc), { history: settlementHistory }, { merge: false })
             .catch(e => console.error("歷史雲端刪除失敗：", e));
     }
+
     currentHistoryIndex = -1;
     renderHistorySelect();
-    document.getElementById('history-select').value = '';
-    document.getElementById('btn-delete-record').disabled = true;
+    document.getElementById('history-select').value        = '';
+    document.getElementById('btn-delete-record').disabled  = true;
+    document.getElementById('btn-save-record').disabled    = true;
     document.getElementById('settlement-detail').style.display = 'none';
     showToast("🗑 紀錄已刪除");
 }
@@ -892,21 +905,24 @@ function renderHistorySelect() {
 function loadHistoryRecord() {
     const sel = document.getElementById('history-select');
     const idx = sel?.value;
-    if (idx === '' || idx === undefined) { currentHistoryIndex = -1; document.getElementById('btn-delete-record').disabled = true; return; }
+    if (idx === '' || idx === undefined) {
+        currentHistoryIndex = -1;
+        document.getElementById('btn-delete-record').disabled = true;
+        return;
+    }
     const record = settlementHistory[parseInt(idx)];
     if (!record) return;
 
     currentHistoryIndex = parseInt(idx);
 
-    // 還原快照資料到畫面
+    // 還原快照
     dropRows = record.drops  || [];
     snowRows = record.snows  || [];
     rerenderDropTable();
     rerenderSnowTable();
-    if (document.getElementById('boss-select') && record.boss) document.getElementById('boss-select').value = record.boss;
-    if (document.getElementById('settlement-date') && record.date) document.getElementById('settlement-date').value = record.date;
+    if (record.boss) document.getElementById('boss-select').value    = record.boss;
+    if (record.date) document.getElementById('settlement-date').value = record.date;
 
-    // 還原結算結果
     lastSettlementResult = record.result;
     renderSettlementResult(record.result, record.members || getActiveMembers());
 
@@ -931,13 +947,13 @@ function calculateBaseAtk() {
     for (let t = Math.max(1, est - 1000); t <= est + 1000; t++) {
         if (Math.round(Math.floor(t * (1 + percentAtk)) * coeff * statFactor) === Math.round(maxAtk)) { matched = t; break; }
     }
-    document.getElementById('resultDisplay').innerText    = matched;
-    document.getElementById('calcBaseAtk').value          = matched;
-    document.getElementById('calcAtkPercent').value       = document.getElementById('percentAtk').value;
-    document.getElementById('calcMainBase').value         = mainStat;
-    document.getElementById('calcMainEquip').value        = 0;
-    document.getElementById('calcMainPercent').value      = 0;
-    document.getElementById('calcSubStat').value          = subStat;
+    document.getElementById('resultDisplay').innerText   = matched;
+    document.getElementById('calcBaseAtk').value         = matched;
+    document.getElementById('calcAtkPercent').value      = document.getElementById('percentAtk').value;
+    document.getElementById('calcMainBase').value        = mainStat;
+    document.getElementById('calcMainEquip').value       = 0;
+    document.getElementById('calcMainPercent').value     = 0;
+    document.getElementById('calcSubStat').value         = subStat;
 }
 
 function calculateEquipStat() {
@@ -946,22 +962,22 @@ function calculateEquipStat() {
     const percent = (parseFloat(document.getElementById('statPercent').value) || 0) / 100;
     let found = 0;
     for (let t = 0; t <= 10000; t++) { if (Math.floor((base + t) * (1 + percent)) === total) { found = t; break; } }
-    document.getElementById('equipStatDisplay').innerText   = found;
-    document.getElementById('calcMainBase').value           = base;
-    document.getElementById('calcMainEquip').value          = found;
-    document.getElementById('calcMainPercent').value        = document.getElementById('statPercent').value;
+    document.getElementById('equipStatDisplay').innerText  = found;
+    document.getElementById('calcMainBase').value          = base;
+    document.getElementById('calcMainEquip').value         = found;
+    document.getElementById('calcMainPercent').value       = document.getElementById('statPercent').value;
 }
 
 function calculateFinalAtk() {
-    const base       = parseFloat(document.getElementById('calcBaseAtk').value)     || 0;
-    const atkPct     = (parseFloat(document.getElementById('calcAtkPercent').value)  || 0) / 100;
-    const mainBase   = parseFloat(document.getElementById('calcMainBase').value)    || 0;
-    const mainEquip  = parseFloat(document.getElementById('calcMainEquip').value)   || 0;
-    const mainPct    = (parseFloat(document.getElementById('calcMainPercent').value) || 0) / 100;
-    const sub        = parseFloat(document.getElementById('calcSubStat').value)     || 0;
-    const coeff      = parseFloat(document.getElementById('coeff').value)           || 1.0;
-    const totalMain  = Math.floor((mainBase + mainEquip) * (1 + mainPct));
+    const base      = parseFloat(document.getElementById('calcBaseAtk').value)      || 0;
+    const atkPct    = (parseFloat(document.getElementById('calcAtkPercent').value)   || 0) / 100;
+    const mainBase  = parseFloat(document.getElementById('calcMainBase').value)     || 0;
+    const mainEquip = parseFloat(document.getElementById('calcMainEquip').value)    || 0;
+    const mainPct   = (parseFloat(document.getElementById('calcMainPercent').value)  || 0) / 100;
+    const sub       = parseFloat(document.getElementById('calcSubStat').value)      || 0;
+    const coeff     = parseFloat(document.getElementById('coeff').value)            || 1.0;
+    const totalMain = Math.floor((mainBase + mainEquip) * (1 + mainPct));
     const statFactor = (totalMain * 4 + sub) / 100;
-    const totalAtk   = Math.floor(base * (1 + atkPct));
+    const totalAtk  = Math.floor(base * (1 + atkPct));
     document.getElementById('finalMaxAtkDisplay').innerText = Math.round(totalAtk * coeff * statFactor).toLocaleString();
 }
