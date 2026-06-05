@@ -9,41 +9,41 @@
 </head>
 <body>
 
-    <h1>🍁 楓星工具箱 🍁</h1>
+<h1>🍁 楓星工具箱 🍁</h1>
 
-    <!-- 分頁按鈕 -->
-    <div class="tabs">
-        <button class="tab-btn active" id="btn-tab-home">首頁</button>
-        <button class="tab-btn" id="btn-tab-money">💰 團隊分紅</button>
-        <button class="tab-btn" id="btn-tab-equip">⚔️ 裝備計算</button>
+<div class="tabs">
+    <button class="tab-btn active" id="btn-tab-home">首頁</button>
+    <button class="tab-btn" id="btn-tab-money">💰 團隊分紅</button>
+    <button class="tab-btn" id="btn-tab-equip">⚔️ 裝備計算</button>
+</div>
+
+<div class="content">
+
+    <!-- ===== 首頁 ===== -->
+    <div id="home" class="tab-content tab-narrow active">
+        <h3>歡迎來到楓星工具箱！</h3>
+        <p>專為楓星玩家打造的便利小工具基地。</p>
+        <div class="cloud-box">
+            <h4>💾 雲端進度同步（免註冊）</h4>
+            <p>輸入你自訂的「自訂字串」，就能在雲端儲存或讀取你的工具箱設定喔！</p>
+            <input type="text" id="userKeyCode" class="cloud-input" placeholder="例如：maple123">
+            <button class="cloud-btn" id="btn-load-cloud">📥 載入設定</button>
+            <p id="cloudStatus" style="color:#64b5f6;font-weight:bold;margin-top:10px;"></p>
+        </div>
     </div>
 
-    <div class="content">
+    <!-- ===== 團隊分紅 ===== -->
+    <div id="money-split" class="tab-content">
+        <h3>💰 團隊分紅計算</h3>
 
-        <!-- ==================== 首頁 ==================== -->
-        <div id="home" class="tab-content tab-narrow active">
-            <h3>歡迎來到楓星工具箱！</h3>
-            <p>專為楓星玩家打造的便利小工具基地。</p>
-
-            <div class="cloud-box">
-                <h4>💾 雲端進度同步（免註冊）</h4>
-                <p>輸入你自訂的「自訂字串」，就能在雲端儲存或讀取你的工具箱設定喔！</p>
-                <input type="text" id="userKeyCode" class="cloud-input" placeholder="例如：maple123">
-                <button class="cloud-btn" id="btn-load-cloud">📥 載入設定</button>
-                <p id="cloudStatus" style="color: #64b5f6; font-weight: bold; margin-top: 10px;"></p>
-            </div>
-        </div>
-
-        <!-- ==================== 團隊分紅 ==================== -->
-        <div id="money-split" class="tab-content">
-            <h3>💰 團隊分紅計算</h3>
-
-            <!-- 基礎設定卡 -->
-            <div class="calc-card settings-card">
-                <h4 class="title-blue">⚙️ 基礎設定 (個人雲端)</h4>
-                <p class="card-desc">設定匯率與方塊價格，下方價格將隨里程匯率即時變動。</p>
-
-                <div class="sim-input-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; align-items: end;">
+        <!-- 基礎設定（可折疊） -->
+        <div class="calc-card settings-card">
+            <h4 class="title-blue" id="btn-toggle-settings" style="cursor:pointer;display:flex;justify-content:space-between;margin:0 0 0 0;">
+                ⚙️ 基礎設定 (個人雲端) <span>▼</span>
+            </h4>
+            <div id="settings-section" style="overflow:hidden;transition:max-height 0.3s ease-out;max-height:500px;">
+                <p class="card-desc" style="margin-top:12px;">設定匯率與方塊價格，下方價格將隨里程匯率即時變動。</p>
+                <div class="sim-input-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;align-items:end;">
                     <div class="form-group">
                         <label>1000萬楓幣換算里程</label>
                         <input type="number" id="moneyToMileage" class="cloud-input" value="10000">
@@ -57,307 +57,260 @@
                         <input type="number" id="cubeSuspiciousPrice" class="cloud-input" value="50">
                     </div>
                 </div>
-
-                <div style="margin-top: 20px; background: #252525; padding: 15px; border-radius: 8px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center;">
+                <div style="margin-top:20px;background:#252525;padding:15px;border-radius:8px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center;">
                     <div>
-                        <div style="font-size: 12px; color: #aaa;">神奇剪刀(萬)</div>
-                        <div id="priceFancy" style="font-size: 16px; font-weight: bold; color: #64b5f6;">0</div>
+                        <div style="font-size:12px;color:#aaa;">神奇剪刀(萬)</div>
+                        <div id="priceFancy" style="font-size:16px;font-weight:bold;color:#64b5f6;">0</div>
                     </div>
                     <div>
-                        <div style="font-size: 12px; color: #aaa;">白金剪刀(萬)</div>
-                        <div id="pricePlatinum" style="font-size: 16px; font-weight: bold; color: #64b5f6;">0</div>
+                        <div style="font-size:12px;color:#aaa;">白金剪刀(萬)</div>
+                        <div id="pricePlatinum" style="font-size:16px;font-weight:bold;color:#64b5f6;">0</div>
                     </div>
                     <div>
-                        <div style="font-size: 12px; color: #aaa;">雪花1個(萬)</div>
-                        <div id="priceSnow" style="font-size: 16px; font-weight: bold; color: #64b5f6;">0</div>
+                        <div style="font-size:12px;color:#aaa;">雪花1個(萬)</div>
+                        <div id="priceSnow" style="font-size:16px;font-weight:bold;color:#64b5f6;">0</div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- 隊員名單卡 -->
-            <div class="calc-card settings-card" style="margin-top: 20px;">
-                <h4 class="title-blue" id="btn-toggle-member" style="cursor: pointer; display: flex; justify-content: space-between;">
-                    👥 隊員分紅表格 (共用雲端) <span>▼</span>
-                </h4>
+        <!-- 隊員名單（可折疊） -->
+        <div class="calc-card settings-card" style="margin-top:20px;">
+            <h4 class="title-blue" id="btn-toggle-member" style="cursor:pointer;display:flex;justify-content:space-between;margin:0;">
+                👥 隊員分紅表格 (共用雲端) <span>▼</span>
+            </h4>
+            <div id="member-section" style="overflow:hidden;transition:max-height 0.3s ease-out;max-height:1000px;">
+                <p class="card-desc" style="margin-top:12px;">在表格中進行編輯，確認後請點擊「新增至雲端」按鈕。</p>
+                <table style="width:100%;border-collapse:collapse;margin-bottom:15px;">
+                    <thead>
+                        <tr style="border-bottom:1px solid #444;">
+                            <th style="text-align:center;padding:8px;width:40px;">參加</th>
+                            <th style="text-align:left;padding:8px;">名稱</th>
+                            <th style="text-align:left;padding:8px;width:80px;">比例</th>
+                            <th style="text-align:center;padding:8px;width:60px;">刪除</th>
+                        </tr>
+                    </thead>
+                    <tbody id="member-table-body"></tbody>
+                </table>
+                <div style="display:flex;gap:10px;">
+                    <button id="btn-add-member" class="calc-btn btn-green">+ 新增隊員</button>
+                    <button id="btn-save-members" class="calc-btn btn-blue">💾 新增至雲端</button>
+                </div>
+            </div>
+        </div>
 
-                <div id="member-section" style="overflow: hidden; transition: max-height 0.3s ease-out; max-height: 1000px;">
-                    <p class="card-desc">在表格中進行編輯，確認後請點擊「新增至雲端」按鈕。</p>
+        <!-- 掉落物登記（寬版，可折疊） -->
+        <div class="calc-card wide-card" style="margin-top:20px;">
+            <h4 class="title-orange" id="btn-toggle-drops" style="cursor:pointer;display:flex;justify-content:space-between;margin:0;">
+                👑 掉落物登記 <span>▼</span>
+            </h4>
+            <div id="drops-section" style="overflow:hidden;transition:max-height 0.5s ease-out;max-height:3000px;">
+                <p class="card-desc" style="margin-top:12px;">選擇王後登記本次掉落物，自動計算每筆淨收入。</p>
 
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+                <!-- 選王 -->
+                <div class="form-group" style="max-width:300px;margin-bottom:20px;">
+                    <label>選擇王</label>
+                    <select id="boss-select" class="cloud-input"></select>
+                </div>
+
+                <!-- 掉落物表格 -->
+                <div style="font-size:13px;color:#aaa;margin-bottom:8px;font-weight:bold;">📦 掉落物清單</div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;">
                         <thead>
-                            <tr style="border-bottom: 1px solid #444;">
-                                <th style="text-align: center; padding: 8px; width: 40px;">參加</th>
-                                <th style="text-align: left; padding: 8px;">名稱</th>
-                                <th style="text-align: left; padding: 8px; width: 80px;">比例</th>
-                                <th style="text-align: center; padding: 8px; width: 60px;">刪除</th>
+                            <tr style="border-bottom:1px solid #444;font-size:12px;color:#aaa;">
+                                <th style="padding:8px 4px;width:38px;text-align:center;">類型</th>
+                                <th class="drop-col-name" style="padding:8px 4px;text-align:left;">掉落物名稱</th>
+                                <th class="drop-col-price" style="padding:8px 4px;">售/估價(萬)</th>
+                                <th class="drop-col-fee" style="padding:8px 4px;">手續費</th>
+                                <th class="drop-col-scissor" style="padding:8px 4px;">剪刀</th>
+                                <th class="drop-col-seller" style="padding:8px 4px;">賣家/自用者</th>
+                                <th class="drop-col-net" style="padding:8px 4px;text-align:right;">淨收入</th>
+                                <th class="drop-col-del" style="padding:8px 4px;"></th>
                             </tr>
                         </thead>
-                        <tbody id="member-table-body"></tbody>
+                        <tbody id="drops-table-body"></tbody>
                     </table>
-
-                    <div style="display: flex; gap: 10px;">
-                        <button id="btn-add-member" class="calc-btn btn-green">+ 新增隊員</button>
-                        <button id="btn-save-members" class="calc-btn btn-blue">💾 新增至雲端</button>
-                    </div>
                 </div>
-            </div>
 
-            <!-- 王掉落物登記卡 -->
-            <div class="calc-card settings-card" style="margin-top: 20px;">
-                <h4 class="title-orange" id="btn-toggle-drops" style="cursor: pointer; display: flex; justify-content: space-between;">
-                    👑 王掉落物登記 <span>▼</span>
-                </h4>
+                <div style="display:flex;gap:10px;margin-top:12px;">
+                    <button id="btn-add-drop-sell" class="calc-btn btn-green" style="flex:1;" disabled>+ 新增（賣出）</button>
+                    <button id="btn-add-drop-self" class="calc-btn btn-purple" style="flex:1;" disabled>+ 新增（自用）</button>
+                    <button id="btn-clear-drops" class="calc-btn btn-red" style="flex:1;">🗑 清空本次</button>
+                </div>
 
-                <div id="drops-section" style="overflow: hidden; transition: max-height 0.5s ease-out; max-height: 2000px;">
-                    <p class="card-desc">選擇王後登記本次掉落物，自動計算每筆淨收入。</p>
-
-                    <!-- 選王 -->
-                    <div class="form-group" style="margin-bottom: 15px;">
-                        <label>選擇王</label>
-                        <select id="boss-select" class="cloud-input"></select>
-                    </div>
-
-                    <!-- 掉落物表格 -->
-                    <div style="font-size: 13px; color: #aaa; margin-bottom: 8px; font-weight: bold;">📦 掉落物清單</div>
-                    <div style="overflow-x: auto;">
-                        <table style="width: 100%; border-collapse: collapse; min-width: 560px;">
-                            <thead>
-                                <tr style="border-bottom: 1px solid #444; font-size: 12px; color: #aaa;">
-                                    <th style="padding: 8px 4px; width: 40px; text-align: center;">類型</th>
-                                    <th style="padding: 8px 4px;">掉落物名稱</th>
-                                    <th style="padding: 8px 4px; width: 90px;">售價/估價(萬)</th>
-                                    <th style="padding: 8px 4px; width: 70px;">手續費</th>
-                                    <th style="padding: 8px 4px; width: 80px;">剪刀</th>
-                                    <th style="padding: 8px 4px; width: 90px;">賣家/自用者</th>
-                                    <th style="padding: 8px 4px; width: 80px; text-align: right;">淨收入</th>
-                                    <th style="padding: 8px 4px; width: 40px;"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="drops-table-body"></tbody>
-                        </table>
-                    </div>
-
-                    <div style="display: flex; gap: 10px; margin-top: 12px;">
-                        <button id="btn-add-drop-sell" class="calc-btn btn-green" style="flex: 1;">+ 新增（賣出）</button>
-                        <button id="btn-add-drop-self" class="calc-btn" style="flex: 1; background: linear-gradient(135deg, #7b5ea7, #5c3d8f);">+ 新增（自用）</button>
-                    </div>
-
-                    <div style="border-top: 1px dashed #444; margin: 18px 0;"></div>
-
-                    <!-- 雪花消耗表格 -->
-                    <div style="font-size: 13px; color: #aaa; margin-bottom: 8px; font-weight: bold;">❄️ 雪花消耗登記</div>
-                    <table style="width: 100%; border-collapse: collapse;">
+                <!-- 雪花消耗 -->
+                <div style="border-top:1px dashed #444;margin:20px 0 12px;"></div>
+                <div style="font-size:13px;color:#aaa;margin-bottom:8px;font-weight:bold;">❄️ 雪花消耗登記</div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;">
                         <thead>
-                            <tr style="border-bottom: 1px solid #444; font-size: 12px; color: #aaa;">
-                                <th style="padding: 8px 4px; text-align: left;">使用者</th>
-                                <th style="padding: 8px 4px; width: 100px;">數量（個）</th>
-                                <th style="padding: 8px 4px; width: 100px; text-align: right;">成本(萬)</th>
-                                <th style="padding: 8px 4px; width: 40px;"></th>
+                            <tr style="border-bottom:1px solid #444;font-size:12px;color:#aaa;">
+                                <th style="padding:8px 4px;text-align:left;">使用者</th>
+                                <th style="padding:8px 4px;width:120px;">數量（個）</th>
+                                <th style="padding:8px 4px;width:100px;text-align:right;">成本(萬)</th>
+                                <th style="padding:8px 4px;width:40px;"></th>
                             </tr>
                         </thead>
                         <tbody id="snow-table-body"></tbody>
                     </table>
-
-                    <div style="margin-top: 10px;">
-                        <button id="btn-add-snow" class="calc-btn btn-blue">+ 新增雪花紀錄</button>
-                    </div>
+                </div>
+                <div style="margin-top:10px;max-width:200px;">
+                    <button id="btn-add-snow" class="calc-btn btn-blue" disabled>+ 新增雪花紀錄</button>
                 </div>
             </div>
+        </div>
 
-            <!-- 物品結算卡 -->
-            <div class="calc-card settings-card" style="margin-top: 20px;">
-                <h4 class="title-green" id="btn-toggle-settlement" style="cursor: pointer; display: flex; justify-content: space-between;">
-                    💹 物品結算 <span>▼</span>
-                </h4>
+        <!-- 物品結算（可折疊） -->
+        <div class="calc-card settings-card" style="margin-top:20px;">
+            <h4 class="title-green" id="btn-toggle-settlement" style="cursor:pointer;display:flex;justify-content:space-between;margin:0;">
+                💹 物品結算 <span>▼</span>
+            </h4>
+            <div id="settlement-section" style="overflow:hidden;transition:max-height 0.5s ease-out;max-height:4000px;">
+                <p class="card-desc" style="margin-top:12px;">確認資料後點擊結算，系統自動計算分紅與付款方式。</p>
 
-                <div id="settlement-section" style="overflow: hidden; transition: max-height 0.5s ease-out; max-height: 3000px;">
-                    <p class="card-desc">確認資料後點擊結算，系統自動計算分紅與付款方式。</p>
-
-                    <!-- 日期與歷史紀錄 -->
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
-                        <div class="form-group">
-                            <label>本次結算日期</label>
-                            <input type="date" id="settlement-date" class="cloud-input">
-                        </div>
-                        <div class="form-group">
-                            <label>讀取歷史紀錄</label>
-                            <select id="history-select" class="cloud-input">
-                                <option value="">— 選擇歷史紀錄 —</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- 收支明細 -->
-                    <div id="settlement-detail" style="display: none;">
-                        <div style="background: #252525; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                            <div style="font-size: 13px; font-weight: bold; color: #aaa; margin-bottom: 10px;">📊 收支明細</div>
-                            <div id="detail-drops"></div>
-                            <div id="detail-snow"></div>
-                            <div style="border-top: 1px solid #444; margin-top: 10px; padding-top: 10px; display: flex; justify-content: space-between; font-weight: bold;">
-                                <span>可分配淨額</span>
-                                <span id="detail-total" style="color: #64b5f6; font-size: 16px;">0萬</span>
-                            </div>
-                        </div>
-
-                        <!-- 每人分紅明細 -->
-                        <div style="background: #252525; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                            <div style="font-size: 13px; font-weight: bold; color: #aaa; margin-bottom: 10px;">👤 每人分紅明細</div>
-                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                                <thead>
-                                    <tr style="border-bottom: 1px solid #444; color: #888; font-size: 12px;">
-                                        <th style="padding: 6px 4px; text-align: left;">隊員</th>
-                                        <th style="padding: 6px 4px; text-align: right;">實際收入</th>
-                                        <th style="padding: 6px 4px; text-align: right;">應得金額</th>
-                                        <th style="padding: 6px 4px; text-align: right;">差額</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="settlement-member-body"></tbody>
-                            </table>
-                        </div>
-
-                        <!-- 付款指示 -->
-                        <div style="background: #252525; border-radius: 8px; padding: 15px; margin-bottom: 20px;">
-                            <div style="font-size: 13px; font-weight: bold; color: #aaa; margin-bottom: 10px;">💸 付款指示</div>
-                            <div id="payment-instructions"></div>
-                        </div>
-                    </div>
-
-                    <!-- 結算按鈕 -->
-                    <div style="display: flex; gap: 10px;">
-                        <button id="btn-settle" class="calc-btn" style="flex: 2; background: linear-gradient(135deg, #ff9f43, #ff5252);">🧮 執行結算並儲存</button>
-                        <button id="btn-clear-settlement" class="calc-btn btn-blue" style="flex: 1;">🗑 清空本次</button>
-                    </div>
-                </div>
-            </div>
-
-        </div><!-- end money-split -->
-
-        <!-- ==================== 裝備計算 ==================== -->
-        <div id="equip-calc" class="tab-content">
-            <h3>⚔️ 裝備綜合計算工具</h3>
-            <p>全方位反推各項面版數據，點擊下方各工具即可開始計算。</p>
-
-            <div class="calc-grid">
-
-                <div class="calc-card">
-                    <h4 class="title-red">⚔️ 基礎攻擊力反推</h4>
-                    <p class="card-desc">選擇武器並輸入面板與屬性，反推基礎能力。</p>
-
+                <!-- 日期 & 歷史 -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-bottom:20px;">
                     <div class="form-group">
-                        <label>武器種類 (係數)</label>
-                        <select id="coeff" class="cloud-input">
-                            <option value="1.75">拳套 (1.75)</option>
-                            <option value="1.70">指虎 (1.70)</option>
-                            <option value="1.50">手槍 / 大砲 (1.50)</option>
-                            <option value="1.49">槍 / 矛 (1.49)</option>
-                            <option value="1.35">弩 / 扇子 (1.35)</option>
-                            <option value="1.34">雙手武器 - 劍 / 斧 / 棍 (1.34)</option>
-                            <option value="1.30">弓 / 短劍 / 雙刀 / 雙弩 / 手杖 (1.30)</option>
-                            <option value="1.25">武士刀 (1.25)</option>
-                            <option value="1.20" selected>單手武器 - 劍 / 斧 / 棍 (1.20)</option>
-                            <option value="1.00">長杖 / 短杖 (1.00)</option>
+                        <label>本次結算日期</label>
+                        <input type="date" id="settlement-date" class="cloud-input">
+                    </div>
+                    <div class="form-group">
+                        <label>讀取歷史紀錄</label>
+                        <select id="history-select" class="cloud-input">
+                            <option value="">— 選擇歷史紀錄 —</option>
                         </select>
                     </div>
+                </div>
 
-                    <div class="form-group">
-                        <label id="lblMain">主屬性</label>
-                        <input type="number" id="mainStat" class="cloud-input" value="1000">
+                <!-- 結算結果區（預設隱藏） -->
+                <div id="settlement-detail" style="display:none;">
+                    <div style="background:#252525;border-radius:8px;padding:15px;margin-bottom:15px;">
+                        <div style="font-size:13px;font-weight:bold;color:#aaa;margin-bottom:10px;">📊 收支明細</div>
+                        <div id="detail-drops"></div>
+                        <div id="detail-snow"></div>
+                        <div style="border-top:1px solid #444;margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;font-weight:bold;">
+                            <span>可分配淨額</span>
+                            <span id="detail-total" style="color:#64b5f6;font-size:16px;">0萬</span>
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label id="lblSub">副屬性</label>
-                        <input type="number" id="subStat" class="cloud-input" value="100">
+                    <div style="background:#252525;border-radius:8px;padding:15px;margin-bottom:15px;">
+                        <div style="font-size:13px;font-weight:bold;color:#aaa;margin-bottom:10px;">👤 每人分紅明細</div>
+                        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+                            <thead>
+                                <tr style="border-bottom:1px solid #444;color:#888;font-size:12px;">
+                                    <th style="padding:6px 4px;text-align:left;">隊員</th>
+                                    <th style="padding:6px 4px;text-align:right;">實際收入</th>
+                                    <th style="padding:6px 4px;text-align:right;">應得金額</th>
+                                    <th style="padding:6px 4px;text-align:right;">差額</th>
+                                </tr>
+                            </thead>
+                            <tbody id="settlement-member-body"></tbody>
+                        </table>
                     </div>
 
-                    <div class="form-group">
-                        <label>面板最大表攻</label>
-                        <input type="number" id="maxAtk" class="cloud-input" value="20000">
-                    </div>
-
-                    <div class="form-group">
-                        <label>裝備總攻擊力 %</label>
-                        <input type="number" id="percentAtk" class="cloud-input" value="0">
-                    </div>
-
-                    <button id="btnCalcBaseAtk" class="calc-btn btn-red">立即反推乾淨攻擊力</button>
-
-                    <div class="result-box border-red">
-                        <div class="result-title">反推基礎攻擊力</div>
-                        <div class="result-value text-red" id="resultDisplay">0</div>
+                    <div style="background:#252525;border-radius:8px;padding:15px;margin-bottom:20px;">
+                        <div style="font-size:13px;font-weight:bold;color:#aaa;margin-bottom:10px;">💸 付款指示</div>
+                        <div id="payment-instructions"></div>
                     </div>
                 </div>
 
-                <div class="calc-card">
-                    <h4 class="title-green">🧬 裝備純屬性反推</h4>
-                    <p class="card-desc">扣除屬性 % 數，反推裝備提供的固定主屬。</p>
-
-                    <div class="form-group">
-                        <label>面板顯示的【總主屬性】</label>
-                        <input type="number" id="statTotal" class="cloud-input" value="1000">
-                    </div>
-
-                    <div class="form-group">
-                        <label>等級提升加的【基礎主屬性】</label>
-                        <input type="number" id="statBaseOnly" class="cloud-input" value="700">
-                    </div>
-
-                    <div class="form-group">
-                        <label>裝備潛能的【總主屬性 %】</label>
-                        <input type="number" id="statPercent" class="cloud-input" value="60">
-                    </div>
-
-                    <button id="btnCalcEquipStat" class="calc-btn btn-green">立即反推裝備純屬性</button>
-
-                    <div class="result-box border-green">
-                        <div class="result-title">裝備提供的純固定屬性</div>
-                        <div class="result-value text-green" id="equipStatDisplay">0</div>
-                    </div>
+                <!-- 按鈕區 -->
+                <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                    <button id="btn-settle" class="calc-btn btn-orange" style="flex:2;min-width:120px;">🧮 執行結算</button>
+                    <button id="btn-save-record" class="calc-btn btn-green" style="flex:1;min-width:100px;" disabled>💾 儲存紀錄</button>
+                    <button id="btn-delete-record" class="calc-btn btn-red" style="flex:1;min-width:100px;" disabled>🗑 刪除此紀錄</button>
                 </div>
-
-                <div class="calc-card">
-                    <h4 class="title-blue">📊 完整表攻計算器</h4>
-                    <p class="card-desc">輸入各項細節參數，精準計算最大表攻。</p>
-
-                    <div class="sim-input-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                        <div class="form-group"><label>基礎攻擊力:</label><input type="number" id="calcBaseAtk" class="cloud-input" value="0"></div>
-                        <div class="form-group"><label>攻擊力 %:</label><input type="number" id="calcAtkPercent" class="cloud-input" value="0"></div>
-                        <div class="form-group"><label>基礎主屬性:</label><input type="number" id="calcMainBase" class="cloud-input" value="0"></div>
-                        <div class="form-group"><label>裝備主屬性:</label><input type="number" id="calcMainEquip" class="cloud-input" value="0"></div>
-                        <div class="form-group"><label>主屬性 %:</label><input type="number" id="calcMainPercent" class="cloud-input" value="0"></div>
-                        <div class="form-group"><label>總副屬性:</label><input type="number" id="calcSubStat" class="cloud-input" value="0"></div>
-                    </div>
-
-                    <button id="btnCalcFinal" class="calc-btn btn-blue" style="margin-top: 15px;">計算當前總表攻</button>
-
-                    <div class="result-box" style="margin-top: 15px; padding: 10px; background: #333; text-align: center;">
-                        <div style="font-size: 14px; color: #aaa;">計算結果最大表攻:</div>
-                        <div id="finalMaxAtkDisplay" style="font-size: 24px; color: #00d2ff; font-weight: bold;">0</div>
-                    </div>
-                </div>
-
             </div>
-        </div><!-- end equip-calc -->
-
-    </div><!-- end content -->
-
-    <!-- Toast 提示 -->
-    <div id="toast" style="position: fixed; bottom: 20px; right: 20px; padding: 15px 25px; background: #333; color: #fff; border-radius: 5px; display: none; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
-        💾 資料已同步
-    </div>
-
-    <!-- 同步狀態面板 -->
-    <div id="sync-panel" style="position: fixed; top: 20px; right: 20px; background: rgba(40, 44, 52, 0.9); color: white; padding: 12px; border-radius: 12px; z-index: 9999; box-shadow: 0 4px 6px rgba(0,0,0,0.3); font-family: sans-serif;">
-        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
-            <div id="sync-dot" style="width: 10px; height: 10px; border-radius: 50%; background-color: #ccc;"></div>
-            <span id="sync-status-text" style="font-size: 13px;">準備就緒</span>
         </div>
-        <div style="font-size: 11px; color: #aaa; margin-bottom: 8px;">
-            帳號: <span id="display-keycode" style="color: #fff;">無</span>
+
+    </div><!-- end money-split -->
+
+    <!-- ===== 裝備計算 ===== -->
+    <div id="equip-calc" class="tab-content">
+        <h3>⚔️ 裝備綜合計算工具</h3>
+        <p>全方位反推各項面版數據，點擊下方各工具即可開始計算。</p>
+        <div class="calc-grid">
+
+            <div class="calc-card">
+                <h4 class="title-red">⚔️ 基礎攻擊力反推</h4>
+                <p class="card-desc">選擇武器並輸入面板與屬性，反推基礎能力。</p>
+                <div class="form-group">
+                    <label>武器種類 (係數)</label>
+                    <select id="coeff" class="cloud-input">
+                        <option value="1.75">拳套 (1.75)</option>
+                        <option value="1.70">指虎 (1.70)</option>
+                        <option value="1.50">手槍 / 大砲 (1.50)</option>
+                        <option value="1.49">槍 / 矛 (1.49)</option>
+                        <option value="1.35">弩 / 扇子 (1.35)</option>
+                        <option value="1.34">雙手武器 - 劍 / 斧 / 棍 (1.34)</option>
+                        <option value="1.30">弓 / 短劍 / 雙刀 / 雙弩 / 手杖 (1.30)</option>
+                        <option value="1.25">武士刀 (1.25)</option>
+                        <option value="1.20" selected>單手武器 - 劍 / 斧 / 棍 (1.20)</option>
+                        <option value="1.00">長杖 / 短杖 (1.00)</option>
+                    </select>
+                </div>
+                <div class="form-group"><label id="lblMain">主屬性</label><input type="number" id="mainStat" class="cloud-input" value="1000"></div>
+                <div class="form-group"><label id="lblSub">副屬性</label><input type="number" id="subStat" class="cloud-input" value="100"></div>
+                <div class="form-group"><label>面板最大表攻</label><input type="number" id="maxAtk" class="cloud-input" value="20000"></div>
+                <div class="form-group"><label>裝備總攻擊力 %</label><input type="number" id="percentAtk" class="cloud-input" value="0"></div>
+                <button id="btnCalcBaseAtk" class="calc-btn btn-red">立即反推乾淨攻擊力</button>
+                <div class="result-box border-red">
+                    <div class="result-title">反推基礎攻擊力</div>
+                    <div class="result-value text-red" id="resultDisplay">0</div>
+                </div>
+            </div>
+
+            <div class="calc-card">
+                <h4 class="title-green">🧬 裝備純屬性反推</h4>
+                <p class="card-desc">扣除屬性 % 數，反推裝備提供的固定主屬。</p>
+                <div class="form-group"><label>面板顯示的【總主屬性】</label><input type="number" id="statTotal" class="cloud-input" value="1000"></div>
+                <div class="form-group"><label>等級提升加的【基礎主屬性】</label><input type="number" id="statBaseOnly" class="cloud-input" value="700"></div>
+                <div class="form-group"><label>裝備潛能的【總主屬性 %】</label><input type="number" id="statPercent" class="cloud-input" value="60"></div>
+                <button id="btnCalcEquipStat" class="calc-btn btn-green">立即反推裝備純屬性</button>
+                <div class="result-box border-green">
+                    <div class="result-title">裝備提供的純固定屬性</div>
+                    <div class="result-value text-green" id="equipStatDisplay">0</div>
+                </div>
+            </div>
+
+            <div class="calc-card">
+                <h4 class="title-blue">📊 完整表攻計算器</h4>
+                <p class="card-desc">輸入各項細節參數，精準計算最大表攻。</p>
+                <div class="sim-input-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                    <div class="form-group"><label>基礎攻擊力:</label><input type="number" id="calcBaseAtk" class="cloud-input" value="0"></div>
+                    <div class="form-group"><label>攻擊力 %:</label><input type="number" id="calcAtkPercent" class="cloud-input" value="0"></div>
+                    <div class="form-group"><label>基礎主屬性:</label><input type="number" id="calcMainBase" class="cloud-input" value="0"></div>
+                    <div class="form-group"><label>裝備主屬性:</label><input type="number" id="calcMainEquip" class="cloud-input" value="0"></div>
+                    <div class="form-group"><label>主屬性 %:</label><input type="number" id="calcMainPercent" class="cloud-input" value="0"></div>
+                    <div class="form-group"><label>總副屬性:</label><input type="number" id="calcSubStat" class="cloud-input" value="0"></div>
+                </div>
+                <button id="btnCalcFinal" class="calc-btn btn-blue" style="margin-top:15px;">計算當前總表攻</button>
+                <div class="result-box" style="margin-top:15px;padding:10px;background:#333;text-align:center;">
+                    <div style="font-size:14px;color:#aaa;">計算結果最大表攻:</div>
+                    <div id="finalMaxAtkDisplay" style="font-size:24px;color:#00d2ff;font-weight:bold;">0</div>
+                </div>
+            </div>
+
         </div>
-        <button id="btn-manual-sync" style="width: 100%; background: #4a90e2; border: none; color: white; padding: 5px; border-radius: 6px; cursor: pointer; font-size: 12px;">手動同步</button>
+    </div><!-- end equip-calc -->
+
+</div><!-- end content -->
+
+<!-- Toast -->
+<div id="toast" style="position:fixed;bottom:20px;right:20px;padding:15px 25px;background:#333;color:#fff;border-radius:5px;display:none;z-index:9999;box-shadow:0 4px 6px rgba(0,0,0,0.3);"></div>
+
+<!-- 同步狀態面板 -->
+<div id="sync-panel" style="position:fixed;top:20px;right:20px;background:rgba(40,44,52,0.9);color:white;padding:12px;border-radius:12px;z-index:9999;box-shadow:0 4px 6px rgba(0,0,0,0.3);font-family:sans-serif;">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <div id="sync-dot" style="width:10px;height:10px;border-radius:50%;background-color:#ccc;"></div>
+        <span id="sync-status-text" style="font-size:13px;">準備就緒</span>
     </div>
+    <div style="font-size:11px;color:#aaa;margin-bottom:8px;">帳號: <span id="display-keycode" style="color:#fff;">無</span></div>
+    <button id="btn-manual-sync" style="width:100%;background:#4a90e2;border:none;color:white;padding:5px;border-radius:6px;cursor:pointer;font-size:12px;">手動同步</button>
+</div>
 
-    <script type="module" src="main.js"></script>
-
+<script type="module" src="main.js"></script>
 </body>
 </html>

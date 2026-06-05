@@ -1,9 +1,7 @@
 /* ==========================================================================
    🧱 1. 全域基礎樣式
    ========================================================================== */
-html {
-    scrollbar-gutter: stable;
-}
+html { scrollbar-gutter: stable; }
 
 body {
     font-family: "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
@@ -31,7 +29,7 @@ h1 {
 }
 
 /* ==========================================================================
-   🎛️ 2. 分頁按鈕區域
+   🎛️ 2. 分頁按鈕
    ========================================================================== */
 .tabs {
     display: flex;
@@ -74,37 +72,15 @@ h1 {
     align-items: center;
 }
 
-.tab-content {
-    display: none;
-    width: 100%;
-    box-sizing: border-box;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-.tab-content h3 {
-    text-align: center;
-    margin-top: 0;
-    color: #fff;
-}
-
-.tab-content p {
-    text-align: center;
-    font-size: 13px;
-    color: #aaa;
-    margin-bottom: 20px;
-}
+.tab-content { display: none; width: 100%; box-sizing: border-box; }
+.tab-content.active { display: block; }
+.tab-content h3 { text-align: center; margin-top: 0; color: #fff; }
+.tab-content p { text-align: center; font-size: 13px; color: #aaa; margin-bottom: 20px; }
 
 /* ==========================================================================
-   📐 4. 模組化容器樣式
+   📐 4. 卡片容器
    ========================================================================== */
-.tab-narrow {
-    max-width: 450px;
-    width: 100%;
-    margin: 0 auto;
-}
+.tab-narrow { max-width: 450px; width: 100%; margin: 0 auto; }
 
 .calc-card {
     background: #1e1e1e;
@@ -118,13 +94,14 @@ h1 {
     width: 100%;
 }
 
-.settings-card {
-    max-width: 600px;
-    margin: 0 auto;
-}
+/* 窄版卡片（基礎設定、隊員、結算） */
+.settings-card { max-width: 600px; margin: 0 auto; }
+
+/* 寬版卡片（掉落物登記） */
+.wide-card { max-width: 1200px; margin: 0 auto; }
 
 /* ==========================================================================
-   📥 5. 表單輸入與操作元件
+   📥 5. 表單元件
    ========================================================================== */
 .cloud-box {
     background-color: #251b1b;
@@ -168,8 +145,7 @@ h1 {
     font-size: 15px;
     font-weight: bold;
     cursor: pointer;
-    margin: 5px 0 20px 0;
-    /* 修正文字垂直置中 */
+    margin: 5px 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -193,28 +169,23 @@ h1 {
 }
 
 /* ==========================================================================
-   📊 7. 計算機結果與配色方案
+   📊 7. 配色
    ========================================================================== */
-.result-box {
-    background-color: #121212;
-    padding: 15px;
-    border-radius: 8px;
-    text-align: center;
-}
+.result-box { background-color: #121212; padding: 15px; border-radius: 8px; text-align: center; }
 
-/* 標題顏色 */
 .title-red    { color: #ff6b6b; }
 .title-green  { color: #4dae4c; }
 .title-blue   { color: #64b5f6; }
 .title-orange { color: #ff9f43; }
 
-/* 按鈕顏色 */
 .btn-red    { background: linear-gradient(135deg, #ff6b6b, #e55353); }
 .btn-green  { background: linear-gradient(135deg, #4dae4c, #3b8e3a); }
 .btn-blue   { background: linear-gradient(135deg, #1e88e5, #1565c0); }
+.btn-orange { background: linear-gradient(135deg, #ff9f43, #ff5252); }
+.btn-purple { background: linear-gradient(135deg, #7b5ea7, #5c3d8f); }
 
 /* ==========================================================================
-   🗑️ 8. 刪除按鈕 (修正置中問題)
+   🗑️ 8. 刪除按鈕
    ========================================================================== */
 .del-btn {
     width: 35px;
@@ -236,108 +207,38 @@ h1 {
 }
 
 /* ==========================================================================
-   📱 9. RWD 手機版排版
+   💹 9. 結算專用樣式
    ========================================================================== */
-@media (max-width: 600px) {
-    body {
-        padding: 10px;
-    }
-
-    h1 {
-        font-size: 20px;
-    }
-
-    .tab-btn {
-        padding: 8px 12px;
-        font-size: 14px;
-    }
-
-    .calc-grid {
-        grid-template-columns: 1fr;
-    }
-
-    .settings-card {
-        max-width: 100%;
-    }
-
-    /* 基礎設定三欄改單欄 */
-    .sim-input-grid {
-        grid-template-columns: 1fr !important;
-    }
-
-    /* 結算日期/歷史紀錄兩欄改單欄 */
-    #settlement-section > div:first-child {
-        grid-template-columns: 1fr !important;
-    }
-
-    /* 掉落物表格允許橫向捲動 */
-    .calc-card table {
-        min-width: unset;
-    }
-}
-
-@media (max-width: 400px) {
-    .cloud-input,
-    .calc-btn {
-        font-size: 13px;
-    }
-}
-
-/* ==========================================================================
-   💹 10. 結算區塊專用樣式
-   ========================================================================== */
-
-/* 收支明細區塊標題 */
-.detail-section-title {
-    font-size: 12px;
-    color: #888;
-    margin: 8px 0 4px;
-    font-weight: bold;
-}
-
-/* 收支明細每行 */
-.detail-row {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    padding: 3px 0 3px 8px;
-    color: #ccc;
-}
-
-/* 付款指示每行 */
-.payment-row {
-    border-bottom: 1px solid #2a2a2a;
-    padding: 10px 0;
-    font-size: 13px;
-}
-
-.payment-row:last-child {
-    border-bottom: none;
-}
+.detail-section-title { font-size: 12px; color: #888; margin: 8px 0 4px; font-weight: bold; }
+.detail-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0 3px 8px; color: #ccc; }
+.payment-row { border-bottom: 1px solid #2a2a2a; padding: 10px 0; font-size: 13px; }
+.payment-row:last-child { border-bottom: none; }
 
 /* 掉落物類型標籤 */
-.drop-type-badge {
-    display: inline-block;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-weight: bold;
-    white-space: nowrap;
-}
+.drop-type-badge { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: bold; white-space: nowrap; }
+.badge-sell { background: #1e3a5f; color: #64b5f6; }
+.badge-self { background: #2a1f3a; color: #b39ddb; }
 
-.badge-sell {
-    background: #1e3a5f;
-    color: #64b5f6;
-}
+/* 自用禁用欄位 */
+.field-disabled { opacity: 0.3; pointer-events: none; background: #222 !important; }
 
-.badge-self {
-    background: #2a1f3a;
-    color: #b39ddb;
-}
+/* 掉落物表格欄寬 */
+.drop-col-name    { min-width: 160px; }
+.drop-col-price   { width: 100px; }
+.drop-col-fee     { width: 75px; }
+.drop-col-scissor { width: 80px; }
+.drop-col-seller  { width: 110px; }
+.drop-col-net     { width: 80px; }
+.drop-col-del     { width: 40px; }
 
-/* 自用模式下禁用欄位 */
-.field-disabled {
-    opacity: 0.3;
-    pointer-events: none;
-    background: #222 !important;
+/* ==========================================================================
+   📱 10. RWD 手機版
+   ========================================================================== */
+@media (max-width: 600px) {
+    body { padding: 10px; }
+    h1 { font-size: 20px; }
+    .tab-btn { padding: 8px 12px; font-size: 14px; }
+    .calc-grid { grid-template-columns: 1fr; }
+    .settings-card, .wide-card { max-width: 100%; }
+    .sim-input-grid { grid-template-columns: 1fr !important; }
 }
