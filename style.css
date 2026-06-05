@@ -1,86 +1,87 @@
 /* ==========================================================================
-   🧱 1. 全域基礎樣式（將整頁的幾何中心點死死鎖定）
+   🧱 1. 全域基礎樣式
    ========================================================================== */
 html {
-    scrollbar-gutter: stable; /* 👈 世紀大發明：強迫保留滾動條的軌道空間 */
+    scrollbar-gutter: stable;
 }
 
-body { 
-    font-family: "Helvetica Neue", Arial, "Noto Sans TC", sans-serif; 
-    padding: 20px; 
-    background-color: #121212; 
-    color: #e0e0e0; 
+body {
+    font-family: "Helvetica Neue", Arial, "Noto Sans TC", sans-serif;
+    padding: 20px;
+    background-color: #121212;
+    color: #e0e0e0;
     display: flex;
     flex-direction: column;
-    align-items: center;    /* 👈 核心：強迫所有大元件以螢幕中線為基準對齊 */
+    align-items: center;
     justify-content: flex-start;
     min-height: 100vh;
     margin: 0;
     box-sizing: border-box;
     width: 100%;
-    overflow-x: hidden;     /* 防止寬幅震盪產生橫向滾動條 */
+    overflow-x: hidden;
 }
 
-h1 { 
-    color: #ff6b6b; 
+h1 {
+    color: #ff6b6b;
     text-align: center !important;
     margin: 10px 0 25px 0;
     width: 100%;
     max-width: 1200px;
     display: block;
-} 
+}
 
 /* ==========================================================================
-   🎛️ 2. 分頁按鈕區域（獨立置中，永不偏斜）
+   🎛️ 2. 分頁按鈕區域
    ========================================================================== */
-.tabs { 
-    display: flex; 
-    gap: 10px; 
-    margin-bottom: 25px; 
-    flex-wrap: wrap; 
-    justify-content: center; /* 👈 標籤按鈕一律保持完美的水平居中 */
-    width: 100%; 
+.tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
     max-width: 1200px;
     box-sizing: border-box;
 }
 
-.tab-btn { 
-    padding: 10px 20px; 
-    background: #2d2d2d; 
+.tab-btn {
+    padding: 10px 20px;
+    background: #2d2d2d;
     color: #aaaaaa;
-    border: 1px solid #444; 
-    cursor: pointer; 
-    font-size: 16px; 
-    border-radius: 8px; 
+    border: 1px solid #444;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 8px;
     transition: background 0.2s;
 }
 
-.tab-btn.active { 
-    background: linear-gradient(135deg, #ff9f43, #ff5252); 
-    color: white; 
+.tab-btn.active {
+    background: linear-gradient(135deg, #ff9f43, #ff5252);
+    color: white;
     border-color: #ff5252;
     font-weight: bold;
 }
 
 /* ==========================================================================
-   📦 3. 隱形主外殼（寬度防禦牆：隔離不同分頁的寬度影響）
+   📦 3. 主外殼與分頁容器
    ========================================================================== */
-.content { 
-    width: 100%; 
-    max-width: 1200px; 
+.content {
+    width: 100%;
+    max-width: 1200px;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
-    align-items: center; /* 👈 核心：強迫所有分頁內容，重心一律對準中線 */
+    align-items: center;
 }
 
-.tab-content { 
-    display: none; 
-    width: 100%; 
+.tab-content {
+    display: none;
+    width: 100%;
     box-sizing: border-box;
 }
-.tab-content.active { 
-    display: block; 
+
+.tab-content.active {
+    display: block;
 }
 
 .tab-content h3 {
@@ -97,37 +98,36 @@ h1 {
 }
 
 /* ==========================================================================
-   📐 4. 模組化容器樣式（共用卡片與設定區域）
+   📐 4. 模組化容器樣式
    ========================================================================== */
 .tab-narrow {
-    max-width: 450px; /* 鎖定小巧好讀的寬度 */
-    width: 100%; 
+    max-width: 450px;
+    width: 100%;
     margin: 0 auto;
 }
 
 .calc-card {
-    background: #1e1e1e; 
-    padding: 22px; 
-    border-radius: 16px; 
+    background: #1e1e1e;
+    padding: 22px;
+    border-radius: 16px;
     border: 1px solid #333;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.5); 
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
     width: 100%;
 }
 
-/* 針對「團隊分紅」設定卡的寬度限制 */
 .settings-card {
-    max-width: 600px; 
+    max-width: 600px;
     margin: 0 auto;
 }
 
 /* ==========================================================================
-   📥 5. 表單輸入與操作元件（通用 UI 控制項）
+   📥 5. 表單輸入與操作元件
    ========================================================================== */
 .cloud-box {
-    background-color: #251b1b; 
+    background-color: #251b1b;
     border: 2px dashed #ff5252;
     padding: 15px;
     border-radius: 12px;
@@ -138,7 +138,7 @@ h1 {
 .cloud-input {
     width: 100%;
     padding: 10px 12px;
-    background-color: #333; 
+    background-color: #333;
     color: white;
     border: 1px solid #555;
     border-radius: 8px;
@@ -149,7 +149,7 @@ h1 {
 .cloud-btn {
     width: 100%;
     padding: 12px;
-    background: linear-gradient(135deg, #4cae4c, #398439); 
+    background: linear-gradient(135deg, #4cae4c, #398439);
     color: white;
     border: none;
     border-radius: 8px;
@@ -162,23 +162,29 @@ h1 {
 .calc-btn {
     width: 100%;
     padding: 12px;
-    color: #ffffff !important; 
+    color: #ffffff !important;
     border: none;
     border-radius: 8px;
     font-size: 15px;
     font-weight: bold;
     cursor: pointer;
     margin: 5px 0 20px 0;
+    /* 修正文字垂直置中 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-sizing: border-box;
 }
 
 /* ==========================================================================
-   ⚡ 6. 【裝備綜合計算】三欄網格佈局（終極對稱置中技術）
+   ⚡ 6. 裝備計算三欄網格
    ========================================================================== */
 .calc-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
     gap: 25px;
-    justify-content: center; 
+    justify-content: center;
     align-items: start;
     width: 100%;
     max-width: 1200px;
@@ -187,19 +193,151 @@ h1 {
 }
 
 /* ==========================================================================
-   📊 7. 計算機結果與配色方案（資訊層級與視覺反饋）
+   📊 7. 計算機結果與配色方案
    ========================================================================== */
 .result-box {
-    background-color: #121212; 
-    padding: 15px; 
-    border-radius: 8px; 
+    background-color: #121212;
+    padding: 15px;
+    border-radius: 8px;
     text-align: center;
 }
 
-.title-red { color: #ff6b6b; }
-.title-green { color: #4dae4c; }
-.title-blue { color: #64b5f6; }
+/* 標題顏色 */
+.title-red    { color: #ff6b6b; }
+.title-green  { color: #4dae4c; }
+.title-blue   { color: #64b5f6; }
+.title-orange { color: #ff9f43; }
 
-.btn-red { background: linear-gradient(135deg, #ff6b6b, #e55353); }
-.btn-green { background: linear-gradient(135deg, #4dae4c, #3b8e3a); }
-.btn-blue { background: linear-gradient(135deg, #1e88e5, #1565c0); }
+/* 按鈕顏色 */
+.btn-red    { background: linear-gradient(135deg, #ff6b6b, #e55353); }
+.btn-green  { background: linear-gradient(135deg, #4dae4c, #3b8e3a); }
+.btn-blue   { background: linear-gradient(135deg, #1e88e5, #1565c0); }
+
+/* ==========================================================================
+   🗑️ 8. 刪除按鈕 (修正置中問題)
+   ========================================================================== */
+.del-btn {
+    width: 35px;
+    height: 35px;
+    min-width: 35px;
+    padding: 0;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    background: linear-gradient(135deg, #ff6b6b, #e55353);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+}
+
+/* ==========================================================================
+   📱 9. RWD 手機版排版
+   ========================================================================== */
+@media (max-width: 600px) {
+    body {
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 20px;
+    }
+
+    .tab-btn {
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+
+    .calc-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .settings-card {
+        max-width: 100%;
+    }
+
+    /* 基礎設定三欄改單欄 */
+    .sim-input-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* 結算日期/歷史紀錄兩欄改單欄 */
+    #settlement-section > div:first-child {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* 掉落物表格允許橫向捲動 */
+    .calc-card table {
+        min-width: unset;
+    }
+}
+
+@media (max-width: 400px) {
+    .cloud-input,
+    .calc-btn {
+        font-size: 13px;
+    }
+}
+
+/* ==========================================================================
+   💹 10. 結算區塊專用樣式
+   ========================================================================== */
+
+/* 收支明細區塊標題 */
+.detail-section-title {
+    font-size: 12px;
+    color: #888;
+    margin: 8px 0 4px;
+    font-weight: bold;
+}
+
+/* 收支明細每行 */
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    padding: 3px 0 3px 8px;
+    color: #ccc;
+}
+
+/* 付款指示每行 */
+.payment-row {
+    border-bottom: 1px solid #2a2a2a;
+    padding: 10px 0;
+    font-size: 13px;
+}
+
+.payment-row:last-child {
+    border-bottom: none;
+}
+
+/* 掉落物類型標籤 */
+.drop-type-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.badge-sell {
+    background: #1e3a5f;
+    color: #64b5f6;
+}
+
+.badge-self {
+    background: #2a1f3a;
+    color: #b39ddb;
+}
+
+/* 自用模式下禁用欄位 */
+.field-disabled {
+    opacity: 0.3;
+    pointer-events: none;
+    background: #222 !important;
+}
