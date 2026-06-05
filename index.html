@@ -42,6 +42,7 @@
                 ⚙️ 基礎設定 (個人雲端) <span>▼</span>
             </h4>
             <div id="settings-section" style="overflow:hidden;transition:max-height 0.3s ease-out;max-height:500px;">
+                <div class="inner-narrow">
                 <p class="card-desc" style="margin-top:12px;">設定匯率與方塊價格，下方價格將隨里程匯率即時變動。</p>
                 <div class="sim-input-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;align-items:end;">
                     <div class="form-group">
@@ -57,9 +58,6 @@
                         <input type="number" id="cubeSuspiciousPrice" class="cloud-input" value="50">
                     </div>
                 </div>
-                <div style="margin-top:16px;">
-                    <button id="btn-open-list-manager" class="calc-btn btn-orange" style="max-width:220px;">⚙️ 管理王／物品清單</button>
-                </div>
                 <div style="margin-top:16px;background:#252525;padding:15px;border-radius:8px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center;">
                     <div>
                         <div style="font-size:12px;color:#aaa;">神奇剪刀(萬)</div>
@@ -74,6 +72,7 @@
                         <div id="priceSnow" style="font-size:16px;font-weight:bold;color:#64b5f6;">0</div>
                     </div>
                 </div>
+                </div>
             </div>
         </div>
 
@@ -83,6 +82,7 @@
                 👥 隊員分紅表格 (共用雲端) <span>▼</span>
             </h4>
             <div id="member-section" style="overflow:hidden;transition:max-height 0.3s ease-out;max-height:1000px;">
+                <div class="inner-narrow">
                 <p class="card-desc" style="margin-top:12px;">在表格中進行編輯，確認後請點擊「新增至雲端」按鈕。</p>
                 <table style="width:100%;border-collapse:collapse;margin-bottom:15px;">
                     <thead>
@@ -99,6 +99,7 @@
                     <button id="btn-add-member" class="calc-btn btn-green">+ 新增隊員</button>
                     <button id="btn-save-members" class="calc-btn btn-blue">💾 新增至雲端</button>
                 </div>
+                </div>
             </div>
         </div>
 
@@ -111,9 +112,12 @@
                 <p class="card-desc" style="margin-top:12px;">選擇王後登記本次掉落物，自動計算每筆淨收入。</p>
 
                 <!-- 選王 -->
-                <div class="form-group" style="margin-bottom:20px;">
-                    <label>選擇王</label>
-                    <select id="boss-select" class="cloud-input"></select>
+                <div style="margin-bottom:20px;">
+                    <label style="display:block;margin-bottom:6px;font-size:14px;">選擇王</label>
+                    <div style="display:flex;gap:10px;align-items:center;">
+                        <select id="boss-select" class="cloud-input" style="flex:1;"></select>
+                        <button id="btn-open-list-manager" class="calc-btn btn-orange" style="width:auto;padding:10px 14px;margin:0;white-space:nowrap;flex-shrink:0;">⚙️ 管理清單</button>
+                    </div>
                 </div>
 
                 <!-- 掉落物表格 -->
@@ -169,6 +173,7 @@
                 💹 物品結算 <span>▼</span>
             </h4>
             <div id="settlement-section" style="overflow:hidden;transition:max-height 0.5s ease-out;max-height:4000px;">
+                <div class="inner-narrow">
                 <p class="card-desc" style="margin-top:12px;">確認資料後點擊結算，系統自動計算分紅與付款方式。</p>
 
                 <!-- 日期 & 歷史 -->
@@ -223,6 +228,7 @@
                     <button id="btn-settle" class="calc-btn btn-orange" style="flex:2;min-width:120px;">🧮 執行結算</button>
                     <button id="btn-save-record" class="calc-btn btn-green" style="flex:1;min-width:100px;" disabled>💾 儲存紀錄</button>
                     <button id="btn-delete-record" class="calc-btn btn-red" style="flex:1;min-width:100px;" disabled>🗑 刪除此紀錄</button>
+                </div>
                 </div>
             </div>
         </div>

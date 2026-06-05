@@ -206,7 +206,20 @@ async function loadFromCloud() {
     if (!kc) { alert('請先輸入代碼！'); return; }
     try {
         const snap = await getDoc(doc(db, "player_data", kc));
-        if (!snap.exists()) { alert("找不到資料"); return; }
+        if (!snap.exists()) {
+            // 雲端沒有資料 → 自動建立新帳號
+            const newData = getFormValues();
+            newData.lastUpdated = new Date().toISOString();
+            await setDoc(doc(db, "player_data", kc), newData, { merge: false });
+            lastSavedData = JSON.parse(JSON.stringify(newData));
+            localStorage.setItem('maple_tool_data', JSON.stringify(newData));
+            updateSyncUI('synced');
+            document.getElementById('display-keycode').innerText = kc;
+            renderBossSelect();
+            renderAllDropItemSelects();
+            alert("✅ 已建立新帳號！");
+            return;
+        }
         const data = snap.data();
         fillValues(data);
         localStorage.setItem('maple_tool_data', JSON.stringify(data));
@@ -224,7 +237,7 @@ async function loadFromCloud() {
             renderHistorySelect();
         }
 
-        // 刷新下拉選單（登入後顯示新增選項）
+        // 刷新下拉選單
         renderBossSelect();
         renderAllDropItemSelects();
 
