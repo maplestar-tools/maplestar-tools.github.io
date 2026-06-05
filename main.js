@@ -250,6 +250,22 @@ function getFormValues() {
         }
     };
 }
+/**
+ * 控制 UI 提示訊息的函式
+ * 負責操控 HTML 中 id="toast" 的 div 元素
+ */
+function showToast(message) {
+    const toast = document.getElementById("toast");
+    if (toast) {
+        toast.textContent = message;      // 更新提示文字
+        toast.style.display = "block";    // 顯示區塊
+        
+        // 3 秒後自動隱藏
+        setTimeout(() => {
+            toast.style.display = "none";
+        }, 3000);
+    }
+}
 /* ==========================================================================
    ⚙️ 2. 團隊分紅：基礎設定與計算
    ========================================================================== */
