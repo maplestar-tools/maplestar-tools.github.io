@@ -19,36 +19,33 @@ const db  = getFirestore(app);
 // ==========================================================================
 // 🌐 全域狀態
 // ==========================================================================
-let saveTimer            = null;   // 15 秒自動儲存計時器
-let lastSavedData        = null;   // 上次儲存快照
-let members              = [];     // 隊員名單
-let bossList             = [];     // 王名單
-let bossItemMap          = {};     // 每隻王的掉落物清單 { 王名: [物品, ...] }
-let dropRows             = [];     // 掉落物登記
-let snowRows             = [];     // 雪花消耗
-let settlementHistory    = [];     // 結算歷史
-let lastSettlementResult = null;   // 最後一次結算結果
-let currentHistoryIndex  = -1;     // 目前查看的歷史索引（-1 = 非歷史模式）
+let saveTimer            = null;
+let lastSavedData        = null;
+let members              = [];     // [{ name, checked, ratio }]
+let bossList             = [];
+let bossItemMap          = {};
+let dropRows             = [];
+let snowRows             = [];
+let settlementHistory    = [];
+let lastSettlementResult = null;
+let currentHistoryIndex  = -1;
 
 // ==========================================================================
 // 🚀 初始化
 // ==========================================================================
 window.addEventListener('DOMContentLoaded', () => {
-    // 還原本地備份
     const localData = localStorage.getItem('maple_tool_data');
     if (localData) {
         try { fillValues(JSON.parse(localData)); updateSyncUI('synced'); }
         catch (e) { console.error("本地資料還原失敗", e); }
     }
 
-    // 還原歷史紀錄
     const localHistory = localStorage.getItem('maple_settlement_history');
     if (localHistory) {
         try { settlementHistory = JSON.parse(localHistory); renderHistorySelect(); }
         catch (e) { console.error("歷史紀錄還原失敗", e); }
     }
 
-    // 預設今天日期
     const dateEl = document.getElementById('settlement-date');
     if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
 
@@ -61,65 +58,64 @@ window.addEventListener('DOMContentLoaded', () => {
 // 🎯 事件綁定
 // ==========================================================================
 function bindEvents() {
-    // 分頁
     document.getElementById('btn-tab-home').addEventListener('click',  () => switchTab('home'));
     document.getElementById('btn-tab-money').addEventListener('click', () => switchTab('money-split'));
     document.getElementById('btn-tab-equip').addEventListener('click', () => switchTab('equip-calc'));
 
-    // 雲端
     document.getElementById('btn-load-cloud').addEventListener('click', loadFromCloud);
     document.getElementById('btn-manual-sync').addEventListener('click', () => saveAllToCloud(true));
 
-    // 折疊
     document.getElementById('btn-toggle-settings').addEventListener('click',   (e) => toggleSection(e.currentTarget, 'settings-section'));
     document.getElementById('btn-toggle-member').addEventListener('click',     (e) => toggleSection(e.currentTarget, 'member-section'));
     document.getElementById('btn-toggle-drops').addEventListener('click',      (e) => toggleSection(e.currentTarget, 'drops-section'));
     document.getElementById('btn-toggle-settlement').addEventListener('click', (e) => toggleSection(e.currentTarget, 'settlement-section'));
 
-    // 隊員
     document.getElementById('btn-add-member').addEventListener('click', addMember);
     document.getElementById('btn-save-members').addEventListener('click', saveMembersToCloud);
     document.getElementById('member-table-body').addEventListener('change', onMemberTableChange);
     document.getElementById('member-table-body').addEventListener('click',  onMemberTableClick);
 
-    // 王選擇
     document.getElementById('boss-select').addEventListener('change', onBossSelectChange);
 
-    // 掉落物
     document.getElementById('btn-add-drop-sell').addEventListener('click', () => addDropRow('sell'));
     document.getElementById('btn-add-drop-self').addEventListener('click', () => addDropRow('self'));
     document.getElementById('btn-clear-drops').addEventListener('click', clearDrops);
     document.getElementById('drops-table-body').addEventListener('change', onDropTableChange);
     document.getElementById('drops-table-body').addEventListener('click',  onDropTableClick);
 
-    // 雪花
     document.getElementById('btn-add-snow').addEventListener('click', addSnowRow);
     document.getElementById('snow-table-body').addEventListener('change', onSnowTableChange);
     document.getElementById('snow-table-body').addEventListener('click',  onSnowTableClick);
 
-    // 結算
     document.getElementById('btn-settle').addEventListener('click', executeSettlement);
     document.getElementById('btn-save-record').addEventListener('click', saveSettlementRecord);
     document.getElementById('btn-delete-record').addEventListener('click', deleteHistoryRecord);
     document.getElementById('history-select').addEventListener('change', loadHistoryRecord);
 
-    // 裝備計算
     document.getElementById('btnCalcBaseAtk').addEventListener('click',   calculateBaseAtk);
     document.getElementById('btnCalcEquipStat').addEventListener('click', calculateEquipStat);
     document.getElementById('btnCalcFinal').addEventListener('click',     calculateFinalAtk);
 
-    // keyCode 變更時刷新下拉選單（登入後顯示新增選項）
     document.getElementById('userKeyCode').addEventListener('input', () => {
         renderBossSelect();
         renderAllDropItemSelects();
     });
 
-    // 全域 input 自動儲存
     document.addEventListener('input', (e) => {
         if ((e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') && e.target.id !== 'userKeyCode') {
             triggerAutoSave();
         }
     });
+
+    // Modal
+    const openBtn  = document.getElementById('btn-open-list-manager');
+    const closeBtn = document.getElementById('btn-close-list-manager');
+    if (openBtn)  openBtn.addEventListener('click',  openListManager);
+    if (closeBtn) closeBtn.addEventListener('click', closeListManager);
+    document.getElementById('modal-list-manager')?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeListManager();
+    });
+    document.getElementById('modal-boss-filter')?.addEventListener('change', renderModalItemList);
 }
 
 // ==========================================================================
@@ -151,9 +147,7 @@ function toggleSection(headerEl, sectionId) {
 
 function expandSection(sectionId) {
     const el = document.getElementById(sectionId);
-    if (el && el.style.maxHeight !== '0px') {
-        el.style.maxHeight = el.scrollHeight + 1000 + "px";
-    }
+    if (el && el.style.maxHeight !== '0px') el.style.maxHeight = el.scrollHeight + 1000 + "px";
 }
 
 // ==========================================================================
@@ -189,6 +183,8 @@ async function saveAllToCloud(isManual = false) {
     try {
         const data = getFormValues();
         data.lastUpdated = new Date().toISOString();
+        // 個人雲端存 checked/ratio（以名稱為 key）
+        data.memberSettings = buildMemberSettings();
         await setDoc(doc(db, "player_data", kc), data, { merge: true });
         lastSavedData = JSON.parse(JSON.stringify(data));
         localStorage.setItem('maple_tool_data', JSON.stringify(data));
@@ -201,16 +197,29 @@ async function saveAllToCloud(isManual = false) {
     }
 }
 
+// 建立以名稱為 key 的個人設定物件
+function buildMemberSettings() {
+    const settings = {};
+    members.forEach(m => { if (m.name.trim()) settings[m.name] = { checked: m.checked, ratio: m.ratio }; });
+    return settings;
+}
+
 async function loadFromCloud() {
     const kc = document.getElementById('userKeyCode')?.value.trim();
     if (!kc) { alert('請先輸入代碼！'); return; }
     try {
         const snap = await getDoc(doc(db, "player_data", kc));
+
         if (!snap.exists()) {
-            // 雲端沒有資料 → 自動建立新帳號
+            // 新 keycode：建立新帳號，本地歷史保留並上傳
             const newData = getFormValues();
-            newData.lastUpdated = new Date().toISOString();
+            newData.lastUpdated  = new Date().toISOString();
+            newData.memberSettings = buildMemberSettings();
             await setDoc(doc(db, "player_data", kc), newData, { merge: false });
+            // 上傳本地歷史到雲端
+            if (settlementHistory.length > 0) {
+                await setDoc(doc(db, "player_history", kc), { history: settlementHistory }, { merge: false });
+            }
             lastSavedData = JSON.parse(JSON.stringify(newData));
             localStorage.setItem('maple_tool_data', JSON.stringify(newData));
             updateSyncUI('synced');
@@ -220,8 +229,20 @@ async function loadFromCloud() {
             alert("✅ 已建立新帳號！");
             return;
         }
+
+        // 已存在 keycode：載入設定
         const data = snap.data();
         fillValues(data);
+
+        // 合併共用名單與個人 checked/ratio
+        const memberSettings = data.memberSettings || {};
+        members = members.map(m => ({
+            name:    m.name,
+            checked: memberSettings[m.name]?.checked ?? false,
+            ratio:   memberSettings[m.name]?.ratio   ?? 1
+        }));
+        renderMembers();
+
         localStorage.setItem('maple_tool_data', JSON.stringify(data));
         lastSavedData = JSON.parse(JSON.stringify(data));
         updateSyncUI('synced');
@@ -229,18 +250,14 @@ async function loadFromCloud() {
         updateDynamicPrices();
         calculateFinalAtk();
 
-        // 讀取歷史紀錄
+        // 以雲端歷史覆蓋本地（已存在帳號）
         const histSnap = await getDoc(doc(db, "player_history", kc));
-        if (histSnap.exists()) {
-            settlementHistory = histSnap.data().history || [];
-            localStorage.setItem('maple_settlement_history', JSON.stringify(settlementHistory));
-            renderHistorySelect();
-        }
+        settlementHistory = histSnap.exists() ? (histSnap.data().history || []) : [];
+        localStorage.setItem('maple_settlement_history', JSON.stringify(settlementHistory));
+        renderHistorySelect();
 
-        // 刷新下拉選單
         renderBossSelect();
         renderAllDropItemSelects();
-
         alert("📥 設定讀取成功！");
     } catch (e) { alert("讀取失敗：" + e.message); }
 }
@@ -304,10 +321,19 @@ async function loadSharedData() {
     try {
         const snap = await getDoc(doc(db, "shared_data", "team_data"));
         if (snap.exists()) {
-            const d    = snap.data();
-            members    = d.members     || [];
-            bossList   = d.bossList    || [];
-            bossItemMap = d.bossItemMap || {};
+            const d     = snap.data();
+            // 共用雲端只存名稱
+            const names  = d.memberNames || d.members?.map(m => m.name) || [];
+            bossList     = d.bossList    || [];
+            bossItemMap  = d.bossItemMap || {};
+            // 還原本地個人設定
+            const localData = localStorage.getItem('maple_tool_data');
+            const memberSettings = localData ? (JSON.parse(localData).memberSettings || {}) : {};
+            members = names.map(name => ({
+                name,
+                checked: memberSettings[name]?.checked ?? false,
+                ratio:   memberSettings[name]?.ratio   ?? 1
+            }));
         }
     } catch (e) {
         console.error("共用資料讀取失敗：", e);
@@ -324,7 +350,11 @@ async function saveMembersToCloud() {
     const kc = document.getElementById('userKeyCode').value.trim();
     if (!kc) { alert("🔒 尚未登入代碼，無法同步！"); return; }
     try {
-        await setDoc(doc(db, "shared_data", "team_data"), { members, bossList, bossItemMap }, { merge: false });
+        // 共用雲端只存名稱
+        const memberNames = members.map(m => m.name).filter(n => n.trim() !== '');
+        await setDoc(doc(db, "shared_data", "team_data"), { memberNames, bossList, bossItemMap }, { merge: false });
+        // 個人設定存個人雲端
+        await saveAllToCloud(false);
         alert("✅ 共用名單已同步至雲端！");
     } catch (e) { alert("同步失敗：" + e.message); }
 }
@@ -366,16 +396,13 @@ function getActiveMembers() { return members.filter(m => m.checked && m.name.tri
 // 👑 王選擇
 // ==========================================================================
 function getCurrentBoss() {
-    const sel = document.getElementById('boss-select');
-    const val = sel?.value;
+    const val = document.getElementById('boss-select')?.value;
     return (val && val !== '__add_new__') ? val : '';
 }
 
 function onBossSelectChange(e) {
     const val = e.target.value;
     if (val === '__add_new__') { handleAddNew('boss', e.target); return; }
-
-    // 切換王時清空掉落物（雪花保留）
     if (dropRows.length > 0) {
         if (confirm("切換王將清空目前的掉落物清單，是否繼續？")) {
             dropRows = [];
@@ -387,7 +414,6 @@ function onBossSelectChange(e) {
     }
     e.target.dataset.prev = val;
     updateDropButtons();
-    // 切換王時更新所有掉落物名稱選單
     renderAllDropItemSelects();
 }
 
@@ -415,8 +441,7 @@ function renderBossSelect() {
 // ==========================================================================
 function getCurrentBossItems() {
     const boss = getCurrentBoss();
-    if (!boss) return [];
-    return bossItemMap[boss] || [];
+    return boss ? (bossItemMap[boss] || []) : [];
 }
 
 function buildItemOptions(selected = '') {
@@ -440,12 +465,11 @@ async function handleAddNew(type, selectEl) {
     const name  = prompt(`請輸入新的${label}：`);
     if (!name || !name.trim()) { selectEl.value = selectEl.dataset.prev || ''; return; }
     const trimmed = name.trim();
-
     if (type === 'boss') {
         if (!bossList.includes(trimmed)) bossList.push(trimmed);
         await saveSharedLists();
         renderBossSelect();
-        document.getElementById('boss-select').value       = trimmed;
+        document.getElementById('boss-select').value        = trimmed;
         document.getElementById('boss-select').dataset.prev = trimmed;
     } else {
         const boss = getCurrentBoss();
@@ -453,11 +477,8 @@ async function handleAddNew(type, selectEl) {
         if (!bossItemMap[boss]) bossItemMap[boss] = [];
         if (!bossItemMap[boss].includes(trimmed)) bossItemMap[boss].push(trimmed);
         await saveSharedLists();
-        // 更新所有掉落物名稱選單
         renderAllDropItemSelects();
-        // 將當前這格選到新物品
         selectEl.value = trimmed;
-        // 同步到 dropRows
         const idx = parseInt(selectEl.dataset.index);
         if (!isNaN(idx) && dropRows[idx]) dropRows[idx].item = trimmed;
     }
@@ -467,7 +488,8 @@ async function handleAddNew(type, selectEl) {
 async function saveSharedLists() {
     const kc = document.getElementById('userKeyCode')?.value.trim();
     if (!kc) return;
-    try { await setDoc(doc(db, "shared_data", "team_data"), { members, bossList, bossItemMap }, { merge: false }); }
+    const memberNames = members.map(m => m.name).filter(n => n.trim() !== '');
+    try { await setDoc(doc(db, "shared_data", "team_data"), { memberNames, bossList, bossItemMap }, { merge: false }); }
     catch (e) { console.error("名單儲存失敗：", e); }
 }
 
@@ -508,9 +530,7 @@ function appendDropRow(i) {
             </select>
         </td>
         <td style="padding:6px 4px;vertical-align:middle;">
-            <input type="number" class="cloud-input drop-price" data-index="${i}"
-                value="" placeholder="0"
-                style="font-size:13px;padding:6px 8px;">
+            <input type="number" class="cloud-input drop-price" data-index="${i}" value="" placeholder="0" style="font-size:13px;padding:6px 8px;">
         </td>
         <td style="padding:6px 4px;vertical-align:middle;">
             <select class="cloud-input drop-fee ${isSell ? '' : 'field-disabled'}" data-index="${i}" style="font-size:13px;padding:6px 8px;" ${isSell ? '' : 'disabled'}>
@@ -542,8 +562,7 @@ function appendDropRow(i) {
 }
 
 function recalcDropRow(i) {
-    const row = dropRows[i];
-    const p   = getPrices();
+    const row = dropRows[i], p = getPrices();
     let net = row.price;
     if (row.type === 'sell') {
         net = row.price * (1 - row.fee / 100);
@@ -556,23 +575,16 @@ function recalcDropRow(i) {
     if (el) el.innerText = net.toFixed(1) + '萬';
 }
 
-function removeDropRow(i) {
-    dropRows.splice(i, 1);
-    rerenderDropTable();
-}
+function removeDropRow(i) { dropRows.splice(i, 1); rerenderDropTable(); }
 
 function rerenderDropTable() {
     document.getElementById('drops-table-body').innerHTML = '';
-    const temp = [...dropRows];
-    dropRows = [];
+    const temp = [...dropRows]; dropRows = [];
     temp.forEach((row, i) => { dropRows.push(row); appendDropRow(i); });
 }
 
 function refreshSellerOptions() {
-    document.querySelectorAll('.drop-seller').forEach(sel => {
-        const cur = sel.value;
-        sel.innerHTML = buildSellerOptions(cur);
-    });
+    document.querySelectorAll('.drop-seller').forEach(sel => { const cur = sel.value; sel.innerHTML = buildSellerOptions(cur); });
 }
 
 function buildSellerOptions(selected = '') {
@@ -588,7 +600,7 @@ function buildSellerOptions(selected = '') {
 function onSnowTableChange(e) {
     const i = parseInt(e.target.dataset.index);
     if (isNaN(i) || !snowRows[i]) return;
-    if (e.target.classList.contains('snow-user'))  { snowRows[i].user  = e.target.value; }
+    if (e.target.classList.contains('snow-user'))  snowRows[i].user  = e.target.value;
     if (e.target.classList.contains('snow-count')) { snowRows[i].count = parseFloat(e.target.value) || 0; recalcSnowRow(i); }
 }
 function onSnowTableClick(e) { if (e.target.classList.contains('snow-del')) removeSnowRow(parseInt(e.target.dataset.index)); }
@@ -612,9 +624,7 @@ function appendSnowRow(i) {
             </select>
         </td>
         <td style="padding:6px 4px;vertical-align:middle;">
-            <input type="number" class="cloud-input snow-count" data-index="${i}"
-                value="" placeholder="0" min="0"
-                style="font-size:13px;padding:6px 8px;">
+            <input type="number" class="cloud-input snow-count" data-index="${i}" value="" placeholder="0" min="0" style="font-size:13px;padding:6px 8px;">
         </td>
         <td style="padding:6px 4px;text-align:right;vertical-align:middle;">
             <span id="snow-cost-${i}" style="color:#ff6b6b;font-weight:bold;font-size:13px;">—</span>
@@ -633,23 +643,16 @@ function recalcSnowRow(i) {
     if (el) el.innerText = cost.toFixed(1) + '萬';
 }
 
-function removeSnowRow(i) {
-    snowRows.splice(i, 1);
-    rerenderSnowTable();
-}
+function removeSnowRow(i) { snowRows.splice(i, 1); rerenderSnowTable(); }
 
 function rerenderSnowTable() {
     document.getElementById('snow-table-body').innerHTML = '';
-    const temp = [...snowRows];
-    snowRows = [];
+    const temp = [...snowRows]; snowRows = [];
     temp.forEach((row, i) => { snowRows.push(row); appendSnowRow(i); });
 }
 
 function refreshSnowUserOptions() {
-    document.querySelectorAll('.snow-user').forEach(sel => {
-        const cur = sel.value;
-        sel.innerHTML = buildSellerOptions(cur);
-    });
+    document.querySelectorAll('.snow-user').forEach(sel => { const cur = sel.value; sel.innerHTML = buildSellerOptions(cur); });
 }
 
 // ==========================================================================
@@ -658,8 +661,7 @@ function refreshSnowUserOptions() {
 function clearDrops() {
     if (dropRows.length === 0 && snowRows.length === 0) return;
     if (!confirm("確定要清空本次所有掉落物和雪花資料嗎？")) return;
-    dropRows = [];
-    snowRows = [];
+    dropRows = []; snowRows = [];
     document.getElementById('drops-table-body').innerHTML = '';
     document.getElementById('snow-table-body').innerHTML  = '';
     showToast("🗑 已清空本次資料");
@@ -670,14 +672,13 @@ function clearDrops() {
 // ==========================================================================
 function validateBeforeSettle() {
     for (let i = 0; i < dropRows.length; i++) {
-        const row = dropRows[i];
-        if (!row.item)   { alert(`第 ${i+1} 筆掉落物尚未選擇名稱！`);       return false; }
-        if (!row.seller) { alert(`第 ${i+1} 筆掉落物尚未選擇賣家/自用者！`); return false; }
+        if (!dropRows[i].item)   { alert(`第 ${i+1} 筆掉落物尚未選擇名稱！`);       return false; }
+        if (!dropRows[i].seller) { alert(`第 ${i+1} 筆掉落物尚未選擇賣家/自用者！`); return false; }
     }
     for (let i = 0; i < snowRows.length; i++) {
         if (!snowRows[i].user) { alert(`第 ${i+1} 筆雪花紀錄尚未選擇使用者！`); return false; }
     }
-    if (getActiveMembers().length === 0)               { alert("請先在隊員表格勾選參加的隊員！"); return false; }
+    if (getActiveMembers().length === 0)                { alert("請先在隊員表格勾選參加的隊員！"); return false; }
     if (dropRows.length === 0 && snowRows.length === 0) { alert("請先登記掉落物或雪花！");         return false; }
     return true;
 }
@@ -687,36 +688,30 @@ function validateBeforeSettle() {
 // ==========================================================================
 function executeSettlement() {
     if (!validateBeforeSettle()) return;
-
     const active = getActiveMembers();
     const prices = getPrices();
 
-    // --- 1. 每人實際收入（賣出淨收入 + 自用估價，兩者都算進來） ---
+    // 每人實際收入（賣出 + 自用都算）
     const actualIncome = {};
     active.forEach(m => { actualIncome[m.name] = 0; });
     dropRows.forEach(row => {
-        if (!row.seller || !actualIncome.hasOwnProperty(row.seller)) return;
-        // 自用和賣出都直接加入實際收入
-        actualIncome[row.seller] += row.net;
+        if (row.seller && actualIncome.hasOwnProperty(row.seller)) actualIncome[row.seller] += row.net;
     });
 
-    // --- 2. 總池 = 所有掉落物淨收入加總 ---
+    // 總池
     let totalPool = 0;
     dropRows.forEach(row => { totalPool += row.net; });
 
-    // --- 3. 雪花：從總池扣除，記錄每人雪花成本 ---
+    // 雪花從總池扣，記錄每人雪花成本
     const snowCostPerMember = {};
     active.forEach(m => { snowCostPerMember[m.name] = 0; });
     let totalSnowCost = 0;
     snowRows.forEach(row => {
-        totalPool    -= row.cost;
-        totalSnowCost += row.cost;
-        if (row.user && snowCostPerMember.hasOwnProperty(row.user)) {
-            snowCostPerMember[row.user] += row.cost;
-        }
+        totalPool -= row.cost; totalSnowCost += row.cost;
+        if (row.user && snowCostPerMember.hasOwnProperty(row.user)) snowCostPerMember[row.user] += row.cost;
     });
 
-    // --- 4. 每人應得 = 依比例分總池 + 加回自己的雪花成本 ---
+    // 每人應得 = 依比例分總池 + 加回自己雪花成本
     const totalRatio = active.reduce((s, m) => s + (m.ratio || 1), 0);
     const shouldGet  = {};
     active.forEach(m => {
@@ -724,32 +719,24 @@ function executeSettlement() {
         shouldGet[m.name] = Math.round((base + (snowCostPerMember[m.name] || 0)) * 10) / 10;
     });
 
-    // --- 5. 差額 = 實際收入 - 應得（正=多拿了要付出，負=少拿了要收回） ---
+    // 差額（正=多拿要付出，負=少拿要收回）
     const diff = {};
-    active.forEach(m => {
-        diff[m.name] = Math.round((actualIncome[m.name] - shouldGet[m.name]) * 10) / 10;
-    });
+    active.forEach(m => { diff[m.name] = Math.round((actualIncome[m.name] - shouldGet[m.name]) * 10) / 10; });
 
-    // --- 6. 付款指示 ---
     const payments = calcPayments(diff, active, prices);
-
-    // --- 7. 渲染結果 ---
-    const result = { totalPool, totalSnowCost, shouldGet, actualIncome, diff, payments };
+    const result   = { totalPool, totalSnowCost, shouldGet, actualIncome, diff, payments };
     renderSettlementResult(result, active);
-
     lastSettlementResult = result;
     document.getElementById('btn-save-record').disabled = false;
 }
 
-// 計算付款指示（正差額=付出方，負差額=收入方）
 function calcPayments(diff, active, prices) {
     let payers    = active.filter(m => diff[m.name] >  0.01).map(m => ({ name: m.name, amount:  diff[m.name] }));
     let receivers = active.filter(m => diff[m.name] < -0.01).map(m => ({ name: m.name, amount: -diff[m.name] }));
-
     const payments = [];
     let pi = 0, ri = 0;
     while (pi < payers.length && ri < receivers.length) {
-        const p      = payers[pi], r = receivers[ri];
+        const p = payers[pi], r = receivers[ri];
         const amount = Math.round(Math.min(p.amount, r.amount) * 10) / 10;
         payments.push({ from: p.name, to: r.name, amount, ...suggestBlocks(amount, prices) });
         p.amount = Math.round((p.amount - amount) * 10) / 10;
@@ -760,17 +747,10 @@ function calcPayments(diff, active, prices) {
     return payments;
 }
 
-// 方塊組合建議（奇幻優先）
 function suggestBlocks(amount, prices) {
     let rem = amount, fancyCount = 0, suspCount = 0;
-    if (prices.cubeFancy > 0) {
-        fancyCount = Math.floor(rem / prices.cubeFancy);
-        rem = Math.round((rem - fancyCount * prices.cubeFancy) * 10) / 10;
-    }
-    if (prices.cubeSuspicious > 0) {
-        suspCount = Math.floor(rem / prices.cubeSuspicious);
-        rem = Math.round((rem - suspCount * prices.cubeSuspicious) * 10) / 10;
-    }
+    if (prices.cubeFancy > 0)      { fancyCount = Math.floor(rem / prices.cubeFancy);      rem = Math.round((rem - fancyCount * prices.cubeFancy) * 10) / 10; }
+    if (prices.cubeSuspicious > 0) { suspCount  = Math.floor(rem / prices.cubeSuspicious); rem = Math.round((rem - suspCount  * prices.cubeSuspicious) * 10) / 10; }
     return { fancyCount, suspCount, remainder: rem };
 }
 
@@ -778,45 +758,37 @@ function suggestBlocks(amount, prices) {
 // 🖼️ 結算結果渲染
 // ==========================================================================
 function renderSettlementResult(result, active) {
-    const { totalPool, totalSnowCost, shouldGet, actualIncome, diff, payments } = result;
+    const { totalPool, shouldGet, actualIncome, diff, payments } = result;
     document.getElementById('settlement-detail').style.display = 'block';
 
-    // 收支明細 - 掉落物
     let dropsHtml = '<div class="detail-section-title">📦 掉落物收入</div>';
     if (dropRows.length === 0) {
         dropsHtml += '<div class="detail-row" style="color:#666;">（無）</div>';
     } else {
         dropRows.forEach(d => {
-            const label = d.type === 'sell'
-                ? `${d.item}（${d.seller}）`
-                : `${d.item}（${d.seller} 自用）`;
+            const label = d.type === 'sell' ? `${d.item}（${d.seller}）` : `${d.item}（${d.seller} 自用）`;
             const color = d.type === 'sell' ? '#64b5f6' : '#b39ddb';
             dropsHtml += `<div class="detail-row"><span>${label}</span><span style="color:${color};">${d.net.toFixed(1)}萬</span></div>`;
         });
     }
     document.getElementById('detail-drops').innerHTML = dropsHtml;
 
-    // 收支明細 - 雪花
     let snowHtml = '<div class="detail-section-title">❄️ 雪花消耗</div>';
     if (snowRows.length === 0) {
         snowHtml += '<div class="detail-row" style="color:#666;">（無）</div>';
     } else {
-        snowRows.forEach(s => {
-            snowHtml += `<div class="detail-row"><span>${s.user} × ${s.count}個</span><span style="color:#ff6b6b;">-${s.cost.toFixed(1)}萬</span></div>`;
-        });
+        snowRows.forEach(s => { snowHtml += `<div class="detail-row"><span>${s.user} × ${s.count}個</span><span style="color:#ff6b6b;">-${s.cost.toFixed(1)}萬</span></div>`; });
     }
     document.getElementById('detail-snow').innerHTML = snowHtml;
     document.getElementById('detail-total').innerText = totalPool.toFixed(1) + '萬';
 
-    // 每人分紅明細
     const tbody = document.getElementById('settlement-member-body');
     tbody.innerHTML = '';
     active.forEach(m => {
-        const d     = diff[m.name];
-        // 正差額 = 多拿了要付出（橘色警示），負差額 = 少拿了要收回（藍色）
+        const d = diff[m.name];
         const color = d >= 0 ? '#ff9f43' : '#64b5f6';
         const sign  = d >= 0 ? '+' : '';
-        const tr    = document.createElement('tr');
+        const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid #2a2a2a';
         tr.innerHTML = `
             <td style="padding:6px 4px;">${m.name}</td>
@@ -827,7 +799,6 @@ function renderSettlementResult(result, active) {
         tbody.appendChild(tr);
     });
 
-    // 付款指示
     const payEl = document.getElementById('payment-instructions');
     if (payments.length === 0) {
         payEl.innerHTML = '<div style="color:#666;font-size:13px;">無需付款，大家收支平衡！</div>';
@@ -848,7 +819,6 @@ function renderSettlementResult(result, active) {
             </div>
         `).join('');
     }
-
     showToast("✅ 結算完成！");
     expandSection('settlement-section');
 }
@@ -866,20 +836,15 @@ function saveSettlementRecord() {
         snows:   JSON.parse(JSON.stringify(snowRows)),
         members: JSON.parse(JSON.stringify(getActiveMembers()))
     };
-
-    // 每筆獨立儲存，不覆蓋
     settlementHistory.unshift(record);
     if (settlementHistory.length > 50) settlementHistory.pop();
-    currentHistoryIndex = 0; // 剛儲存的在最前面
-
+    currentHistoryIndex = 0;
     localStorage.setItem('maple_settlement_history', JSON.stringify(settlementHistory));
-
     const kc = document.getElementById('userKeyCode')?.value.trim();
     if (kc) {
         setDoc(doc(db, "player_history", kc), { history: settlementHistory }, { merge: false })
             .catch(e => console.error("歷史雲端儲存失敗：", e));
     }
-
     renderHistorySelect();
     document.getElementById('btn-delete-record').disabled = false;
     showToast("💾 紀錄已儲存！");
@@ -889,14 +854,12 @@ function deleteHistoryRecord() {
     if (!confirm("確定要刪除此筆紀錄嗎？")) return;
     const idx = currentHistoryIndex >= 0 ? currentHistoryIndex : 0;
     settlementHistory.splice(idx, 1);
-
     localStorage.setItem('maple_settlement_history', JSON.stringify(settlementHistory));
     const kc = document.getElementById('userKeyCode')?.value.trim();
     if (kc) {
         setDoc(doc(db, "player_history", kc), { history: settlementHistory }, { merge: false })
             .catch(e => console.error("歷史雲端刪除失敗：", e));
     }
-
     currentHistoryIndex = -1;
     renderHistorySelect();
     document.getElementById('history-select').value        = '';
@@ -910,9 +873,7 @@ function renderHistorySelect() {
     const sel = document.getElementById('history-select');
     if (!sel) return;
     sel.innerHTML = '<option value="">— 選擇歷史紀錄 —</option>';
-    settlementHistory.forEach((r, i) => {
-        sel.innerHTML += `<option value="${i}">${r.date} ${r.boss}</option>`;
-    });
+    settlementHistory.forEach((r, i) => { sel.innerHTML += `<option value="${i}">${r.date} ${r.boss}</option>`; });
 }
 
 function loadHistoryRecord() {
@@ -925,23 +886,119 @@ function loadHistoryRecord() {
     }
     const record = settlementHistory[parseInt(idx)];
     if (!record) return;
-
     currentHistoryIndex = parseInt(idx);
 
-    // 還原快照
-    dropRows = record.drops  || [];
-    snowRows = record.snows  || [];
+    // 還原掉落物與雪花
+    dropRows = record.drops || [];
+    snowRows = record.snows || [];
     rerenderDropTable();
     rerenderSnowTable();
-    if (record.boss) document.getElementById('boss-select').value    = record.boss;
+
+    // 還原王
+    if (record.boss) {
+        const bossEl = document.getElementById('boss-select');
+        if (bossEl) { bossEl.value = record.boss; bossEl.dataset.prev = record.boss; }
+        renderAllDropItemSelects();
+        updateDropButtons();
+    }
+
+    // 還原日期
     if (record.date) document.getElementById('settlement-date').value = record.date;
+
+    // 還原隊員勾選狀態（只更新畫面，不寫雲端）
+    if (record.members) {
+        const checkedNames = record.members.map(m => m.name);
+        members = members.map(m => ({
+            ...m,
+            checked: checkedNames.includes(m.name),
+            ratio:   record.members.find(rm => rm.name === m.name)?.ratio ?? m.ratio
+        }));
+        renderMembers();
+    }
 
     lastSettlementResult = record.result;
     renderSettlementResult(record.result, record.members || getActiveMembers());
-
     document.getElementById('btn-save-record').disabled   = false;
     document.getElementById('btn-delete-record').disabled = false;
     showToast("📂 已讀取歷史紀錄");
+}
+
+// ==========================================================================
+// 🪟 管理王／物品清單 Modal
+// ==========================================================================
+function openListManager() {
+    const kc = document.getElementById('userKeyCode')?.value.trim();
+    if (!kc) { alert("🔒 請先輸入代碼才能管理清單！"); return; }
+    renderModalBossList();
+    renderModalBossFilter();
+    renderModalItemList();
+    document.getElementById('modal-list-manager').classList.add('active');
+}
+
+function closeListManager() {
+    document.getElementById('modal-list-manager').classList.remove('active');
+}
+
+function renderModalBossList() {
+    const el = document.getElementById('modal-boss-list');
+    if (!el) return;
+    if (bossList.length === 0) { el.innerHTML = '<div style="color:#666;font-size:13px;">尚無王名單</div>'; return; }
+    el.innerHTML = bossList.map((boss, i) => `
+        <div class="modal-list-item">
+            <span>${boss}</span>
+            <button class="del-btn modal-del-boss" data-index="${i}" style="margin:0;">✕</button>
+        </div>
+    `).join('');
+    el.querySelectorAll('.modal-del-boss').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const idx      = parseInt(btn.dataset.index);
+            const bossName = bossList[idx];
+            if (!confirm(`確定要刪除「${bossName}」及其所有掉落物嗎？`)) return;
+            bossList.splice(idx, 1);
+            delete bossItemMap[bossName];
+            await saveSharedLists();
+            renderBossSelect();
+            renderModalBossList();
+            renderModalBossFilter();
+            renderModalItemList();
+            showToast(`🗑 已刪除「${bossName}」`);
+        });
+    });
+}
+
+function renderModalBossFilter() {
+    const sel = document.getElementById('modal-boss-filter');
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">— 選擇王查看物品 —</option>';
+    bossList.forEach(b => { sel.innerHTML += `<option value="${b}" ${cur === b ? 'selected' : ''}>${b}</option>`; });
+}
+
+function renderModalItemList() {
+    const el   = document.getElementById('modal-item-list');
+    const boss = document.getElementById('modal-boss-filter')?.value;
+    if (!el) return;
+    if (!boss) { el.innerHTML = '<div style="color:#666;font-size:13px;">請先選擇王</div>'; return; }
+    const items = bossItemMap[boss] || [];
+    if (items.length === 0) { el.innerHTML = '<div style="color:#666;font-size:13px;">此王尚無掉落物</div>'; return; }
+    el.innerHTML = items.map((item, i) => `
+        <div class="modal-list-item">
+            <span>${item}</span>
+            <button class="del-btn modal-del-item" data-boss="${boss}" data-index="${i}" style="margin:0;">✕</button>
+        </div>
+    `).join('');
+    el.querySelectorAll('.modal-del-item').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const b   = btn.dataset.boss;
+            const idx = parseInt(btn.dataset.index);
+            if (!confirm(`確定要刪除「${bossItemMap[b][idx]}」嗎？`)) return;
+            bossItemMap[b].splice(idx, 1);
+            await saveSharedLists();
+            renderAllDropItemSelects();
+            renderModalItemList();
+            showToast("🗑 已刪除物品");
+        });
+    });
 }
 
 // ==========================================================================
@@ -993,106 +1050,4 @@ function calculateFinalAtk() {
     const statFactor = (totalMain * 4 + sub) / 100;
     const totalAtk  = Math.floor(base * (1 + atkPct));
     document.getElementById('finalMaxAtkDisplay').innerText = Math.round(totalAtk * coeff * statFactor).toLocaleString();
-}
-
-// ==========================================================================
-// 🪟 管理王／物品清單 Modal
-// ==========================================================================
-document.addEventListener('DOMContentLoaded', () => {
-    // 綁定開關按鈕（延遲綁定確保 DOM 已載入）
-    const openBtn  = document.getElementById('btn-open-list-manager');
-    const closeBtn = document.getElementById('btn-close-list-manager');
-    if (openBtn)  openBtn.addEventListener('click',  openListManager);
-    if (closeBtn) closeBtn.addEventListener('click', closeListManager);
-
-    // 點擊遮罩關閉
-    document.getElementById('modal-list-manager')?.addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) closeListManager();
-    });
-
-    // 王篩選切換
-    document.getElementById('modal-boss-filter')?.addEventListener('change', renderModalItemList);
-});
-
-function openListManager() {
-    const kc = document.getElementById('userKeyCode')?.value.trim();
-    if (!kc) { alert("🔒 請先輸入代碼才能管理清單！"); return; }
-    renderModalBossList();
-    renderModalBossFilter();
-    renderModalItemList();
-    document.getElementById('modal-list-manager').classList.add('active');
-}
-
-function closeListManager() {
-    document.getElementById('modal-list-manager').classList.remove('active');
-}
-
-// 渲染王名單
-function renderModalBossList() {
-    const el = document.getElementById('modal-boss-list');
-    if (!el) return;
-    if (bossList.length === 0) {
-        el.innerHTML = '<div style="color:#666;font-size:13px;">尚無王名單</div>';
-        return;
-    }
-    el.innerHTML = bossList.map((boss, i) => `
-        <div class="modal-list-item">
-            <span>${boss}</span>
-            <button class="del-btn modal-del-boss" data-index="${i}">✕</button>
-        </div>
-    `).join('');
-
-    el.querySelectorAll('.modal-del-boss').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const idx = parseInt(btn.dataset.index);
-            const bossName = bossList[idx];
-            if (!confirm(`確定要刪除「${bossName}」及其所有掉落物嗎？`)) return;
-            bossList.splice(idx, 1);
-            delete bossItemMap[bossName];
-            await saveSharedLists();
-            renderBossSelect();
-            renderModalBossList();
-            renderModalBossFilter();
-            renderModalItemList();
-            showToast(`🗑 已刪除「${bossName}」`);
-        });
-    });
-}
-
-// 渲染王篩選下拉
-function renderModalBossFilter() {
-    const sel = document.getElementById('modal-boss-filter');
-    if (!sel) return;
-    const cur = sel.value;
-    sel.innerHTML = '<option value="">— 選擇王查看物品 —</option>';
-    bossList.forEach(b => { sel.innerHTML += `<option value="${b}" ${cur === b ? 'selected' : ''}>${b}</option>`; });
-}
-
-// 渲染掉落物清單
-function renderModalItemList() {
-    const el   = document.getElementById('modal-item-list');
-    const boss = document.getElementById('modal-boss-filter')?.value;
-    if (!el) return;
-    if (!boss) { el.innerHTML = '<div style="color:#666;font-size:13px;">請先選擇王</div>'; return; }
-    const items = bossItemMap[boss] || [];
-    if (items.length === 0) { el.innerHTML = '<div style="color:#666;font-size:13px;">此王尚無掉落物</div>'; return; }
-    el.innerHTML = items.map((item, i) => `
-        <div class="modal-list-item">
-            <span>${item}</span>
-            <button class="del-btn modal-del-item" data-boss="${boss}" data-index="${i}">✕</button>
-        </div>
-    `).join('');
-
-    el.querySelectorAll('.modal-del-item').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const b   = btn.dataset.boss;
-            const idx = parseInt(btn.dataset.index);
-            if (!confirm(`確定要刪除「${bossItemMap[b][idx]}」嗎？`)) return;
-            bossItemMap[b].splice(idx, 1);
-            await saveSharedLists();
-            renderAllDropItemSelects();
-            renderModalItemList();
-            showToast("🗑 已刪除物品");
-        });
-    });
 }

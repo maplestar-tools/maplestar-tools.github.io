@@ -258,6 +258,11 @@ h1 {
     border-radius: 8px;
     margin-bottom: 6px;
     font-size: 14px;
+    gap: 10px;
+}
+
+.modal-list-item span {
+    flex: 1;
 }
 
 /* 限制基礎設定、隊員、結算卡片內容寬度（維持原本 600px 感）*/
