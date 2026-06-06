@@ -530,20 +530,21 @@ function appendDropRow(i) {
             </select>
         </td>
         <td style="padding:6px 4px;vertical-align:middle;">
-            <input type="number" class="cloud-input drop-price" data-index="${i}" value="" placeholder="0" style="font-size:13px;padding:6px 8px;">
+            <input type="number" class="cloud-input drop-price" data-index="${i}"
+                value="${row.price || ''}" placeholder="0" style="font-size:13px;padding:6px 8px;">
         </td>
         <td style="padding:6px 4px;vertical-align:middle;">
             <select class="cloud-input drop-fee ${isSell ? '' : 'field-disabled'}" data-index="${i}" style="font-size:13px;padding:6px 8px;" ${isSell ? '' : 'disabled'}>
-                <option value="0">0%</option>
-                <option value="3">3%</option>
-                <option value="6" ${isSell ? 'selected' : ''}>6%</option>
+                <option value="0" ${row.fee==0?'selected':''}>0%</option>
+                <option value="3" ${row.fee==3?'selected':''}>3%</option>
+                <option value="6" ${row.fee==6||(!row.fee&&isSell)?'selected':''}>6%</option>
             </select>
         </td>
         <td style="padding:6px 4px;vertical-align:middle;">
             <select class="cloud-input drop-scissor ${isSell ? '' : 'field-disabled'}" data-index="${i}" style="font-size:13px;padding:6px 8px;" ${isSell ? '' : 'disabled'}>
-                <option value="none" selected>無</option>
-                <option value="fancy">神奇</option>
-                <option value="platinum">白金</option>
+                <option value="none" ${!row.scissor||row.scissor==='none'?'selected':''}>無</option>
+                <option value="fancy" ${row.scissor==='fancy'?'selected':''}>神奇</option>
+                <option value="platinum" ${row.scissor==='platinum'?'selected':''}>白金</option>
             </select>
         </td>
         <td style="padding:6px 4px;vertical-align:middle;">
@@ -552,7 +553,7 @@ function appendDropRow(i) {
             </select>
         </td>
         <td style="padding:6px 4px;text-align:right;vertical-align:middle;">
-            <span id="drop-net-${i}" style="color:${isSell?'#64b5f6':'#b39ddb'};font-weight:bold;font-size:13px;white-space:nowrap;">—</span>
+            <span id="drop-net-${i}" style="color:${isSell?'#64b5f6':'#b39ddb'};font-weight:bold;font-size:13px;white-space:nowrap;">${row.net!=null?row.net.toFixed(1)+'萬':'—'}</span>
         </td>
         <td style="padding:6px 4px;text-align:center;vertical-align:middle;">
             <button class="del-btn drop-del" data-index="${i}">✕</button>
@@ -624,10 +625,10 @@ function appendSnowRow(i) {
             </select>
         </td>
         <td style="padding:6px 4px;vertical-align:middle;">
-            <input type="number" class="cloud-input snow-count" data-index="${i}" value="" placeholder="0" min="0" style="font-size:13px;padding:6px 8px;">
+            <input type="number" class="cloud-input snow-count" data-index="${i}" value="${row.count||''}" placeholder="0" min="0" style="font-size:13px;padding:6px 8px;">
         </td>
         <td style="padding:6px 4px;text-align:right;vertical-align:middle;">
-            <span id="snow-cost-${i}" style="color:#ff6b6b;font-weight:bold;font-size:13px;">—</span>
+            <span id="snow-cost-${i}" style="color:#ff6b6b;font-weight:bold;font-size:13px;">${row.cost!=null?row.cost.toFixed(1)+'萬':'—'}</span>
         </td>
         <td style="padding:6px 4px;text-align:center;vertical-align:middle;">
             <button class="del-btn snow-del" data-index="${i}">✕</button>
