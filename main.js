@@ -847,6 +847,9 @@ function saveSettlementRecord() {
             .catch(e => console.error("歷史雲端儲存失敗：", e));
     }
     renderHistorySelect();
+    // 儲存後自動選到剛儲存的這筆
+    const sel = document.getElementById('history-select');
+    if (sel) sel.value = '0';
     document.getElementById('btn-delete-record').disabled = false;
     showToast("💾 紀錄已儲存！");
 }
@@ -889,24 +892,7 @@ function loadHistoryRecord() {
     if (!record) return;
     currentHistoryIndex = parseInt(idx);
 
-    // 還原掉落物與雪花
-    dropRows = record.drops || [];
-    snowRows = record.snows || [];
-    rerenderDropTable();
-    rerenderSnowTable();
-
-    // 還原王
-    if (record.boss) {
-        const bossEl = document.getElementById('boss-select');
-        if (bossEl) { bossEl.value = record.boss; bossEl.dataset.prev = record.boss; }
-        renderAllDropItemSelects();
-        updateDropButtons();
-    }
-
-    // 還原日期
-    if (record.date) document.getElementById('settlement-date').value = record.date;
-
-    // 還原隊員勾選狀態（只更新畫面，不寫雲端）
+    // 1. 先還原隊員勾選（buildSellerOptions 需要用到）
     if (record.members) {
         const checkedNames = record.members.map(m => m.name);
         members = members.map(m => ({
@@ -917,6 +903,25 @@ function loadHistoryRecord() {
         renderMembers();
     }
 
+    // 2. 還原王（buildItemOptions 需要用到）
+    if (record.boss) {
+        const bossEl = document.getElementById('boss-select');
+        if (bossEl) { bossEl.value = record.boss; bossEl.dataset.prev = record.boss; }
+        updateDropButtons();
+    }
+
+    // 3. 還原日期
+    if (record.date) document.getElementById('settlement-date').value = record.date;
+
+    // 4. 還原掉落物（rerenderDropTable 內部呼叫 appendDropRow，此時王和隊員都已還原）
+    dropRows = record.drops || [];
+    rerenderDropTable();
+
+    // 5. 還原雪花
+    snowRows = record.snows || [];
+    rerenderSnowTable();
+
+    // 6. 渲染結算結果
     lastSettlementResult = record.result;
     renderSettlementResult(record.result, record.members || getActiveMembers());
     document.getElementById('btn-save-record').disabled   = false;
