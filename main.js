@@ -438,10 +438,12 @@ function getCurrentBoss() {
 function onBossSelectChange(e) {
     const val = e.target.value;
     if (val === '__add_new__') { handleAddNew('boss', e.target); return; }
-    if (dropRows.length > 0) {
-        if (confirm("切換王將清空目前的掉落物清單，是否繼續？")) {
-            dropRows = [];
+    if (dropRows.length > 0 || snowRows.length > 0) {
+        if (confirm("切換王將清空掉落物與雪花清單，是否繼續？")) {
+            dropRows = []; snowRows = [];
             document.getElementById('drops-table-body').innerHTML = '';
+            document.getElementById('snow-table-body').innerHTML  = '';
+            currentHistoryIndex = -1;
         } else {
             e.target.value = e.target.dataset.prev || '';
             return;
