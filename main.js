@@ -64,14 +64,11 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // 自動載入：有勾選 + 有 keycode 才執行
     const shouldAutoLoad = localStorage.getItem('maple_auto_load') === 'true';
-    const savedKc        = localStorage.getItem('maple_tool_data')
-        ? JSON.parse(localStorage.getItem('maple_tool_data')).userKeyCode : null;
-    // keycode 存在 input 欄位（fillValues 已還原）
     const kcEl = document.getElementById('userKeyCode');
     if (shouldAutoLoad && kcEl?.value.trim()) {
         showAutoLoadStatus('載入中...');
         loadFromCloud(true).catch(() => {
-            showAutoLoadStatus('自動載入失敗，使用本地資料');
+            showAutoLoadStatus('⚠️ 自動載入失敗，使用本地資料');
         });
     }
 });
@@ -299,6 +296,7 @@ async function loadFromCloud(silent = false) {
 // ==========================================================================
 function getFormValues() {
     const ids = [
+        'userKeyCode',
         'moneyToMileage','cubeFancyPrice','cubeSuspiciousPrice',
         'coeff','mainStat','subStat','maxAtk','percentAtk',
         'statTotal','statBaseOnly','statPercent',
@@ -760,6 +758,7 @@ function executeSettlement() {
     const result   = { totalPool, totalSnowCost, shouldGet, actualIncome, diff, payments };
     renderSettlementResult(result, active);
     lastSettlementResult = result;
+    currentHistoryIndex  = -1; // 全新結算，不是查看歷史
     document.getElementById('btn-save-record').disabled = false;
 }
 
