@@ -33,7 +33,7 @@ let currentHistoryIndex  = -1;
 // ==========================================================================
 // 🚀 初始化
 // ==========================================================================
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
     const localData = localStorage.getItem('maple_tool_data');
     if (localData) {
         try { fillValues(JSON.parse(localData)); updateSyncUI('synced'); }
@@ -50,7 +50,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
 
     updateDynamicPrices();
-    loadSharedData();
+    await loadSharedData();
     bindEvents();
 
     // 還原 checkbox 狀態
@@ -873,7 +873,7 @@ function saveSettlementRecord() {
         // 覆蓋目前查看的歷史紀錄
         settlementHistory[currentHistoryIndex] = record;
     } else {
-        // 新增
+        // 新增到最前面，索引為 0
         settlementHistory.unshift(record);
         if (settlementHistory.length > 50) settlementHistory.pop();
         currentHistoryIndex = 0;
@@ -886,10 +886,12 @@ function saveSettlementRecord() {
             .catch(e => console.error("歷史雲端儲存失敗：", e));
     }
     renderHistorySelect();
-    // 儲存後自動選到該筆
+    // 儲存後自動選到該筆（覆蓋或新增都正確）
     const sel = document.getElementById('history-select');
     if (sel) sel.value = String(currentHistoryIndex);
     document.getElementById('btn-delete-record').disabled = false;
+    // 儲存完後鎖定，避免重複儲存時再次新增
+    document.getElementById('btn-save-record').disabled = true;
     showToast("💾 紀錄已儲存！");
 }
 
