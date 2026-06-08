@@ -705,6 +705,8 @@ function resetSettlementUI() {
     currentHistoryIndex  = -1;
     lastSettlementResult = null;
 }
+
+function clearDrops() {
     if (dropRows.length === 0 && snowRows.length === 0) return;
     if (!confirm("確定要清空本次所有掉落物和雪花資料嗎？")) return;
     dropRows = []; snowRows = [];
