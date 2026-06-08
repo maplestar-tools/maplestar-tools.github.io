@@ -230,8 +230,7 @@ function buildMemberSettings() {
 }
 
 function showAutoLoadStatus(msg) {
-    const el = document.getElementById('cloudStatus');
-    if (el) el.innerText = msg;
+    showToast(msg);
 }
 
 async function loadFromCloud(silent = false) {
@@ -796,15 +795,18 @@ function suggestBlocks(amount, prices) {
 // ==========================================================================
 // 🖼️ 結算結果渲染
 // ==========================================================================
-function renderSettlementResult(result, active) {
+function renderSettlementResult(result, active, dropsSnapshot, snowsSnapshot) {
     const { totalPool, shouldGet, actualIncome, diff, payments } = result;
+    // 優先用快照，沒有快照才用目前的 dropRows/snowRows
+    const displayDrops = dropsSnapshot || dropRows;
+    const displaySnows = snowsSnapshot || snowRows;
     document.getElementById('settlement-detail').style.display = 'block';
 
     let dropsHtml = '<div class="detail-section-title">📦 掉落物收入</div>';
-    if (dropRows.length === 0) {
+    if (displayDrops.length === 0) {
         dropsHtml += '<div class="detail-row" style="color:#666;">（無）</div>';
     } else {
-        dropRows.forEach(d => {
+        displayDrops.forEach(d => {
             const label = d.type === 'sell' ? `${d.item}（${d.seller}）` : `${d.item}（${d.seller} 自用）`;
             const color = d.type === 'sell' ? '#64b5f6' : '#b39ddb';
             dropsHtml += `<div class="detail-row"><span>${label}</span><span style="color:${color};">${d.net.toFixed(1)}萬</span></div>`;
@@ -813,10 +815,10 @@ function renderSettlementResult(result, active) {
     document.getElementById('detail-drops').innerHTML = dropsHtml;
 
     let snowHtml = '<div class="detail-section-title">❄️ 雪花消耗</div>';
-    if (snowRows.length === 0) {
+    if (displaySnows.length === 0) {
         snowHtml += '<div class="detail-row" style="color:#666;">（無）</div>';
     } else {
-        snowRows.forEach(s => { snowHtml += `<div class="detail-row"><span>${s.user} × ${s.count}個</span><span style="color:#ff6b6b;">-${s.cost.toFixed(1)}萬</span></div>`; });
+        displaySnows.forEach(s => { snowHtml += `<div class="detail-row"><span>${s.user} × ${s.count}個</span><span style="color:#ff6b6b;">-${s.cost.toFixed(1)}萬</span></div>`; });
     }
     document.getElementById('detail-snow').innerHTML = snowHtml;
     document.getElementById('detail-total').innerText = totalPool.toFixed(1) + '萬';
@@ -893,11 +895,14 @@ function saveSettlementRecord() {
             .catch(e => console.error("歷史雲端儲存失敗：", e));
     }
     renderHistorySelect();
-    // 儲存後自動選到該筆（覆蓋或新增都正確）
+    // 用 dataset 標記暫時跳過 change 事件，再直接設值
     const sel = document.getElementById('history-select');
-    if (sel) sel.value = String(currentHistoryIndex);
+    if (sel) {
+        sel.dataset.skipChange = 'true';
+        sel.value = String(currentHistoryIndex);
+        setTimeout(() => { delete sel.dataset.skipChange; }, 100);
+    }
     document.getElementById('btn-delete-record').disabled = false;
-    // 儲存完後鎖定，避免重複儲存時再次新增
     document.getElementById('btn-save-record').disabled = true;
     showToast("💾 紀錄已儲存！");
 }
@@ -930,6 +935,7 @@ function renderHistorySelect() {
 
 function loadHistoryRecord() {
     const sel = document.getElementById('history-select');
+    if (sel?.dataset.skipChange === 'true') return; // 儲存後更新選單時跳過
     const idx = sel?.value;
     if (idx === '' || idx === undefined) {
         currentHistoryIndex = -1;
@@ -971,7 +977,7 @@ function loadHistoryRecord() {
 
     // 6. 渲染結算結果
     lastSettlementResult = record.result;
-    renderSettlementResult(record.result, record.members || getActiveMembers());
+    renderSettlementResult(record.result, record.members || getActiveMembers(), record.drops, record.snows);
     document.getElementById('btn-save-record').disabled   = false;
     document.getElementById('btn-delete-record').disabled = false;
     showToast("📂 已讀取歷史紀錄");
