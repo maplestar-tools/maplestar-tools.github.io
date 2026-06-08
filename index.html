@@ -27,6 +27,10 @@
             <h4>💾 雲端進度同步（免註冊）</h4>
             <p>輸入你自訂的「自訂字串」，就能在雲端儲存或讀取你的工具箱設定喔！</p>
             <input type="text" id="userKeyCode" class="cloud-input" placeholder="例如：maple123">
+            <div style="display:flex;align-items:center;gap:8px;margin:10px 0;">
+                <input type="checkbox" id="autoLoad" style="width:16px;height:16px;cursor:pointer;">
+                <label for="autoLoad" style="font-size:14px;color:#aaa;cursor:pointer;">自動載入</label>
+            </div>
             <button class="cloud-btn" id="btn-load-cloud">📥 載入設定</button>
             <p id="cloudStatus" style="color:#64b5f6;font-weight:bold;margin-top:10px;"></p>
         </div>

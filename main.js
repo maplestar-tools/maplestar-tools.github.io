@@ -52,6 +52,28 @@ window.addEventListener('DOMContentLoaded', () => {
     updateDynamicPrices();
     loadSharedData();
     bindEvents();
+
+    // 還原 checkbox 狀態
+    const autoLoadEl = document.getElementById('autoLoad');
+    if (autoLoadEl) {
+        autoLoadEl.checked = localStorage.getItem('maple_auto_load') === 'true';
+        autoLoadEl.addEventListener('change', () => {
+            localStorage.setItem('maple_auto_load', autoLoadEl.checked);
+        });
+    }
+
+    // 自動載入：有勾選 + 有 keycode 才執行
+    const shouldAutoLoad = localStorage.getItem('maple_auto_load') === 'true';
+    const savedKc        = localStorage.getItem('maple_tool_data')
+        ? JSON.parse(localStorage.getItem('maple_tool_data')).userKeyCode : null;
+    // keycode 存在 input 欄位（fillValues 已還原）
+    const kcEl = document.getElementById('userKeyCode');
+    if (shouldAutoLoad && kcEl?.value.trim()) {
+        showAutoLoadStatus('載入中...');
+        loadFromCloud(true).catch(() => {
+            showAutoLoadStatus('自動載入失敗，使用本地資料');
+        });
+    }
 });
 
 // ==========================================================================
@@ -62,7 +84,7 @@ function bindEvents() {
     document.getElementById('btn-tab-money').addEventListener('click', () => switchTab('money-split'));
     document.getElementById('btn-tab-equip').addEventListener('click', () => switchTab('equip-calc'));
 
-    document.getElementById('btn-load-cloud').addEventListener('click', loadFromCloud);
+    document.getElementById('btn-load-cloud').addEventListener('click', () => loadFromCloud(false));
     document.getElementById('btn-manual-sync').addEventListener('click', () => saveAllToCloud(true));
 
     document.getElementById('btn-toggle-settings').addEventListener('click',   (e) => toggleSection(e.currentTarget, 'settings-section'));
@@ -204,19 +226,23 @@ function buildMemberSettings() {
     return settings;
 }
 
-async function loadFromCloud() {
+function showAutoLoadStatus(msg) {
+    const el = document.getElementById('cloudStatus');
+    if (el) el.innerText = msg;
+}
+
+async function loadFromCloud(silent = false) {
     const kc = document.getElementById('userKeyCode')?.value.trim();
-    if (!kc) { alert('請先輸入代碼！'); return; }
+    if (!kc) { if (!silent) alert('請先輸入代碼！'); return; }
     try {
         const snap = await getDoc(doc(db, "player_data", kc));
 
         if (!snap.exists()) {
             // 新 keycode：建立新帳號，本地歷史保留並上傳
             const newData = getFormValues();
-            newData.lastUpdated  = new Date().toISOString();
+            newData.lastUpdated    = new Date().toISOString();
             newData.memberSettings = buildMemberSettings();
             await setDoc(doc(db, "player_data", kc), newData, { merge: false });
-            // 上傳本地歷史到雲端
             if (settlementHistory.length > 0) {
                 await setDoc(doc(db, "player_history", kc), { history: settlementHistory }, { merge: false });
             }
@@ -226,11 +252,11 @@ async function loadFromCloud() {
             document.getElementById('display-keycode').innerText = kc;
             renderBossSelect();
             renderAllDropItemSelects();
-            alert("✅ 已建立新帳號！");
+            if (!silent) alert("✅ 已建立新帳號！");
+            else showAutoLoadStatus('✅ 已建立新帳號');
             return;
         }
 
-        // 已存在 keycode：載入設定
         const data = snap.data();
         fillValues(data);
 
@@ -250,7 +276,7 @@ async function loadFromCloud() {
         updateDynamicPrices();
         calculateFinalAtk();
 
-        // 以雲端歷史覆蓋本地（已存在帳號）
+        // 以雲端歷史覆蓋本地
         const histSnap = await getDoc(doc(db, "player_history", kc));
         settlementHistory = histSnap.exists() ? (histSnap.data().history || []) : [];
         localStorage.setItem('maple_settlement_history', JSON.stringify(settlementHistory));
@@ -258,8 +284,14 @@ async function loadFromCloud() {
 
         renderBossSelect();
         renderAllDropItemSelects();
-        alert("📥 設定讀取成功！");
-    } catch (e) { alert("讀取失敗：" + e.message); }
+
+        if (!silent) alert("📥 設定讀取成功！");
+        else showAutoLoadStatus('✅ 自動載入成功');
+    } catch (e) {
+        if (!silent) alert("讀取失敗：" + e.message);
+        else showAutoLoadStatus('⚠️ 自動載入失敗，使用本地資料');
+        throw e;
+    }
 }
 
 // ==========================================================================
@@ -837,9 +869,17 @@ function saveSettlementRecord() {
         snows:   JSON.parse(JSON.stringify(snowRows)),
         members: JSON.parse(JSON.stringify(getActiveMembers()))
     };
-    settlementHistory.unshift(record);
-    if (settlementHistory.length > 50) settlementHistory.pop();
-    currentHistoryIndex = 0;
+
+    if (currentHistoryIndex >= 0) {
+        // 覆蓋目前查看的歷史紀錄
+        settlementHistory[currentHistoryIndex] = record;
+    } else {
+        // 新增
+        settlementHistory.unshift(record);
+        if (settlementHistory.length > 50) settlementHistory.pop();
+        currentHistoryIndex = 0;
+    }
+
     localStorage.setItem('maple_settlement_history', JSON.stringify(settlementHistory));
     const kc = document.getElementById('userKeyCode')?.value.trim();
     if (kc) {
@@ -847,9 +887,9 @@ function saveSettlementRecord() {
             .catch(e => console.error("歷史雲端儲存失敗：", e));
     }
     renderHistorySelect();
-    // 儲存後自動選到剛儲存的這筆
+    // 儲存後自動選到該筆
     const sel = document.getElementById('history-select');
-    if (sel) sel.value = '0';
+    if (sel) sel.value = String(currentHistoryIndex);
     document.getElementById('btn-delete-record').disabled = false;
     showToast("💾 紀錄已儲存！");
 }
