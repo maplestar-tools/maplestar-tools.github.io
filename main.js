@@ -443,7 +443,7 @@ function onBossSelectChange(e) {
             dropRows = []; snowRows = [];
             document.getElementById('drops-table-body').innerHTML = '';
             document.getElementById('snow-table-body').innerHTML  = '';
-            currentHistoryIndex = -1;
+            resetSettlementUI();
         } else {
             e.target.value = e.target.dataset.prev || '';
             return;
@@ -696,14 +696,21 @@ function refreshSnowUserOptions() {
 // ==========================================================================
 // 🗑️ 清空掉落物
 // ==========================================================================
-function clearDrops() {
+function resetSettlementUI() {
+    document.getElementById('settlement-detail').style.display = 'none';
+    document.getElementById('history-select').value            = '';
+    document.getElementById('settlement-date').value           = new Date().toISOString().split('T')[0];
+    document.getElementById('btn-save-record').disabled        = true;
+    document.getElementById('btn-delete-record').disabled      = true;
+    currentHistoryIndex  = -1;
+    lastSettlementResult = null;
+}
     if (dropRows.length === 0 && snowRows.length === 0) return;
     if (!confirm("確定要清空本次所有掉落物和雪花資料嗎？")) return;
     dropRows = []; snowRows = [];
     document.getElementById('drops-table-body').innerHTML = '';
     document.getElementById('snow-table-body').innerHTML  = '';
-    document.getElementById('history-select').value       = '';
-    currentHistoryIndex = -1;
+    resetSettlementUI();
     showToast("🗑 已清空本次資料");
 }
 
