@@ -36,7 +36,13 @@ let currentHistoryIndex  = -1;
 window.addEventListener('DOMContentLoaded', async () => {
     const localData = localStorage.getItem('maple_tool_data');
     if (localData) {
-        try { fillValues(JSON.parse(localData)); updateSyncUI('synced'); }
+        try {
+            fillValues(JSON.parse(localData));
+            updateSyncUI('synced');
+            // 本地還原後同步更新右上角帳號顯示
+            const kc = document.getElementById('userKeyCode')?.value.trim();
+            if (kc) document.getElementById('display-keycode').innerText = kc;
+        }
         catch (e) { console.error("本地資料還原失敗", e); }
     }
 
@@ -695,6 +701,8 @@ function clearDrops() {
     dropRows = []; snowRows = [];
     document.getElementById('drops-table-body').innerHTML = '';
     document.getElementById('snow-table-body').innerHTML  = '';
+    document.getElementById('history-select').value       = '';
+    currentHistoryIndex = -1;
     showToast("🗑 已清空本次資料");
 }
 
@@ -758,7 +766,6 @@ function executeSettlement() {
     const result   = { totalPool, totalSnowCost, shouldGet, actualIncome, diff, payments };
     renderSettlementResult(result, active);
     lastSettlementResult = result;
-    currentHistoryIndex  = -1; // 全新結算，不是查看歷史
     document.getElementById('btn-save-record').disabled = false;
 }
 
