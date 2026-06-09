@@ -119,7 +119,10 @@ function bindEvents() {
 
     document.getElementById('btnCalcBaseAtk').addEventListener('click',   calculateBaseAtk);
     document.getElementById('btnCalcEquipStat').addEventListener('click', calculateEquipStat);
-    document.getElementById('btnCalcFinal').addEventListener('click',     calculateFinalAtk);
+    document.getElementById('btnCalcSubStat').addEventListener('click',   calculateSubEquipStat);
+    document.getElementById('btnCalcA').addEventListener('click', () => calcFinalAtk('A'));
+    document.getElementById('btnCalcB').addEventListener('click', () => calcFinalAtk('B'));
+    initMapleCheckboxes();
 
     document.getElementById('userKeyCode').addEventListener('input', () => {
         renderBossSelect();
@@ -305,7 +308,10 @@ function getFormValues() {
         'moneyToMileage','cubeFancyPrice','cubeSuspiciousPrice',
         'coeff','mainStat','subStat','maxAtk','percentAtk',
         'statTotal','statBaseOnly','statPercent',
-        'calcBaseAtk','calcAtkPercent','calcMainBase','calcMainEquip','calcMainPercent','calcSubStat'
+        'subStatTotal','subStatBaseOnly','subStatPercent',
+        'maplePercentMain','maplePercentSub',
+        'calcBaseAtkA','calcAtkPercentA','calcMainBaseA','calcMainEquipA','calcMainPercentA','calcSubBaseA','calcSubEquipA','calcSubPercentA','maplePercentA',
+        'calcBaseAtkB','calcAtkPercentB','calcMainBaseB','calcMainEquipB','calcMainPercentB','calcSubBaseB','calcSubEquipB','calcSubPercentB','maplePercentB',
     ];
     const data = {};
     ids.forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
@@ -1075,6 +1081,32 @@ function renderModalItemList() {
 // ==========================================================================
 // ⚔️ 裝備計算
 // ==========================================================================
+
+// 楓葉祝福 checkbox 啟用/禁用輸入欄
+function initMapleCheckboxes() {
+    [
+        ['mapleCheckMain', 'maplePercentMain'],
+        ['mapleCheckSub',  'maplePercentSub'],
+        ['mapleCheckA',    'maplePercentA'],
+        ['mapleCheckB',    'maplePercentB'],
+    ].forEach(([checkId, inputId]) => {
+        const cb = document.getElementById(checkId);
+        const inp = document.getElementById(inputId);
+        if (!cb || !inp) return;
+        cb.addEventListener('change', () => {
+            inp.disabled = !cb.checked;
+            inp.style.opacity = cb.checked ? '1' : '0.4';
+        });
+    });
+}
+
+// 取得楓葉祝福加成後的屬性值
+function applyMaple(base, mapleChecked, maplePct) {
+    if (!mapleChecked || !maplePct) return base;
+    return base * (1 + maplePct / 100);
+}
+
+// 基礎攻擊力反推
 function calculateBaseAtk() {
     const mainStat   = parseFloat(document.getElementById('mainStat').value)   || 0;
     const subStat    = parseFloat(document.getElementById('subStat').value)    || 0;
@@ -1088,37 +1120,90 @@ function calculateBaseAtk() {
     for (let t = Math.max(1, est - 1000); t <= est + 1000; t++) {
         if (Math.round(Math.floor(t * (1 + percentAtk)) * coeff * statFactor) === Math.round(maxAtk)) { matched = t; break; }
     }
-    document.getElementById('resultDisplay').innerText   = matched;
-    document.getElementById('calcBaseAtk').value         = matched;
-    document.getElementById('calcAtkPercent').value      = document.getElementById('percentAtk').value;
-    document.getElementById('calcMainBase').value        = mainStat;
-    document.getElementById('calcMainEquip').value       = 0;
-    document.getElementById('calcMainPercent').value     = 0;
-    document.getElementById('calcSubStat').value         = subStat;
+    document.getElementById('resultDisplay').innerText = matched;
+
+    // 帶入表攻計算器 A/B
+    ['A','B'].forEach(s => {
+        document.getElementById(`calcBaseAtk${s}`).value    = matched;
+        document.getElementById(`calcAtkPercent${s}`).value = document.getElementById('percentAtk').value;
+        document.getElementById(`calcMainBase${s}`).value   = mainStat;
+        document.getElementById(`calcSubBase${s}`).value    = subStat;
+    });
 }
 
+// 裝備主屬性反推
 function calculateEquipStat() {
-    const total   = parseFloat(document.getElementById('statTotal').value)    || 0;
-    const base    = parseFloat(document.getElementById('statBaseOnly').value) || 0;
-    const percent = (parseFloat(document.getElementById('statPercent').value) || 0) / 100;
+    const total      = parseFloat(document.getElementById('statTotal').value)    || 0;
+    const base       = parseFloat(document.getElementById('statBaseOnly').value) || 0;
+    const percent    = (parseFloat(document.getElementById('statPercent').value) || 0) / 100;
+    const mapleOn    = document.getElementById('mapleCheckMain').checked;
+    const maplePct   = parseFloat(document.getElementById('maplePercentMain').value) || 0;
+    const baseAdj    = mapleOn ? base * (1 + maplePct / 100) : base;
+
     let found = 0;
-    for (let t = 0; t <= 10000; t++) { if (Math.floor((base + t) * (1 + percent)) === total) { found = t; break; } }
-    document.getElementById('equipStatDisplay').innerText  = found;
-    document.getElementById('calcMainBase').value          = base;
-    document.getElementById('calcMainEquip').value         = found;
-    document.getElementById('calcMainPercent').value       = document.getElementById('statPercent').value;
+    for (let t = 0; t <= 10000; t++) {
+        if (Math.floor((baseAdj + t) * (1 + percent)) === total) { found = t; break; }
+    }
+    document.getElementById('equipStatDisplay').innerText = found;
+
+    // 帶入表攻計算器 A/B
+    ['A','B'].forEach(s => {
+        document.getElementById(`calcMainBase${s}`).value    = base;
+        document.getElementById(`calcMainEquip${s}`).value   = found;
+        document.getElementById(`calcMainPercent${s}`).value = document.getElementById('statPercent').value;
+        if (mapleOn) {
+            document.getElementById(`mapleCheckMain${s}`) // 不存在，略過
+        }
+    });
 }
 
-function calculateFinalAtk() {
-    const base      = parseFloat(document.getElementById('calcBaseAtk').value)      || 0;
-    const atkPct    = (parseFloat(document.getElementById('calcAtkPercent').value)   || 0) / 100;
-    const mainBase  = parseFloat(document.getElementById('calcMainBase').value)     || 0;
-    const mainEquip = parseFloat(document.getElementById('calcMainEquip').value)    || 0;
-    const mainPct   = (parseFloat(document.getElementById('calcMainPercent').value)  || 0) / 100;
-    const sub       = parseFloat(document.getElementById('calcSubStat').value)      || 0;
-    const coeff     = parseFloat(document.getElementById('coeff').value)            || 1.0;
-    const totalMain = Math.floor((mainBase + mainEquip) * (1 + mainPct));
-    const statFactor = (totalMain * 4 + sub) / 100;
-    const totalAtk  = Math.floor(base * (1 + atkPct));
-    document.getElementById('finalMaxAtkDisplay').innerText = Math.round(totalAtk * coeff * statFactor).toLocaleString();
+// 裝備副屬性反推
+function calculateSubEquipStat() {
+    const total    = parseFloat(document.getElementById('subStatTotal').value)    || 0;
+    const base     = parseFloat(document.getElementById('subStatBaseOnly').value) || 0;
+    const percent  = (parseFloat(document.getElementById('subStatPercent').value) || 0) / 100;
+    const mapleOn  = document.getElementById('mapleCheckSub').checked;
+    const maplePct = parseFloat(document.getElementById('maplePercentSub').value) || 0;
+    const baseAdj  = mapleOn ? base * (1 + maplePct / 100) : base;
+
+    let found = 0;
+    for (let t = 0; t <= 10000; t++) {
+        if (Math.floor((baseAdj + t) * (1 + percent)) === total) { found = t; break; }
+    }
+    document.getElementById('subEquipStatDisplay').innerText = found;
+
+    // 帶入表攻計算器 A/B
+    ['A','B'].forEach(s => {
+        document.getElementById(`calcSubBase${s}`).value    = base;
+        document.getElementById(`calcSubEquip${s}`).value   = found;
+        document.getElementById(`calcSubPercent${s}`).value = document.getElementById('subStatPercent').value;
+    });
 }
+
+// 計算單組表攻
+function calcFinalAtk(suffix) {
+    const base      = parseFloat(document.getElementById(`calcBaseAtk${suffix}`).value)    || 0;
+    const atkPct    = (parseFloat(document.getElementById(`calcAtkPercent${suffix}`).value) || 0) / 100;
+    const mainBase  = parseFloat(document.getElementById(`calcMainBase${suffix}`).value)   || 0;
+    const mainEquip = parseFloat(document.getElementById(`calcMainEquip${suffix}`).value)  || 0;
+    const mainPct   = (parseFloat(document.getElementById(`calcMainPercent${suffix}`).value)|| 0) / 100;
+    const subBase   = parseFloat(document.getElementById(`calcSubBase${suffix}`).value)    || 0;
+    const subEquip  = parseFloat(document.getElementById(`calcSubEquip${suffix}`).value)   || 0;
+    const subPct    = (parseFloat(document.getElementById(`calcSubPercent${suffix}`).value) || 0) / 100;
+    const coeff     = parseFloat(document.getElementById('coeff').value)                   || 1.0;
+    const mapleOn   = document.getElementById(`mapleCheck${suffix}`).checked;
+    const maplePct  = parseFloat(document.getElementById(`maplePercent${suffix}`).value)   || 0;
+
+    const mainBaseAdj = mapleOn ? mainBase * (1 + maplePct / 100) : mainBase;
+    const subBaseAdj  = mapleOn ? subBase  * (1 + maplePct / 100) : subBase;
+
+    const totalMain  = Math.floor((mainBaseAdj + mainEquip) * (1 + mainPct));
+    const totalSub   = Math.floor((subBaseAdj  + subEquip)  * (1 + subPct));
+    const statFactor = (totalMain * 4 + totalSub) / 100;
+    const totalAtk   = Math.floor(base * (1 + atkPct));
+    const result     = Math.round(totalAtk * coeff * statFactor);
+
+    document.getElementById(`finalAtkDisplay${suffix}`).innerText = result.toLocaleString();
+}
+
+function calculateFinalAtk() { calcFinalAtk('A'); calcFinalAtk('B'); }

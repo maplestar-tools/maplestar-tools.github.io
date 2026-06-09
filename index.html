@@ -243,11 +243,12 @@
     <div id="equip-calc" class="tab-content">
         <h3>⚔️ 裝備綜合計算工具</h3>
         <p>全方位反推各項面版數據，點擊下方各工具即可開始計算。</p>
-        <div class="calc-grid">
+        <div class="calc-grid" style="grid-template-columns:1fr 1fr 1.1fr;">
 
+            <!-- 第一張：基礎攻擊力反推 -->
             <div class="calc-card">
                 <h4 class="title-red">⚔️ 基礎攻擊力反推</h4>
-                <p class="card-desc">選擇武器並輸入面板與屬性，反推基礎能力。</p>
+                <p class="card-desc">選擇武器並輸入面板與屬性，反推基礎攻擊力。</p>
                 <div class="form-group">
                     <label>武器種類 (係數)</label>
                     <select id="coeff" class="cloud-input">
@@ -263,45 +264,117 @@
                         <option value="1.00">長杖 / 短杖 (1.00)</option>
                     </select>
                 </div>
-                <div class="form-group"><label id="lblMain">主屬性</label><input type="number" id="mainStat" class="cloud-input" value="1000"></div>
-                <div class="form-group"><label id="lblSub">副屬性</label><input type="number" id="subStat" class="cloud-input" value="100"></div>
+                <div class="form-group"><label>主屬性</label><input type="number" id="mainStat" class="cloud-input" value="1000"></div>
+                <div class="form-group"><label>副屬性</label><input type="number" id="subStat" class="cloud-input" value="100"></div>
                 <div class="form-group"><label>面板最大表攻</label><input type="number" id="maxAtk" class="cloud-input" value="20000"></div>
                 <div class="form-group"><label>裝備總攻擊力 %</label><input type="number" id="percentAtk" class="cloud-input" value="0"></div>
-                <button id="btnCalcBaseAtk" class="calc-btn btn-red">立即反推乾淨攻擊力</button>
+                <button id="btnCalcBaseAtk" class="calc-btn btn-red">立即反推基礎攻擊力</button>
                 <div class="result-box">
-                    <div class="result-title">反推基礎攻擊力</div>
+                    <div class="result-title">基礎攻擊力</div>
                     <div class="result-value text-red" id="resultDisplay">0</div>
                 </div>
             </div>
 
+            <!-- 第二張：裝備屬性反推 -->
             <div class="calc-card">
-                <h4 class="title-green">🧬 裝備純屬性反推</h4>
-                <p class="card-desc">扣除屬性 % 數，反推裝備提供的固定主屬。</p>
-                <div class="form-group"><label>面板顯示的【總主屬性】</label><input type="number" id="statTotal" class="cloud-input" value="1000"></div>
-                <div class="form-group"><label>等級提升加的【基礎主屬性】</label><input type="number" id="statBaseOnly" class="cloud-input" value="700"></div>
-                <div class="form-group"><label>裝備潛能的【總主屬性 %】</label><input type="number" id="statPercent" class="cloud-input" value="60"></div>
-                <button id="btnCalcEquipStat" class="calc-btn btn-green">立即反推裝備純屬性</button>
-                <div class="result-box">
-                    <div class="result-title">裝備提供的純固定屬性</div>
+                <h4 class="title-green">🧬 裝備屬性反推</h4>
+                <p class="card-desc">反推裝備提供的固定主屬與副屬。</p>
+
+                <div style="font-size:12px;font-weight:bold;color:#aaa;margin-bottom:8px;">主屬性</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div class="form-group"><label>面板總主屬性</label><input type="number" id="statTotal" class="cloud-input" value="1000"></div>
+                    <div class="form-group"><label>基礎主屬性</label><input type="number" id="statBaseOnly" class="cloud-input" value="700"></div>
+                </div>
+                <div class="form-group"><label>主屬性 %</label><input type="number" id="statPercent" class="cloud-input" value="60"></div>
+                <div style="display:flex;align-items:center;gap:6px;margin:6px 0 2px;">
+                    <input type="checkbox" id="mapleCheckMain" style="width:14px;height:14px;cursor:pointer;">
+                    <label for="mapleCheckMain" style="font-size:13px;color:#aaa;cursor:pointer;">楓葉祝福（全屬性%）</label>
+                </div>
+                <input type="number" id="maplePercentMain" class="cloud-input" placeholder="例：5" disabled style="opacity:0.4;margin-bottom:8px;">
+                <button id="btnCalcEquipStat" class="calc-btn btn-green">反推主屬性</button>
+                <div class="result-box" style="margin-bottom:12px;">
+                    <div class="result-title">裝備提供的固定主屬</div>
                     <div class="result-value text-green" id="equipStatDisplay">0</div>
+                </div>
+
+                <hr style="border:none;border-top:1px dashed #444;margin:4px 0 12px;">
+
+                <div style="font-size:12px;font-weight:bold;color:#aaa;margin-bottom:8px;">副屬性</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div class="form-group"><label>面板總副屬性</label><input type="number" id="subStatTotal" class="cloud-input" value="0"></div>
+                    <div class="form-group"><label>基礎副屬性</label><input type="number" id="subStatBaseOnly" class="cloud-input" value="0"></div>
+                </div>
+                <div class="form-group"><label>副屬性 %</label><input type="number" id="subStatPercent" class="cloud-input" value="0"></div>
+                <div style="display:flex;align-items:center;gap:6px;margin:6px 0 2px;">
+                    <input type="checkbox" id="mapleCheckSub" style="width:14px;height:14px;cursor:pointer;">
+                    <label for="mapleCheckSub" style="font-size:13px;color:#aaa;cursor:pointer;">楓葉祝福（全屬性%）</label>
+                </div>
+                <input type="number" id="maplePercentSub" class="cloud-input" placeholder="例：5" disabled style="opacity:0.4;margin-bottom:8px;">
+                <button id="btnCalcSubStat" class="calc-btn btn-green">反推副屬性</button>
+                <div class="result-box">
+                    <div class="result-title">裝備提供的固定副屬</div>
+                    <div class="result-value" style="color:#ff9f43;font-size:20px;font-weight:bold;" id="subEquipStatDisplay">0</div>
                 </div>
             </div>
 
+            <!-- 第三張：表攻計算器 A/B -->
             <div class="calc-card">
-                <h4 class="title-blue">📊 完整表攻計算器</h4>
-                <p class="card-desc">輸入各項細節參數，精準計算最大表攻。</p>
-                <div class="sim-input-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                    <div class="form-group"><label>基礎攻擊力:</label><input type="number" id="calcBaseAtk" class="cloud-input" value="0"></div>
-                    <div class="form-group"><label>攻擊力 %:</label><input type="number" id="calcAtkPercent" class="cloud-input" value="0"></div>
-                    <div class="form-group"><label>基礎主屬性:</label><input type="number" id="calcMainBase" class="cloud-input" value="0"></div>
-                    <div class="form-group"><label>裝備主屬性:</label><input type="number" id="calcMainEquip" class="cloud-input" value="0"></div>
-                    <div class="form-group"><label>主屬性 %:</label><input type="number" id="calcMainPercent" class="cloud-input" value="0"></div>
-                    <div class="form-group"><label>總副屬性:</label><input type="number" id="calcSubStat" class="cloud-input" value="0"></div>
-                </div>
-                <button id="btnCalcFinal" class="calc-btn btn-blue" style="margin-top:15px;">計算當前總表攻</button>
-                <div class="result-box" style="margin-top:15px;padding:10px;background:#333;text-align:center;">
-                    <div style="font-size:14px;color:#aaa;">計算結果最大表攻:</div>
-                    <div id="finalMaxAtkDisplay" style="font-size:24px;color:#00d2ff;font-weight:bold;">0</div>
+                <h4 class="title-blue">📊 表攻計算器</h4>
+                <p class="card-desc">輸入參數精準計算表攻，A/B 兩組可供比較。</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+
+                    <!-- 套裝 A -->
+                    <div>
+                        <div style="font-size:12px;font-weight:bold;color:#64b5f6;text-align:center;background:#1a2a3a;border-radius:6px;padding:5px;margin-bottom:8px;">套裝 A</div>
+                        <div class="form-group"><label>基礎攻擊力</label><input type="number" id="calcBaseAtkA" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>攻擊力 %</label><input type="number" id="calcAtkPercentA" class="cloud-input" value="0"></div>
+                        <hr style="border:none;border-top:1px dashed #444;margin:6px 0;">
+                        <div class="form-group"><label>基礎主屬</label><input type="number" id="calcMainBaseA" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>裝備主屬</label><input type="number" id="calcMainEquipA" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>主屬性 %</label><input type="number" id="calcMainPercentA" class="cloud-input" value="0"></div>
+                        <hr style="border:none;border-top:1px dashed #444;margin:6px 0;">
+                        <div class="form-group"><label>基礎副屬</label><input type="number" id="calcSubBaseA" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>裝備副屬</label><input type="number" id="calcSubEquipA" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>副屬性 %</label><input type="number" id="calcSubPercentA" class="cloud-input" value="0"></div>
+                        <hr style="border:none;border-top:1px dashed #444;margin:6px 0;">
+                        <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">
+                            <input type="checkbox" id="mapleCheckA" style="width:13px;height:13px;cursor:pointer;">
+                            <label for="mapleCheckA" style="font-size:11px;color:#aaa;cursor:pointer;white-space:nowrap;">楓祝(全屬%)</label>
+                        </div>
+                        <input type="number" id="maplePercentA" class="cloud-input" placeholder="例：5" disabled style="opacity:0.4;margin-bottom:6px;">
+                        <button id="btnCalcA" class="calc-btn btn-blue">計算 A</button>
+                        <div class="result-box">
+                            <div style="font-size:12px;color:#aaa;">表攻 A</div>
+                            <div id="finalAtkDisplayA" style="font-size:18px;color:#64b5f6;font-weight:bold;">0</div>
+                        </div>
+                    </div>
+
+                    <!-- 套裝 B -->
+                    <div>
+                        <div style="font-size:12px;font-weight:bold;color:#ff9f43;text-align:center;background:#3a2a1a;border-radius:6px;padding:5px;margin-bottom:8px;">套裝 B</div>
+                        <div class="form-group"><label>基礎攻擊力</label><input type="number" id="calcBaseAtkB" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>攻擊力 %</label><input type="number" id="calcAtkPercentB" class="cloud-input" value="0"></div>
+                        <hr style="border:none;border-top:1px dashed #444;margin:6px 0;">
+                        <div class="form-group"><label>基礎主屬</label><input type="number" id="calcMainBaseB" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>裝備主屬</label><input type="number" id="calcMainEquipB" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>主屬性 %</label><input type="number" id="calcMainPercentB" class="cloud-input" value="0"></div>
+                        <hr style="border:none;border-top:1px dashed #444;margin:6px 0;">
+                        <div class="form-group"><label>基礎副屬</label><input type="number" id="calcSubBaseB" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>裝備副屬</label><input type="number" id="calcSubEquipB" class="cloud-input" value="0"></div>
+                        <div class="form-group"><label>副屬性 %</label><input type="number" id="calcSubPercentB" class="cloud-input" value="0"></div>
+                        <hr style="border:none;border-top:1px dashed #444;margin:6px 0;">
+                        <div style="display:flex;align-items:center;gap:5px;margin-bottom:4px;">
+                            <input type="checkbox" id="mapleCheckB" style="width:13px;height:13px;cursor:pointer;">
+                            <label for="mapleCheckB" style="font-size:11px;color:#aaa;cursor:pointer;white-space:nowrap;">楓祝(全屬%)</label>
+                        </div>
+                        <input type="number" id="maplePercentB" class="cloud-input" placeholder="例：5" disabled style="opacity:0.4;margin-bottom:6px;">
+                        <button id="btnCalcB" class="calc-btn btn-blue">計算 B</button>
+                        <div class="result-box">
+                            <div style="font-size:12px;color:#aaa;">表攻 B</div>
+                            <div id="finalAtkDisplayB" style="font-size:18px;color:#ff9f43;font-weight:bold;">0</div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
