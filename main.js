@@ -315,14 +315,41 @@ function getFormValues() {
     ];
     const data = {};
     ids.forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
+
+    // 勾選狀態另外存
+    ['mapleCheckMain','mapleCheckSub','mapleCheckA','mapleCheckB'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) data[id] = el.checked;
+    });
+
     return data;
 }
 
 function fillValues(obj) {
     for (const key in obj) {
-        if (typeof obj[key] === 'object' && obj[key] !== null) continue;
         const el = document.getElementById(key);
-        if (el) el.value = obj[key];
+        if (!el) continue;
+        if (typeof obj[key] === 'boolean') {
+            // 還原 checkbox 狀態
+            el.checked = obj[key];
+            // 同步更新對應輸入框的 disabled 狀態
+            const inputMap = {
+                mapleCheckMain: 'maplePercentMain',
+                mapleCheckSub:  'maplePercentSub',
+                mapleCheckA:    'maplePercentA',
+                mapleCheckB:    'maplePercentB',
+            };
+            const inputId = inputMap[key];
+            if (inputId) {
+                const inp = document.getElementById(inputId);
+                if (inp) {
+                    inp.disabled = !obj[key];
+                    inp.style.opacity = obj[key] ? '1' : '0.4';
+                }
+            }
+        } else if (typeof obj[key] !== 'object') {
+            el.value = obj[key];
+        }
     }
 }
 
@@ -1122,12 +1149,10 @@ function calculateBaseAtk() {
     }
     document.getElementById('resultDisplay').innerText = matched;
 
-    // 帶入表攻計算器 A/B
+    // 只帶入表攻計算器 A/B 的攻擊相關欄位
     ['A','B'].forEach(s => {
         document.getElementById(`calcBaseAtk${s}`).value    = matched;
         document.getElementById(`calcAtkPercent${s}`).value = document.getElementById('percentAtk').value;
-        document.getElementById(`calcMainBase${s}`).value   = mainStat;
-        document.getElementById(`calcSubBase${s}`).value    = subStat;
     });
 }
 
@@ -1146,14 +1171,11 @@ function calculateEquipStat() {
     }
     document.getElementById('equipStatDisplay').innerText = found;
 
-    // 帶入表攻計算器 A/B
+    // 帶入表攻計算器 A/B 主屬性欄位
     ['A','B'].forEach(s => {
         document.getElementById(`calcMainBase${s}`).value    = base;
         document.getElementById(`calcMainEquip${s}`).value   = found;
         document.getElementById(`calcMainPercent${s}`).value = document.getElementById('statPercent').value;
-        if (mapleOn) {
-            document.getElementById(`mapleCheckMain${s}`) // 不存在，略過
-        }
     });
 }
 
