@@ -1498,6 +1498,7 @@ async function ocrCanvas(canvas) {
     }
 }
 
+function captureRegionToCanvas() {
     if (!captureStream || !captureRegion) return null;
     const video = document.createElement('video');
     video.srcObject = captureStream;
