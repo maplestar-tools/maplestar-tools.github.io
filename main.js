@@ -1542,30 +1542,32 @@ async function ocrCanvas(canvas) {
 }
 
 async function captureRegionToCanvas() {
-    if (!captureStream || !captureRegion) return null;
+    if (!captureStream || !captureRegion) { console.log('截圖失敗：stream或region為null'); return null; }
     try {
         const track = captureStream.getVideoTracks()[0];
+        console.log('track狀態：', track.readyState, '設定：', track.getSettings());
 
-        // 方法1：ImageCapture API
         if (typeof ImageCapture !== 'undefined') {
             const imageCapture = new ImageCapture(track);
-            // 等待串流穩定
             await new Promise(r => setTimeout(r, 300));
+            console.log('準備 grabFrame...');
             const bitmap = await imageCapture.grabFrame();
+            console.log('grabFrame 成功，bitmap尺寸：', bitmap.width, bitmap.height);
             const canvas = document.createElement('canvas');
             canvas.width  = captureRegion.w;
             canvas.height = captureRegion.h;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(bitmap, captureRegion.x, captureRegion.y, captureRegion.w, captureRegion.h, 0, 0, captureRegion.w, captureRegion.h);
+            console.log('drawImage 完成');
             return canvas;
         }
 
-        // 方法2：備用 video element
         return await new Promise(resolve => {
             const video = document.createElement('video');
             video.srcObject = captureStream;
             video.autoplay  = true;
             video.onplaying = () => {
+                console.log('video playing，尺寸：', video.videoWidth, video.videoHeight);
                 const canvas = document.createElement('canvas');
                 canvas.width  = captureRegion.w;
                 canvas.height = captureRegion.h;
@@ -1574,11 +1576,11 @@ async function captureRegionToCanvas() {
                 video.pause();
                 resolve(canvas);
             };
-            setTimeout(() => resolve(null), 5000); // 5秒 timeout
+            setTimeout(() => { console.log('截圖timeout'); resolve(null); }, 5000);
         });
 
     } catch(e) {
-        console.error('截圖失敗：', e);
+        console.error('截圖例外：', e);
         showToast('⚠️ 截圖失敗，請重試');
         return null;
     }
