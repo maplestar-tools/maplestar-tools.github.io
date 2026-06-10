@@ -1541,23 +1541,47 @@ async function ocrCanvas(canvas) {
     }
 }
 
-function captureRegionToCanvas() {
+async function captureRegionToCanvas() {
     if (!captureStream || !captureRegion) return null;
-    const video = document.createElement('video');
-    video.srcObject = captureStream;
+    try {
+        const track = captureStream.getVideoTracks()[0];
 
-    return new Promise(resolve => {
-        video.onloadedmetadata = () => {
-            video.play();
+        // 方法1：ImageCapture API
+        if (typeof ImageCapture !== 'undefined') {
+            const imageCapture = new ImageCapture(track);
+            // 等待串流穩定
+            await new Promise(r => setTimeout(r, 300));
+            const bitmap = await imageCapture.grabFrame();
             const canvas = document.createElement('canvas');
             canvas.width  = captureRegion.w;
             canvas.height = captureRegion.h;
             const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, captureRegion.x, captureRegion.y, captureRegion.w, captureRegion.h, 0, 0, captureRegion.w, captureRegion.h);
-            video.pause();
-            resolve(canvas);
-        };
-    });
+            ctx.drawImage(bitmap, captureRegion.x, captureRegion.y, captureRegion.w, captureRegion.h, 0, 0, captureRegion.w, captureRegion.h);
+            return canvas;
+        }
+
+        // 方法2：備用 video element
+        return await new Promise(resolve => {
+            const video = document.createElement('video');
+            video.srcObject = captureStream;
+            video.autoplay  = true;
+            video.onplaying = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width  = captureRegion.w;
+                canvas.height = captureRegion.h;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, captureRegion.x, captureRegion.y, captureRegion.w, captureRegion.h, 0, 0, captureRegion.w, captureRegion.h);
+                video.pause();
+                resolve(canvas);
+            };
+            setTimeout(() => resolve(null), 5000); // 5秒 timeout
+        });
+
+    } catch(e) {
+        console.error('截圖失敗：', e);
+        showToast('⚠️ 截圖失敗，請重試');
+        return null;
+    }
 }
 
 async function takePreviewShot() {
