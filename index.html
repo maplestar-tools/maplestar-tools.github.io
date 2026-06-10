@@ -15,6 +15,7 @@
     <button class="tab-btn active" id="btn-tab-home">首頁</button>
     <button class="tab-btn" id="btn-tab-money">💰 團隊分紅</button>
     <button class="tab-btn" id="btn-tab-equip">⚔️ 裝備計算</button>
+    <button class="tab-btn" id="btn-tab-exp">📊 經驗計算</button>
 </div>
 
 <div class="content">
@@ -380,6 +381,125 @@
 
         </div>
     </div><!-- end equip-calc -->
+
+    <!-- ===== 經驗計算 ===== -->
+    <div id="exp-calc" class="tab-content">
+        <h3>📊 經驗計算</h3>
+
+        <!-- 休息經驗計算 -->
+        <div class="calc-card settings-card">
+            <h4 class="title-orange" id="btn-toggle-rest" style="cursor:pointer;display:flex;justify-content:space-between;margin:0;">
+                ⏰ 休息經驗計算 <span>▼</span>
+            </h4>
+            <div id="rest-section" style="overflow:hidden;transition:max-height 0.3s ease-out;max-height:500px;">
+                <div class="inner-narrow" style="margin-top:14px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+                        <div class="form-group">
+                            <label>當前休息經驗</label>
+                            <input type="number" id="restCurrent" class="cloud-input" placeholder="0">
+                        </div>
+                        <div class="form-group">
+                            <label>獲得一次休息經驗後</label>
+                            <input type="number" id="restAfter" class="cloud-input" placeholder="0">
+                        </div>
+                    </div>
+                    <button id="btnCalcRest" class="calc-btn btn-orange">計算</button>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;">
+                        <div class="result-box">
+                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">已累積時間</div>
+                            <div id="restAccumTime" style="font-size:20px;font-weight:bold;color:#ff9f43;">—</div>
+                        </div>
+                        <div class="result-box">
+                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">休息經驗上限(24小時)</div>
+                            <div id="restMaxExp" style="font-size:20px;font-weight:bold;color:#64b5f6;">—</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 獲得經驗計算 -->
+        <div class="calc-card settings-card" style="margin-top:20px;">
+            <h4 class="title-blue" id="btn-toggle-exp" style="cursor:pointer;display:flex;justify-content:space-between;margin:0;">
+                🎯 獲得經驗計算 <span>▼</span>
+            </h4>
+            <div id="exp-section" style="overflow:hidden;transition:max-height 0.5s ease-out;max-height:3000px;">
+                <div style="margin-top:14px;">
+
+                    <!-- 框選區域 -->
+                    <div style="font-size:13px;color:#aaa;font-weight:bold;margin-bottom:8px;">截圖框選區域</div>
+                    <div style="background:#252525;border-radius:8px;padding:12px;margin-bottom:10px;">
+                        <div id="capture-preview" style="width:100%;height:60px;background:#333;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#555;margin-bottom:8px;">尚未授權</div>
+                        <div id="capture-coords" style="font-size:11px;color:#888;text-align:center;margin-bottom:8px;">—</div>
+                        <button id="btn-capture-select" class="calc-btn btn-green" style="margin:0;">授權並框選</button>
+                    </div>
+
+                    <!-- 計時選擇 -->
+                    <div style="font-size:13px;color:#aaa;font-weight:bold;margin-bottom:8px;">計時長度</div>
+                    <div id="timer-options" style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:12px;">
+                        <button class="timer-opt calc-btn btn-gray" data-minutes="3" style="margin:0;padding:8px 0;font-size:12px;">3分</button>
+                        <button class="timer-opt calc-btn btn-gray" data-minutes="5" style="margin:0;padding:8px 0;font-size:12px;">5分</button>
+                        <button class="timer-opt calc-btn btn-blue active-timer" data-minutes="10" style="margin:0;padding:8px 0;font-size:12px;">10分</button>
+                        <button class="timer-opt calc-btn btn-gray" data-minutes="15" style="margin:0;padding:8px 0;font-size:12px;">15分</button>
+                        <button class="timer-opt calc-btn btn-gray" data-minutes="30" style="margin:0;padding:8px 0;font-size:12px;">30分</button>
+                        <button class="timer-opt calc-btn btn-gray" data-minutes="0" style="margin:0;padding:8px 0;font-size:12px;">無限</button>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                        <button id="btn-start-timer" class="calc-btn btn-green" style="margin:0;">▶ 開始（10秒後截圖）</button>
+                        <button id="btn-stop-timer" class="calc-btn btn-red" style="margin:0;" disabled>⏹ 停止並截圖</button>
+                    </div>
+
+                    <!-- 計時顯示 -->
+                    <div id="timer-display" style="font-size:36px;font-weight:bold;color:#64b5f6;text-align:center;padding:8px 0;letter-spacing:2px;">00:00</div>
+                    <div id="timer-status" style="font-size:12px;color:#888;text-align:center;margin-bottom:12px;">尚未開始</div>
+
+                    <hr style="border:none;border-top:1px dashed #444;margin:10px 0;">
+
+                    <!-- OCR 結果 -->
+                    <div style="font-size:13px;color:#aaa;font-weight:bold;margin-bottom:8px;">截圖解析結果（可手動修改數值）</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                        <div style="background:#252525;border-radius:8px;padding:10px;">
+                            <div style="font-size:11px;color:#888;margin-bottom:6px;">起始截圖</div>
+                            <div id="ocr-start-img" style="width:100%;height:44px;background:#333;border-radius:4px;margin-bottom:8px;"></div>
+                            <div class="form-group" style="margin:0;">
+                                <label>解析數值</label>
+                                <input type="number" id="ocr-start-val" class="cloud-input" placeholder="0">
+                            </div>
+                        </div>
+                        <div style="background:#252525;border-radius:8px;padding:10px;">
+                            <div style="font-size:11px;color:#888;margin-bottom:6px;">結束截圖</div>
+                            <div id="ocr-end-img" style="width:100%;height:44px;background:#333;border-radius:4px;margin-bottom:8px;"></div>
+                            <div class="form-group" style="margin:0;">
+                                <label>解析數值</label>
+                                <input type="number" id="ocr-end-val" class="cloud-input" placeholder="0">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="btn-calc-exp" class="calc-btn btn-blue">確認並計算</button>
+
+                    <!-- 結果 -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px;">
+                        <div class="result-box">
+                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;" id="exp-total-label">總獲得經驗</div>
+                            <div id="exp-total" style="font-size:20px;font-weight:bold;color:#4dae4c;">—</div>
+                        </div>
+                        <div class="result-box">
+                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">10分鐘獲得經驗</div>
+                            <div id="exp-per10" style="font-size:20px;font-weight:bold;color:#64b5f6;">—</div>
+                        </div>
+                        <div class="result-box">
+                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">30分鐘獲得經驗</div>
+                            <div id="exp-per30" style="font-size:20px;font-weight:bold;color:#ff9f43;">—</div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+    </div><!-- end exp-calc -->
 
 </div><!-- end content -->
 

@@ -86,6 +86,7 @@ function bindEvents() {
     document.getElementById('btn-tab-home').addEventListener('click',  () => switchTab('home'));
     document.getElementById('btn-tab-money').addEventListener('click', () => switchTab('money-split'));
     document.getElementById('btn-tab-equip').addEventListener('click', () => switchTab('equip-calc'));
+    document.getElementById('btn-tab-exp').addEventListener('click',   () => switchTab('exp-calc'));
 
     document.getElementById('btn-load-cloud').addEventListener('click', () => loadFromCloud(false));
     document.getElementById('btn-manual-sync').addEventListener('click', () => saveAllToCloud(true));
@@ -124,6 +125,28 @@ function bindEvents() {
     document.getElementById('btnCalcB').addEventListener('click', () => calcFinalAtk('B'));
     initMapleCheckboxes();
 
+    // 經驗計算
+    document.getElementById('btn-toggle-rest').addEventListener('click', (e) => toggleSection(e.currentTarget, 'rest-section'));
+    document.getElementById('btn-toggle-exp').addEventListener('click',  (e) => toggleSection(e.currentTarget, 'exp-section'));
+    document.getElementById('btnCalcRest').addEventListener('click', calculateRestExp);
+    document.getElementById('btn-capture-select').addEventListener('click', startCaptureSelect);
+    document.getElementById('btn-start-timer').addEventListener('click', startExpTimer);
+    document.getElementById('btn-stop-timer').addEventListener('click',  stopExpTimer);
+    document.getElementById('btn-calc-exp').addEventListener('click',    calculateExpResult);
+
+    // 計時選項按鈕
+    document.querySelectorAll('.timer-opt').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.timer-opt').forEach(b => {
+                b.classList.remove('btn-blue','active-timer');
+                b.classList.add('btn-gray');
+            });
+            btn.classList.remove('btn-gray');
+            btn.classList.add('btn-blue','active-timer');
+            selectedMinutes = parseInt(btn.dataset.minutes);
+        });
+    });
+
     document.getElementById('userKeyCode').addEventListener('input', () => {
         renderBossSelect();
         renderAllDropItemSelects();
@@ -153,7 +176,7 @@ function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-    const map = { home: 'btn-tab-home', 'money-split': 'btn-tab-money', 'equip-calc': 'btn-tab-equip' };
+    const map = { home: 'btn-tab-home', 'money-split': 'btn-tab-money', 'equip-calc': 'btn-tab-equip', 'exp-calc': 'btn-tab-exp' };
     if (map[tabId]) document.getElementById(map[tabId]).classList.add('active');
 }
 
@@ -1229,3 +1252,256 @@ function calcFinalAtk(suffix) {
 }
 
 function calculateFinalAtk() { calcFinalAtk('A'); calcFinalAtk('B'); }
+
+// ==========================================================================
+// 📊 經驗計算
+// ==========================================================================
+
+// 全域狀態
+let selectedMinutes  = 10;    // 預設 10 分鐘
+let timerInterval    = null;  // 計時器
+let timerSeconds     = 0;     // 已計時秒數
+let countdownInterval = null; // 倒數計時器
+let captureStream    = null;  // 螢幕分享 stream
+let captureRegion    = null;  // 框選座標 {x,y,w,h}
+let startCanvas      = null;  // 起始截圖
+let endCanvas        = null;  // 結束截圖
+
+// 初始化：還原框選座標
+(function initExpCalc() {
+    const saved = localStorage.getItem('maple_capture_region');
+    if (saved) {
+        try {
+            captureRegion = JSON.parse(saved);
+            updateCaptureCoords();
+            document.getElementById('capture-preview').innerText = '已有上次框選座標，請先授權';
+        } catch(e) {}
+    }
+})();
+
+// --- 休息經驗計算 ---
+function calculateRestExp() {
+    const current = parseFloat(document.getElementById('restCurrent').value) || 0;
+    const after   = parseFloat(document.getElementById('restAfter').value)   || 0;
+    if (after <= current) { alert('獲得後的數值必須大於當前數值！'); return; }
+
+    const perMinute   = after - current;                        // 每分鐘休息經驗
+    const accumulated = current / perMinute;                    // 已累積分鐘數
+    const maxExp      = Math.round(perMinute * 60 * 24);       // 24小時上限
+
+    const hours   = Math.floor(accumulated / 60);
+    const minutes = Math.floor(accumulated % 60);
+
+    document.getElementById('restAccumTime').innerText = `${hours}小時${minutes}分`;
+    document.getElementById('restMaxExp').innerText    = maxExp.toLocaleString();
+}
+
+// --- 螢幕分享與框選 ---
+async function startCaptureSelect() {
+    try {
+        // 如果已有 stream 且還活著，不重新授權
+        if (!captureStream || captureStream.getTracks().every(t => t.readyState === 'ended')) {
+            captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            captureStream.getTracks()[0].addEventListener('ended', () => {
+                captureStream = null;
+                document.getElementById('btn-capture-select').innerText = '重新授權並框選';
+                document.getElementById('capture-preview').innerText = '授權已結束';
+            });
+        }
+        // 顯示框選遮罩
+        showSelectionOverlay();
+    } catch(e) {
+        alert('授權失敗或已取消：' + e.message);
+    }
+}
+
+function showSelectionOverlay() {
+    // 建立全螢幕遮罩
+    const overlay = document.createElement('div');
+    overlay.id = 'capture-overlay';
+    overlay.style.cssText = `
+        position:fixed;top:0;left:0;width:100%;height:100%;
+        z-index:99999;cursor:crosshair;background:rgba(0,0,0,0.5);
+    `;
+
+    // 預覽影片
+    const video = document.createElement('video');
+    video.srcObject = captureStream;
+    video.autoplay = true;
+    video.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;opacity:0.7;';
+    overlay.appendChild(video);
+
+    // 說明文字
+    const hint = document.createElement('div');
+    hint.innerText = '拖曳框選經驗值區域，放開滑鼠完成選取';
+    hint.style.cssText = 'position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:white;padding:8px 16px;border-radius:8px;font-size:14px;z-index:2;pointer-events:none;';
+    overlay.appendChild(hint);
+
+    // 選取框
+    const selBox = document.createElement('div');
+    selBox.style.cssText = 'position:absolute;border:2px solid #4dae4c;background:rgba(77,174,76,0.15);pointer-events:none;display:none;';
+    overlay.appendChild(selBox);
+
+    document.body.appendChild(overlay);
+
+    let startX, startY, isDragging = false;
+
+    overlay.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        startX = e.clientX; startY = e.clientY;
+        selBox.style.cssText += `display:block;left:${startX}px;top:${startY}px;width:0;height:0;`;
+    });
+
+    overlay.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        const w = e.clientX - startX, h = e.clientY - startY;
+        selBox.style.left   = (w < 0 ? e.clientX : startX) + 'px';
+        selBox.style.top    = (h < 0 ? e.clientY : startY) + 'px';
+        selBox.style.width  = Math.abs(w) + 'px';
+        selBox.style.height = Math.abs(h) + 'px';
+    });
+
+    overlay.addEventListener('mouseup', (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        const rect = selBox.getBoundingClientRect();
+        if (rect.width < 10 || rect.height < 10) { document.body.removeChild(overlay); return; }
+
+        // 換算為影片實際座標
+        const vTrack = captureStream.getVideoTracks()[0];
+        const settings = vTrack.getSettings();
+        const scaleX = settings.width  / window.innerWidth;
+        const scaleY = settings.height / window.innerHeight;
+
+        captureRegion = {
+            x: Math.round(rect.left   * scaleX),
+            y: Math.round(rect.top    * scaleY),
+            w: Math.round(rect.width  * scaleX),
+            h: Math.round(rect.height * scaleY),
+        };
+        localStorage.setItem('maple_capture_region', JSON.stringify(captureRegion));
+
+        document.body.removeChild(overlay);
+        updateCaptureCoords();
+        takePreviewShot();
+        document.getElementById('btn-capture-select').innerText = '重新框選';
+    });
+}
+
+function updateCaptureCoords() {
+    if (!captureRegion) return;
+    const el = document.getElementById('capture-coords');
+    if (el) el.innerText = `X: ${captureRegion.x}　Y: ${captureRegion.y}　寬: ${captureRegion.w}　高: ${captureRegion.h}`;
+}
+
+// 截取指定區域並顯示在 canvas
+function captureRegionToCanvas() {
+    if (!captureStream || !captureRegion) return null;
+    const video = document.createElement('video');
+    video.srcObject = captureStream;
+
+    return new Promise(resolve => {
+        video.onloadedmetadata = () => {
+            video.play();
+            const canvas = document.createElement('canvas');
+            canvas.width  = captureRegion.w;
+            canvas.height = captureRegion.h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, captureRegion.x, captureRegion.y, captureRegion.w, captureRegion.h, 0, 0, captureRegion.w, captureRegion.h);
+            video.pause();
+            resolve(canvas);
+        };
+    });
+}
+
+async function takePreviewShot() {
+    const canvas = await captureRegionToCanvas();
+    if (!canvas) return;
+    const el = document.getElementById('capture-preview');
+    el.innerHTML = '';
+    canvas.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:4px;';
+    el.appendChild(canvas);
+}
+
+function showCanvasInEl(canvas, elId) {
+    const el = document.getElementById(elId);
+    if (!el || !canvas) return;
+    el.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = canvas.toDataURL();
+    img.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:4px;';
+    el.appendChild(img);
+}
+
+// --- 計時器 ---
+function formatTime(seconds) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+}
+
+async function startExpTimer() {
+    if (!captureStream || !captureRegion) { alert('請先授權並框選區域！'); return; }
+
+    document.getElementById('btn-start-timer').disabled = true;
+    document.getElementById('btn-stop-timer').disabled  = false;
+
+    // 10 秒倒數
+    let countdown = 10;
+    document.getElementById('timer-status').innerText = '準備中，請切換到遊戲視窗...';
+    document.getElementById('timer-display').style.color = '#ff9f43';
+
+    countdownInterval = setInterval(async () => {
+        document.getElementById('timer-display').innerText = `${countdown}`;
+        countdown--;
+        if (countdown < 0) {
+            clearInterval(countdownInterval);
+            // 截起始截圖
+            startCanvas = await captureRegionToCanvas();
+            showCanvasInEl(startCanvas, 'ocr-start-img');
+            document.getElementById('timer-display').style.color = '#64b5f6';
+            document.getElementById('timer-status').innerText = '計時中...';
+            timerSeconds = 0;
+            timerInterval = setInterval(() => {
+                timerSeconds++;
+                document.getElementById('timer-display').innerText = formatTime(timerSeconds);
+                // 時間到自動停止
+                if (selectedMinutes > 0 && timerSeconds >= selectedMinutes * 60) {
+                    stopExpTimer();
+                }
+            }, 1000);
+        }
+    }, 1000);
+}
+
+async function stopExpTimer() {
+    clearInterval(timerInterval);
+    clearInterval(countdownInterval);
+
+    // 截結束截圖
+    endCanvas = await captureRegionToCanvas();
+    showCanvasInEl(endCanvas, 'ocr-end-img');
+
+    document.getElementById('timer-status').innerText = `已計時 ${formatTime(timerSeconds)}`;
+    document.getElementById('btn-start-timer').disabled = false;
+    document.getElementById('btn-stop-timer').disabled  = true;
+
+    // 更新結果標題
+    document.getElementById('exp-total-label').innerText = `總獲得經驗（${formatTime(timerSeconds)}）`;
+}
+
+// --- 計算結果 ---
+function calculateExpResult() {
+    const startVal = parseFloat(document.getElementById('ocr-start-val').value) || 0;
+    const endVal   = parseFloat(document.getElementById('ocr-end-val').value)   || 0;
+    if (endVal <= startVal) { alert('結束數值必須大於起始數值！'); return; }
+    if (timerSeconds === 0) { alert('請先完成計時！'); return; }
+
+    const totalExp  = endVal - startVal;
+    const per10     = Math.round(totalExp / timerSeconds * 600);
+    const per30     = Math.round(totalExp / timerSeconds * 1800);
+
+    document.getElementById('exp-total').innerText  = totalExp.toLocaleString();
+    document.getElementById('exp-per10').innerText  = per10.toLocaleString();
+    document.getElementById('exp-per30').innerText  = per30.toLocaleString();
+}
