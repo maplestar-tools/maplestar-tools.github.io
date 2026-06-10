@@ -133,6 +133,12 @@ function bindEvents() {
     document.getElementById('btn-start-timer').addEventListener('click', startExpTimer);
     document.getElementById('btn-stop-timer').addEventListener('click',  stopExpTimer);
     document.getElementById('btn-calc-exp').addEventListener('click',    calculateExpResult);
+    document.getElementById('btn-ocr').addEventListener('click', parseScreenshots);
+
+    // 監聽解析數值輸入框，兩個都清空才恢復可按
+    ['ocr-start-val','ocr-end-val'].forEach(id => {
+        document.getElementById(id).addEventListener('input', updateOcrBtnState);
+    });
 
     // 計時選項按鈕
     document.querySelectorAll('.timer-opt').forEach(btn => {
@@ -1395,7 +1401,103 @@ function updateCaptureCoords() {
 }
 
 // 截取指定區域並顯示在 canvas
-function captureRegionToCanvas() {
+// 更新解析按鈕狀態
+function updateOcrBtnState() {
+    const btn        = document.getElementById('btn-ocr');
+    const startVal   = document.getElementById('ocr-start-val').value.trim();
+    const endVal     = document.getElementById('ocr-end-val').value.trim();
+    const hasScreenshots = startCanvas && endCanvas;
+    const bothEmpty  = startVal === '' && endVal === '';
+
+    // 需要：兩張截圖都有 + 兩個輸入框都空
+    btn.disabled = !(hasScreenshots && bothEmpty);
+}
+
+// 解析截圖（一次解析兩張）
+let ocrCooldown = false;
+async function parseScreenshots() {
+    if (ocrCooldown) return;
+    if (!startCanvas || !endCanvas) { showToast('⚠️ 請先完成截圖！'); return; }
+
+    const btn = document.getElementById('btn-ocr');
+    btn.disabled = true;
+    btn.innerText = '解析中...';
+
+    try {
+        const [startResult, endResult] = await Promise.all([
+            ocrCanvas(startCanvas),
+            ocrCanvas(endCanvas)
+        ]);
+
+        if (startResult) document.getElementById('ocr-start-val').value = startResult;
+        if (endResult)   document.getElementById('ocr-end-val').value   = endResult;
+
+        // 解析完成後按鈕鎖住（兩個都有值）
+        btn.disabled = true;
+        btn.innerText = '🔍 解析截圖';
+
+        // 5 秒冷卻
+        ocrCooldown = true;
+        let countdown = 5;
+        const cooldownInterval = setInterval(() => {
+            btn.innerText = `冷卻中 ${countdown}s`;
+            countdown--;
+            if (countdown < 0) {
+                clearInterval(cooldownInterval);
+                ocrCooldown = false;
+                btn.innerText = '🔍 解析截圖';
+                updateOcrBtnState();
+            }
+        }, 1000);
+
+    } catch(e) {
+        btn.disabled = false;
+        btn.innerText = '🔍 解析截圖';
+        ocrCooldown = false;
+    }
+}
+
+// Google Cloud Vision OCR
+const VISION_API_KEY = 'AIzaSyD1dONez4mPFyoQpIgxN0aSGCKYiUvbyxU';
+
+async function ocrCanvas(canvas) {
+    try {
+        const base64 = canvas.toDataURL('image/png').split(',')[1];
+        const response = await fetch(
+            `https://vision.googleapis.com/v1/images:annotate?key=${VISION_API_KEY}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    requests: [{
+                        image: { content: base64 },
+                        features: [{ type: 'TEXT_DETECTION', maxResults: 1 }]
+                    }]
+                })
+            }
+        );
+
+        if (response.status === 429) {
+            showToast('⚠️ API 次數已用完，請手動輸入數值');
+            throw new Error('quota exceeded');
+        }
+
+        const data = await response.json();
+        const text = data.responses?.[0]?.fullTextAnnotation?.text || '';
+
+        // 只取 [ 之前的第一組純數字
+        const beforeBracket = text.split('[')[0];
+        const match = beforeBracket.match(/(\d[\d,]+)/);
+        if (match) return match[1].replace(/,/g, '');
+
+        showToast('⚠️ 解析失敗，請手動輸入數值');
+        return '';
+    } catch(e) {
+        if (e.message !== 'quota exceeded') showToast('⚠️ 解析失敗，請手動輸入數值');
+        throw e;
+    }
+}
+
     if (!captureStream || !captureRegion) return null;
     const video = document.createElement('video');
     video.srcObject = captureStream;
@@ -1443,6 +1545,18 @@ function formatTime(seconds) {
 async function startExpTimer() {
     if (!captureStream || !captureRegion) { alert('請先授權並框選區域！'); return; }
 
+    // 清空上次的截圖、解析值、結算結果
+    startCanvas = null; endCanvas = null;
+    document.getElementById('ocr-start-img').innerHTML = '';
+    document.getElementById('ocr-end-img').innerHTML   = '';
+    document.getElementById('ocr-start-val').value     = '';
+    document.getElementById('ocr-end-val').value       = '';
+    document.getElementById('exp-total').innerText     = '—';
+    document.getElementById('exp-per10').innerText     = '—';
+    document.getElementById('exp-per30').innerText     = '—';
+    document.getElementById('exp-total-label').innerText = '總獲得經驗';
+    updateOcrBtnState();
+
     document.getElementById('btn-start-timer').disabled = true;
     document.getElementById('btn-stop-timer').disabled  = false;
 
@@ -1459,6 +1573,7 @@ async function startExpTimer() {
             // 截起始截圖
             startCanvas = await captureRegionToCanvas();
             showCanvasInEl(startCanvas, 'ocr-start-img');
+            updateOcrBtnState();
             document.getElementById('timer-display').style.color = '#64b5f6';
             document.getElementById('timer-status').innerText = '計時中...';
             timerSeconds = 0;
@@ -1481,6 +1596,7 @@ async function stopExpTimer() {
     // 截結束截圖
     endCanvas = await captureRegionToCanvas();
     showCanvasInEl(endCanvas, 'ocr-end-img');
+    updateOcrBtnState();
 
     document.getElementById('timer-status').innerText = `已計時 ${formatTime(timerSeconds)}`;
     document.getElementById('btn-start-timer').disabled = false;
