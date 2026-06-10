@@ -1458,7 +1458,7 @@ async function parseScreenshots() {
 }
 
 // Google Cloud Vision OCR
-const VISION_API_KEY = 'AIzaSyD1dONez4mPFyoQpIgxN0aSGCKYiUvbyxU';
+const VISION_API_KEY = 'AIzaSyCm41DLNwd-e7SFgNJxssWhd2H6H6MhOQY';
 
 async function ocrCanvas(canvas) {
     try {
