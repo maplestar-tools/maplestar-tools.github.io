@@ -429,7 +429,7 @@
                     <!-- 框選區域 -->
                     <div style="font-size:13px;color:#aaa;font-weight:bold;margin-bottom:8px;">截圖框選區域</div>
                     <div style="background:#252525;border-radius:8px;padding:12px;margin-bottom:10px;">
-                        <div id="capture-preview" style="width:100%;height:60px;background:#333;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#555;margin-bottom:8px;">尚未授權</div>
+                        <div id="capture-preview" style="width:100%;min-height:60px;background:#333;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#555;margin-bottom:8px;overflow:hidden;">尚未授權</div>
                         <div id="capture-coords" style="font-size:11px;color:#888;text-align:center;margin-bottom:8px;">—</div>
                         <button id="btn-capture-select" class="calc-btn btn-green" style="margin:0;">授權並框選</button>
                     </div>
@@ -461,7 +461,7 @@
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
                         <div style="background:#252525;border-radius:8px;padding:10px;">
                             <div style="font-size:11px;color:#888;margin-bottom:6px;">起始截圖</div>
-                            <div id="ocr-start-img" style="width:100%;height:44px;background:#333;border-radius:4px;margin-bottom:8px;"></div>
+                            <div id="ocr-start-img" style="width:100%;min-height:44px;overflow:hidden;background:#333;border-radius:4px;margin-bottom:8px;"></div>
                             <div class="form-group" style="margin:0;">
                                 <label>解析數值</label>
                                 <input type="number" id="ocr-start-val" class="cloud-input" placeholder="0">
@@ -469,7 +469,7 @@
                         </div>
                         <div style="background:#252525;border-radius:8px;padding:10px;">
                             <div style="font-size:11px;color:#888;margin-bottom:6px;">結束截圖</div>
-                            <div id="ocr-end-img" style="width:100%;height:44px;background:#333;border-radius:4px;margin-bottom:8px;"></div>
+                            <div id="ocr-end-img" style="width:100%;min-height:44px;overflow:hidden;background:#333;border-radius:4px;margin-bottom:8px;"></div>
                             <div class="form-group" style="margin:0;">
                                 <label>解析數值</label>
                                 <input type="number" id="ocr-end-val" class="cloud-input" placeholder="0">

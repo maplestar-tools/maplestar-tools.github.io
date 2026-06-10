@@ -1591,8 +1591,10 @@ async function takePreviewShot() {
     if (!canvas) return;
     const el = document.getElementById('capture-preview');
     el.innerHTML = '';
-    canvas.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:4px;';
-    el.appendChild(canvas);
+    const img = document.createElement('img');
+    img.src = canvas.toDataURL();
+    img.style.cssText = 'width:100%;height:auto;border-radius:4px;display:block;';
+    el.appendChild(img);
 }
 
 function showCanvasInEl(canvas, elId) {
