@@ -1281,6 +1281,7 @@ let endCanvas        = null;  // 結束截圖
             captureRegion = JSON.parse(saved);
             updateCaptureCoords();
             document.getElementById('capture-preview').innerText = '已有上次框選座標，請先授權';
+            document.getElementById('btn-capture-select').innerText = '授權並截圖';
         } catch(e) {}
     }
 })();
@@ -1310,12 +1311,19 @@ async function startCaptureSelect() {
             captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
             captureStream.getTracks()[0].addEventListener('ended', () => {
                 captureStream = null;
-                document.getElementById('btn-capture-select').innerText = '重新授權並框選';
+                document.getElementById('btn-capture-select').innerText = captureRegion ? '授權並截圖' : '授權並框選';
                 document.getElementById('capture-preview').innerText = '授權已結束';
             });
         }
-        // 顯示框選遮罩
-        showSelectionOverlay();
+
+        // 有上次座標 → 直接截圖
+        if (captureRegion) {
+            await takePreviewShot();
+            document.getElementById('btn-capture-select').innerText = '重新框選';
+        } else {
+            // 沒有座標 → 進框選流程
+            showSelectionOverlay();
+        }
     } catch(e) {
         alert('授權失敗或已取消：' + e.message);
     }
