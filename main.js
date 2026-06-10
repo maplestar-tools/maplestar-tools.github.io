@@ -1327,27 +1327,19 @@ function showSelectionOverlay() {
     const vidW     = settings.width;
     const vidH     = settings.height;
 
-    // 預設視窗大小：影片一半大小，最大 960x540
-    let winW = Math.min(Math.round(vidW / 2), 960);
-    let winH = Math.round(winW * vidH / vidW);
+    // 全螢幕容器
+    const overlay = document.createElement('div');
+    overlay.id = 'capture-overlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:#000;display:flex;flex-direction:column;';
 
-    // 建立浮動視窗容器
-    const popup = document.createElement('div');
-    popup.id = 'capture-popup';
-    popup.style.cssText = `
-        position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
-        z-index:99999;background:#1e1e1e;border:2px solid #4dae4c;
-        border-radius:12px;overflow:hidden;resize:both;
-        width:${winW}px;min-width:320px;min-height:200px;
-        box-shadow:0 8px 32px rgba(0,0,0,0.8);
-        display:flex;flex-direction:column;
-    `;
-
-    // 標題列（可拖曳）
+    // 標題列
     const titleBar = document.createElement('div');
-    titleBar.style.cssText = 'background:#252525;padding:8px 12px;font-size:12px;color:#aaa;cursor:move;display:flex;justify-content:space-between;align-items:center;user-select:none;flex-shrink:0;';
-    titleBar.innerHTML = '<span>🖱 拖曳框選經驗值區域，放開滑鼠完成選取</span><span style="color:#4dae4c;font-size:11px;">可調整視窗大小</span>';
-    popup.appendChild(titleBar);
+    titleBar.style.cssText = 'background:rgba(0,0,0,0.85);padding:10px 16px;font-size:13px;color:#aaa;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;';
+    titleBar.innerHTML = `
+        <span>🖱 拖曳框選經驗值區域，放開滑鼠完成選取</span>
+        <button id="btn-cancel-select" style="background:#e55353;border:none;color:white;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">✕ 取消</button>
+    `;
+    overlay.appendChild(titleBar);
 
     // 影片容器
     const videoWrap = document.createElement('div');
@@ -1364,24 +1356,13 @@ function showSelectionOverlay() {
     selBox.style.cssText = 'position:absolute;border:2px solid #4dae4c;background:rgba(77,174,76,0.15);pointer-events:none;display:none;';
     videoWrap.appendChild(selBox);
 
-    popup.appendChild(videoWrap);
-    document.body.appendChild(popup);
+    overlay.appendChild(videoWrap);
+    document.body.appendChild(overlay);
 
-    // 拖曳標題列移動視窗
-    let dragOffX = 0, dragOffY = 0, isDraggingWin = false;
-    titleBar.addEventListener('mousedown', (e) => {
-        isDraggingWin = true;
-        const rect = popup.getBoundingClientRect();
-        dragOffX = e.clientX - rect.left;
-        dragOffY = e.clientY - rect.top;
-        popup.style.transform = 'none';
+    // 取消按鈕
+    document.getElementById('btn-cancel-select').addEventListener('click', () => {
+        document.body.removeChild(overlay);
     });
-    document.addEventListener('mousemove', (e) => {
-        if (!isDraggingWin) return;
-        popup.style.left = (e.clientX - dragOffX) + 'px';
-        popup.style.top  = (e.clientY - dragOffY) + 'px';
-    });
-    document.addEventListener('mouseup', () => { isDraggingWin = false; });
 
     // 框選邏輯
     let startX, startY, isDragging = false;
@@ -1391,7 +1372,7 @@ function showSelectionOverlay() {
         const rect = videoWrap.getBoundingClientRect();
         startX = e.clientX - rect.left;
         startY = e.clientY - rect.top;
-        selBox.style.cssText += `display:block;left:${startX}px;top:${startY}px;width:0;height:0;`;
+        selBox.style.cssText = `position:absolute;border:2px solid #4dae4c;background:rgba(77,174,76,0.15);pointer-events:none;display:block;left:${startX}px;top:${startY}px;width:0;height:0;`;
         e.preventDefault();
     });
 
@@ -1416,49 +1397,40 @@ function showSelectionOverlay() {
         if (selRect.width < 10 || selRect.height < 10) return;
 
         // 計算影片在 videoWrap 裡的實際顯示區域（考慮 object-fit:contain 的黑邊）
-        const wrapW  = wrapRect.width;
-        const wrapH  = wrapRect.height;
+        const wrapW      = wrapRect.width;
+        const wrapH      = wrapRect.height;
         const vidAspect  = vidW / vidH;
         const wrapAspect = wrapW / wrapH;
 
         let dispW, dispH, offX, offY;
         if (vidAspect > wrapAspect) {
-            // 左右填滿，上下有黑邊
             dispW = wrapW;
             dispH = wrapW / vidAspect;
             offX  = 0;
             offY  = (wrapH - dispH) / 2;
         } else {
-            // 上下填滿，左右有黑邊
             dispH = wrapH;
             dispW = wrapH * vidAspect;
             offX  = (wrapW - dispW) / 2;
             offY  = 0;
         }
 
-        // 選取框相對於 videoWrap 的位置
-        const relX = selRect.left - wrapRect.left;
-        const relY = selRect.top  - wrapRect.top;
-
-        // 換算為影片實際像素座標
+        const relX   = selRect.left - wrapRect.left;
+        const relY   = selRect.top  - wrapRect.top;
         const scaleX = vidW / dispW;
         const scaleY = vidH / dispH;
 
         captureRegion = {
-            x: Math.round((relX - offX) * scaleX),
-            y: Math.round((relY - offY) * scaleY),
+            x: Math.max(0, Math.round((relX - offX) * scaleX)),
+            y: Math.max(0, Math.round((relY - offY) * scaleY)),
             w: Math.round(selRect.width  * scaleX),
             h: Math.round(selRect.height * scaleY),
         };
-
-        // 限制不超出影片範圍
-        captureRegion.x = Math.max(0, captureRegion.x);
-        captureRegion.y = Math.max(0, captureRegion.y);
         captureRegion.w = Math.min(captureRegion.w, vidW - captureRegion.x);
         captureRegion.h = Math.min(captureRegion.h, vidH - captureRegion.y);
 
         localStorage.setItem('maple_capture_region', JSON.stringify(captureRegion));
-        document.body.removeChild(popup);
+        document.body.removeChild(overlay);
         updateCaptureCoords();
         takePreviewShot();
         document.getElementById('btn-capture-select').innerText = '重新框選';
