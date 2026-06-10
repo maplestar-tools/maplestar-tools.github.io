@@ -1322,72 +1322,143 @@ async function startCaptureSelect() {
 }
 
 function showSelectionOverlay() {
-    // 建立全螢幕遮罩
-    const overlay = document.createElement('div');
-    overlay.id = 'capture-overlay';
-    overlay.style.cssText = `
-        position:fixed;top:0;left:0;width:100%;height:100%;
-        z-index:99999;cursor:crosshair;background:rgba(0,0,0,0.5);
+    const vTrack   = captureStream.getVideoTracks()[0];
+    const settings = vTrack.getSettings();
+    const vidW     = settings.width;
+    const vidH     = settings.height;
+
+    // 預設視窗大小：影片一半大小，最大 960x540
+    let winW = Math.min(Math.round(vidW / 2), 960);
+    let winH = Math.round(winW * vidH / vidW);
+
+    // 建立浮動視窗容器
+    const popup = document.createElement('div');
+    popup.id = 'capture-popup';
+    popup.style.cssText = `
+        position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);
+        z-index:99999;background:#1e1e1e;border:2px solid #4dae4c;
+        border-radius:12px;overflow:hidden;resize:both;
+        width:${winW}px;min-width:320px;min-height:200px;
+        box-shadow:0 8px 32px rgba(0,0,0,0.8);
+        display:flex;flex-direction:column;
     `;
 
-    // 預覽影片
+    // 標題列（可拖曳）
+    const titleBar = document.createElement('div');
+    titleBar.style.cssText = 'background:#252525;padding:8px 12px;font-size:12px;color:#aaa;cursor:move;display:flex;justify-content:space-between;align-items:center;user-select:none;flex-shrink:0;';
+    titleBar.innerHTML = '<span>🖱 拖曳框選經驗值區域，放開滑鼠完成選取</span><span style="color:#4dae4c;font-size:11px;">可調整視窗大小</span>';
+    popup.appendChild(titleBar);
+
+    // 影片容器
+    const videoWrap = document.createElement('div');
+    videoWrap.style.cssText = 'position:relative;flex:1;overflow:hidden;cursor:crosshair;';
+
     const video = document.createElement('video');
     video.srcObject = captureStream;
-    video.autoplay = true;
-    video.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;opacity:0.7;';
-    overlay.appendChild(video);
-
-    // 說明文字
-    const hint = document.createElement('div');
-    hint.innerText = '拖曳框選經驗值區域，放開滑鼠完成選取';
-    hint.style.cssText = 'position:absolute;top:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);color:white;padding:8px 16px;border-radius:8px;font-size:14px;z-index:2;pointer-events:none;';
-    overlay.appendChild(hint);
+    video.autoplay  = true;
+    video.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;background:#000;';
+    videoWrap.appendChild(video);
 
     // 選取框
     const selBox = document.createElement('div');
     selBox.style.cssText = 'position:absolute;border:2px solid #4dae4c;background:rgba(77,174,76,0.15);pointer-events:none;display:none;';
-    overlay.appendChild(selBox);
+    videoWrap.appendChild(selBox);
 
-    document.body.appendChild(overlay);
+    popup.appendChild(videoWrap);
+    document.body.appendChild(popup);
 
+    // 拖曳標題列移動視窗
+    let dragOffX = 0, dragOffY = 0, isDraggingWin = false;
+    titleBar.addEventListener('mousedown', (e) => {
+        isDraggingWin = true;
+        const rect = popup.getBoundingClientRect();
+        dragOffX = e.clientX - rect.left;
+        dragOffY = e.clientY - rect.top;
+        popup.style.transform = 'none';
+    });
+    document.addEventListener('mousemove', (e) => {
+        if (!isDraggingWin) return;
+        popup.style.left = (e.clientX - dragOffX) + 'px';
+        popup.style.top  = (e.clientY - dragOffY) + 'px';
+    });
+    document.addEventListener('mouseup', () => { isDraggingWin = false; });
+
+    // 框選邏輯
     let startX, startY, isDragging = false;
 
-    overlay.addEventListener('mousedown', (e) => {
+    videoWrap.addEventListener('mousedown', (e) => {
         isDragging = true;
-        startX = e.clientX; startY = e.clientY;
+        const rect = videoWrap.getBoundingClientRect();
+        startX = e.clientX - rect.left;
+        startY = e.clientY - rect.top;
         selBox.style.cssText += `display:block;left:${startX}px;top:${startY}px;width:0;height:0;`;
+        e.preventDefault();
     });
 
-    overlay.addEventListener('mousemove', (e) => {
+    videoWrap.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
-        const w = e.clientX - startX, h = e.clientY - startY;
-        selBox.style.left   = (w < 0 ? e.clientX : startX) + 'px';
-        selBox.style.top    = (h < 0 ? e.clientY : startY) + 'px';
+        const rect = videoWrap.getBoundingClientRect();
+        const cx = e.clientX - rect.left;
+        const cy = e.clientY - rect.top;
+        const w  = cx - startX, h = cy - startY;
+        selBox.style.left   = (w < 0 ? cx : startX) + 'px';
+        selBox.style.top    = (h < 0 ? cy : startY) + 'px';
         selBox.style.width  = Math.abs(w) + 'px';
         selBox.style.height = Math.abs(h) + 'px';
     });
 
-    overlay.addEventListener('mouseup', (e) => {
+    videoWrap.addEventListener('mouseup', (e) => {
         if (!isDragging) return;
         isDragging = false;
-        const rect = selBox.getBoundingClientRect();
-        if (rect.width < 10 || rect.height < 10) { document.body.removeChild(overlay); return; }
 
-        // 換算為影片實際座標
-        const vTrack = captureStream.getVideoTracks()[0];
-        const settings = vTrack.getSettings();
-        const scaleX = settings.width  / window.innerWidth;
-        const scaleY = settings.height / window.innerHeight;
+        const wrapRect = videoWrap.getBoundingClientRect();
+        const selRect  = selBox.getBoundingClientRect();
+        if (selRect.width < 10 || selRect.height < 10) return;
+
+        // 計算影片在 videoWrap 裡的實際顯示區域（考慮 object-fit:contain 的黑邊）
+        const wrapW  = wrapRect.width;
+        const wrapH  = wrapRect.height;
+        const vidAspect  = vidW / vidH;
+        const wrapAspect = wrapW / wrapH;
+
+        let dispW, dispH, offX, offY;
+        if (vidAspect > wrapAspect) {
+            // 左右填滿，上下有黑邊
+            dispW = wrapW;
+            dispH = wrapW / vidAspect;
+            offX  = 0;
+            offY  = (wrapH - dispH) / 2;
+        } else {
+            // 上下填滿，左右有黑邊
+            dispH = wrapH;
+            dispW = wrapH * vidAspect;
+            offX  = (wrapW - dispW) / 2;
+            offY  = 0;
+        }
+
+        // 選取框相對於 videoWrap 的位置
+        const relX = selRect.left - wrapRect.left;
+        const relY = selRect.top  - wrapRect.top;
+
+        // 換算為影片實際像素座標
+        const scaleX = vidW / dispW;
+        const scaleY = vidH / dispH;
 
         captureRegion = {
-            x: Math.round(rect.left   * scaleX),
-            y: Math.round(rect.top    * scaleY),
-            w: Math.round(rect.width  * scaleX),
-            h: Math.round(rect.height * scaleY),
+            x: Math.round((relX - offX) * scaleX),
+            y: Math.round((relY - offY) * scaleY),
+            w: Math.round(selRect.width  * scaleX),
+            h: Math.round(selRect.height * scaleY),
         };
-        localStorage.setItem('maple_capture_region', JSON.stringify(captureRegion));
 
-        document.body.removeChild(overlay);
+        // 限制不超出影片範圍
+        captureRegion.x = Math.max(0, captureRegion.x);
+        captureRegion.y = Math.max(0, captureRegion.y);
+        captureRegion.w = Math.min(captureRegion.w, vidW - captureRegion.x);
+        captureRegion.h = Math.min(captureRegion.h, vidH - captureRegion.y);
+
+        localStorage.setItem('maple_capture_region', JSON.stringify(captureRegion));
+        document.body.removeChild(popup);
         updateCaptureCoords();
         takePreviewShot();
         document.getElementById('btn-capture-select').innerText = '重新框選';
