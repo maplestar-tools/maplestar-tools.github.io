@@ -1306,6 +1306,9 @@ function calculateRestExp() {
 // --- 螢幕分享與框選 ---
 async function startCaptureSelect() {
     try {
+        const btnText = document.getElementById('btn-capture-select').innerText;
+        const needReselect = btnText === '重新框選';
+
         // 如果已有 stream 且還活著，不重新授權
         if (!captureStream || captureStream.getTracks().every(t => t.readyState === 'ended')) {
             captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
@@ -1316,13 +1319,13 @@ async function startCaptureSelect() {
             });
         }
 
-        // 有上次座標 → 直接截圖
-        if (captureRegion) {
+        // 重新框選 或 沒有座標 → 進框選流程
+        if (needReselect || !captureRegion) {
+            showSelectionOverlay();
+        } else {
+            // 有上次座標且非重新框選 → 直接截圖
             await takePreviewShot();
             document.getElementById('btn-capture-select').innerText = '重新框選';
-        } else {
-            // 沒有座標 → 進框選流程
-            showSelectionOverlay();
         }
     } catch(e) {
         alert('授權失敗或已取消：' + e.message);
@@ -1345,7 +1348,10 @@ function showSelectionOverlay() {
     titleBar.style.cssText = 'background:rgba(0,0,0,0.85);padding:10px 16px;font-size:13px;color:#aaa;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;';
     titleBar.innerHTML = `
         <span>🖱 拖曳框選經驗值區域，放開滑鼠完成選取</span>
-        <button id="btn-cancel-select" style="background:#e55353;border:none;color:white;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">✕ 取消</button>
+        <div style="display:flex;gap:8px;">
+            <button id="btn-change-window" style="background:#1e88e5;border:none;color:white;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">🔄 更換視窗</button>
+            <button id="btn-cancel-select" style="background:#e55353;border:none;color:white;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">✕ 取消</button>
+        </div>
     `;
     overlay.appendChild(titleBar);
 
@@ -1370,6 +1376,24 @@ function showSelectionOverlay() {
     // 取消按鈕
     document.getElementById('btn-cancel-select').addEventListener('click', () => {
         document.body.removeChild(overlay);
+    });
+
+    // 更換視窗按鈕
+    document.getElementById('btn-change-window').addEventListener('click', async () => {
+        document.body.removeChild(overlay);
+        try {
+            // 停止舊的 stream
+            if (captureStream) captureStream.getTracks().forEach(t => t.stop());
+            captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            captureStream.getTracks()[0].addEventListener('ended', () => {
+                captureStream = null;
+                document.getElementById('btn-capture-select').innerText = captureRegion ? '授權並截圖' : '授權並框選';
+                document.getElementById('capture-preview').innerText = '授權已結束';
+            });
+            showSelectionOverlay();
+        } catch(e) {
+            alert('授權失敗或已取消：' + e.message);
+        }
     });
 
     // 框選邏輯
