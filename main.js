@@ -1545,18 +1545,25 @@ function preprocessCanvas(srcCanvas) {
     const imageData = ctx.getImageData(0, 0, dst.width, dst.height);
     const data = imageData.data;
 
+    // 第一步：找全圖最亮的像素，動態決定閾值
+    let maxBrightness = 0;
     for (let i = 0; i < data.length; i += 4) {
-        const r = data[i], g = data[i+1], b = data[i+2];
-        // 綠色判斷：G 明顯高於 R 和 B → 這是進度條背景，變白
-        const isGreen = (g - r > 30) && (g - b > 30);
-        // 亮色判斷：整體亮度高 → 這是數字筆劃，變黑
-        const brightness = (r + g + b) / 3;
-        if (isGreen || brightness < 100) {
-            data[i] = data[i+1] = data[i+2] = 255; // 白底
+        const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
+        if (brightness > maxBrightness) maxBrightness = brightness;
+    }
+
+    // 閾值 = 最亮值的 85%，只保留接近最亮的像素（數字筆劃）
+    const threshold = maxBrightness * 0.85;
+
+    for (let i = 0; i < data.length; i += 4) {
+        const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
+        if (brightness >= threshold) {
+            data[i] = data[i+1] = data[i+2] = 0;   // 數字筆劃 → 黑
         } else {
-            data[i] = data[i+1] = data[i+2] = 0;   // 黑字
+            data[i] = data[i+1] = data[i+2] = 255; // 背景 → 白
         }
     }
+
     ctx.putImageData(imageData, 0, 0);
     // 加在 return dst; 之前
     document.body.appendChild(dst);
