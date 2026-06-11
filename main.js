@@ -1490,8 +1490,6 @@ function updateOcrBtnState() {
 
 // 解析截圖（一次解析兩張）
 let ocrCooldown = false;
-// 解析截圖（一次解析兩張）
-let ocrCooldown = false;
 async function parseScreenshots() {
     if (ocrCooldown) return;
     if (!startCanvas || !endCanvas) { showToast('⚠️ 請先完成截圖！'); return; }
