@@ -1490,6 +1490,8 @@ function updateOcrBtnState() {
 
 // 解析截圖（一次解析兩張）
 let ocrCooldown = false;
+// 解析截圖（一次解析兩張）
+let ocrCooldown = false;
 async function parseScreenshots() {
     if (ocrCooldown) return;
     if (!startCanvas || !endCanvas) { showToast('⚠️ 請先完成截圖！'); return; }
@@ -1499,19 +1501,15 @@ async function parseScreenshots() {
     btn.innerText = '解析中...';
 
     try {
-        const [startResult, endResult] = await Promise.all([
-            ocrCanvas(startCanvas),
-            ocrCanvas(endCanvas)
-        ]);
+        const startResult = await ocrCanvas(startCanvas);
+        const endResult = await ocrCanvas(endCanvas);
 
         if (startResult) document.getElementById('ocr-start-val').value = startResult;
         if (endResult)   document.getElementById('ocr-end-val').value   = endResult;
 
-        // 解析完成後按鈕鎖住（兩個都有值）
         btn.disabled = true;
         btn.innerText = '🔍 解析截圖';
 
-        // 5 秒冷卻
         ocrCooldown = true;
         let countdown = 5;
         const cooldownInterval = setInterval(() => {
@@ -1541,8 +1539,9 @@ async function ocrCanvas(canvas) {
             body: JSON.stringify({ image: base64 }),
         });
         const data = await res.json();
-        console.log('PaddleOCR結果：', JSON.stringify(data));
-        return data.number || '';
+        console.log('PaddleOCR結果：', data.text);
+        const match = data.text?.match(/^[\d,]+/);
+        return match ? match[0].replace(/,/g, '') : '';
     } catch (e) {
         showToast('⚠️ 解析失敗，請手動輸入數值');
         return '';
