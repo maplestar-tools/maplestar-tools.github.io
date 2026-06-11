@@ -1541,7 +1541,7 @@ async function ocrCanvas(canvas) {
             body: JSON.stringify({ image: base64 }),
         });
         const data = await res.json();
-        console.log('PaddleOCR結果：', data.text);
+        console.log('PaddleOCR結果：', JSON.stringify(data));
         return data.number || '';
     } catch (e) {
         showToast('⚠️ 解析失敗，請手動輸入數值');
