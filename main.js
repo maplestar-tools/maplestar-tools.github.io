@@ -1533,11 +1533,41 @@ async function parseScreenshots() {
 }
 
 // Google Cloud Vision OCR
+// 圖像前處理：綠色背景轉黑，白色文字保留
+function preprocessCanvas(srcCanvas) {
+    const dst = document.createElement('canvas');
+    dst.width  = srcCanvas.width  * 2; // 放大2倍提升辨識率
+    dst.height = srcCanvas.height * 2;
+    const ctx = dst.getContext('2d');
+
+    // 先放大
+    ctx.drawImage(srcCanvas, 0, 0, dst.width, dst.height);
+
+    const imageData = ctx.getImageData(0, 0, dst.width, dst.height);
+    const data = imageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i+1], b = data[i+2];
+        // 判斷是否為白色/淺色文字（高亮度）
+        const brightness = (r + g + b) / 3;
+        if (brightness > 180) {
+            // 白色文字 → 保留為黑色（OCR 對黑字白底效果最好）
+            data[i] = data[i+1] = data[i+2] = 0;
+        } else {
+            // 其他顏色（綠色背景等）→ 白色
+            data[i] = data[i+1] = data[i+2] = 255;
+        }
+    }
+    ctx.putImageData(imageData, 0, 0);
+    return dst;
+}
+
 const OCR_API_KEY = 'K89346209788957';
 
 async function ocrCanvas(canvas) {
     try {
-        const base64 = canvas.toDataURL('image/png').split(',')[1];
+        const processed = preprocessCanvas(canvas);
+        const base64 = processed.toDataURL('image/png').split(',')[1];
 
         const formData = new FormData();
         formData.append('base64Image', 'data:image/png;base64,' + base64);
@@ -1546,7 +1576,7 @@ async function ocrCanvas(canvas) {
         formData.append('isOverlayRequired', 'false');
         formData.append('detectOrientation', 'false');
         formData.append('scale', 'true');
-        formData.append('OCREngine', '1'); // Engine 1 可能保留特殊符號
+        formData.append('OCREngine', '2'); // Engine 2 對遊戲字體較好
 
         const response = await fetch('https://api.ocr.space/parse/image', {
             method: 'POST',
