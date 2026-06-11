@@ -1536,41 +1536,27 @@ async function parseScreenshots() {
 // 圖像前處理：綠色背景轉黑，白色文字保留
 function preprocessCanvas(srcCanvas) {
     const dst = document.createElement('canvas');
-
-    dst.width  = srcCanvas.width * 6;
-    dst.height = srcCanvas.height * 6;
-
+    dst.width  = srcCanvas.width  * 4;
+    dst.height = srcCanvas.height * 4;
     const ctx = dst.getContext('2d');
-
     ctx.imageSmoothingEnabled = false;
-
-    ctx.drawImage(
-        srcCanvas,
-        0,
-        0,
-        srcCanvas.width,
-        srcCanvas.height,
-        0,
-        0,
-        dst.width,
-        dst.height
-    );
+    ctx.drawImage(srcCanvas, 0, 0, dst.width, dst.height);
 
     const imageData = ctx.getImageData(0, 0, dst.width, dst.height);
     const data = imageData.data;
 
-    // for (let i = 0; i < data.length; i += 4) {
-    //     const r = data[i], g = data[i+1], b = data[i+2];
-    //     // 判斷是否為白色/淺色文字（高亮度）
-    //     const brightness = (r + g + b) / 3;
-    //     if (brightness > 180) {
-    //         // 白色文字 → 保留為黑色（OCR 對黑字白底效果最好）
-    //         data[i] = data[i+1] = data[i+2] = 0;
-    //     } else {
-    //         // 其他顏色（綠色背景等）→ 白色
-    //         data[i] = data[i+1] = data[i+2] = 255;
-    //     }
-    // }
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i], g = data[i+1], b = data[i+2];
+        // 綠色判斷：G 明顯高於 R 和 B → 這是進度條背景，變白
+        const isGreen = (g - r > 30) && (g - b > 30);
+        // 亮色判斷：整體亮度高 → 這是數字筆劃，變黑
+        const brightness = (r + g + b) / 3;
+        if (isGreen || brightness < 100) {
+            data[i] = data[i+1] = data[i+2] = 255; // 白底
+        } else {
+            data[i] = data[i+1] = data[i+2] = 0;   // 黑字
+        }
+    }
     ctx.putImageData(imageData, 0, 0);
     return dst;
 }
