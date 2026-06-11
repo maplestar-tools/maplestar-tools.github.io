@@ -1546,7 +1546,7 @@ async function ocrCanvas(canvas) {
         formData.append('isOverlayRequired', 'false');
         formData.append('detectOrientation', 'false');
         formData.append('scale', 'true');
-        formData.append('OCREngine', '2'); // Engine 2 對遊戲字體較好
+        formData.append('OCREngine', '1'); // Engine 1 可能保留特殊符號
 
         const response = await fetch('https://api.ocr.space/parse/image', {
             method: 'POST',
