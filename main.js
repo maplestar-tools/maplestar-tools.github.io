@@ -1553,7 +1553,7 @@ function preprocessCanvas(srcCanvas) {
     }
 
     // 閾值 = 最亮值的 85%，只保留接近最亮的像素（數字筆劃）
-    const threshold = maxBrightness * 0.85;
+    const threshold = maxBrightness * 0.75;
 
     for (let i = 0; i < data.length; i += 4) {
         const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
@@ -1567,7 +1567,7 @@ function preprocessCanvas(srcCanvas) {
     ctx.putImageData(imageData, 0, 0);
     // 加在 return dst; 之前
     document.body.appendChild(dst);
-    dst.style.cssText = 'position:fixed;top:0;left:0;z-index:99999;border:2px solid red;';
+    dst.style.cssText = 'position:fixed;top:0;left:0;z-index:99999;border:2px solid red;max-width:100%;max-height:200px;object-fit:contain;';
     return dst;
 }
 
