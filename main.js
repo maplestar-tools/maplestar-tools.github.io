@@ -1532,94 +1532,67 @@ async function parseScreenshots() {
     }
 }
 
-// Google Cloud Vision OCR
-// 圖像前處理：綠色背景轉黑，白色文字保留
-function preprocessCanvas(srcCanvas) {
-    const dst = document.createElement('canvas');
-    dst.width  = srcCanvas.width  * 4;
-    dst.height = srcCanvas.height * 4;
-    const ctx = dst.getContext('2d');
-    ctx.imageSmoothingEnabled = false;
-
-    // 裁掉頂部 30% 和底部 10%（排除邊框和反光帶）
-    const cropTop    = Math.floor(srcCanvas.height * 0.30);
-    const cropBottom = Math.floor(srcCanvas.height * 0.10);
-    const cropH      = srcCanvas.height - cropTop - cropBottom;
-
-    ctx.drawImage(
-        srcCanvas,
-        0, cropTop, srcCanvas.width, cropH,
-        0, 0, dst.width, dst.height
-    );
-
-    const imageData = ctx.getImageData(0, 0, dst.width, dst.height);
-    const data = imageData.data;
-
-    let maxBrightness = 0;
-    for (let i = 0; i < data.length; i += 4) {
-        const b = (data[i] + data[i+1] + data[i+2]) / 3;
-        if (b > maxBrightness) maxBrightness = b;
-    }
-
-    const threshold = maxBrightness * 0.75;
-
-    for (let i = 0; i < data.length; i += 4) {
-        const b = (data[i] + data[i+1] + data[i+2]) / 3;
-        data[i] = data[i+1] = data[i+2] = b >= threshold ? 0 : 255;
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-    return dst;
-}
-
-const OCR_API_KEY = 'K89346209788957';
+const PADDLE_TOKEN = "075a69c79c732be12d92582b656253598f8c3941";
+const JOB_URL = "https://paddleocr.aistudio-app.com/api/v2/ocr/jobs";
+const MODEL = "PaddleOCR-VL-1.6";
 
 async function ocrCanvas(canvas) {
     try {
-        const processed = preprocessCanvas(canvas);
-        const base64 = processed.toDataURL('image/png').split(',')[1];
+        const base64 = canvas.toDataURL('image/png').split(',')[1];
 
+        // 送出 job
         const formData = new FormData();
-        formData.append('base64Image', 'data:image/png;base64,' + base64);
-        formData.append('apikey', OCR_API_KEY);
-        formData.append('language', 'eng');
-        formData.append('isOverlayRequired', 'false');
-        formData.append('detectOrientation', 'false');
-        formData.append('scale', 'true');
-        formData.append('OCREngine', '2'); // Engine 2 對遊戲字體較好
+        formData.append('model', MODEL);
+        formData.append('optionalPayload', JSON.stringify({
+            useDocOrientationClassify: false,
+            useDocUnwarping: false,
+            useChartRecognition: false,
+        }));
+        const blob = await (await fetch(`data:image/png;base64,${base64}`)).blob();
+        formData.append('file', blob, 'image.png');
 
-        const response = await fetch('https://api.ocr.space/parse/image', {
+        const jobRes = await fetch(JOB_URL, {
             method: 'POST',
-            body: formData
+            headers: { Authorization: `bearer ${PADDLE_TOKEN}` },
+            body: formData,
         });
+        const jobData = await jobRes.json();
+        const jobId = jobData.data.jobId;
 
-        if (response.status === 429) {
-            showToast('⚠️ API 次數已用完，請手動輸入數值');
-            throw new Error('quota exceeded');
+        // polling
+        let resultUrl = '';
+        for (let i = 0; i < 30; i++) {
+            await new Promise(r => setTimeout(r, 3000));
+            const pollRes = await fetch(`${JOB_URL}/${jobId}`, {
+                headers: { Authorization: `bearer ${PADDLE_TOKEN}` },
+            });
+            const pollData = (await pollRes.json()).data;
+            if (pollData.state === 'done') {
+                resultUrl = pollData.resultUrl.jsonUrl;
+                break;
+            } else if (pollData.state === 'failed') {
+                showToast('⚠️ OCR 失敗：' + pollData.errorMsg);
+                return '';
+            }
         }
 
-        const data = await response.json();
-
-        if (data.IsErroredOnProcessing) {
-            showToast('⚠️ 解析失敗，請手動輸入數值');
-            throw new Error('ocr error');
+        // 拿結果
+        const jsonlRes = await fetch(resultUrl);
+        const lines = (await jsonlRes.text()).trim().split('\n');
+        const texts = [];
+        for (const line of lines) {
+            const result = JSON.parse(line).result;
+            for (const r of result.layoutParsingResults) {
+                texts.push(r.markdown.text);
+            }
         }
+        const full = texts.join(' ');
+        const match = full.match(/[\d,]+/);
+        return match ? match[0].replace(/,/g, '') : '';
 
-        const text = data.ParsedResults?.[0]?.ParsedText || '';
-        console.log('OCR原始結果：', JSON.stringify(text));
-
-        // 只取 [ 之前的第一組純數字
-        const beforeBracket = text.split('[')[0];
-        const match = beforeBracket.match(/(\d[\d,]+)/);
-        if (match) return match[1].replace(/,/g, '');
-
+    } catch (e) {
         showToast('⚠️ 解析失敗，請手動輸入數值');
         return '';
-    } catch(e) {
-        if (e.message !== 'quota exceeded' && e.message !== 'ocr error') {
-            showToast('⚠️ 解析失敗，請手動輸入數值');
-        }
-        throw e;
     }
 }
 
