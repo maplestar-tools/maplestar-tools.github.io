@@ -1566,6 +1566,7 @@ async function ocrCanvas(canvas) {
         }
 
         const text = data.ParsedResults?.[0]?.ParsedText || '';
+        console.log('OCR原始結果：', JSON.stringify(text));
 
         // 只取 [ 之前的第一組純數字
         const beforeBracket = text.split('[')[0];
