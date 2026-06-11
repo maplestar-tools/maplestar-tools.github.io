@@ -1559,18 +1559,18 @@ function preprocessCanvas(srcCanvas) {
     const imageData = ctx.getImageData(0, 0, dst.width, dst.height);
     const data = imageData.data;
 
-    for (let i = 0; i < data.length; i += 4) {
-        const r = data[i], g = data[i+1], b = data[i+2];
-        // 判斷是否為白色/淺色文字（高亮度）
-        const brightness = (r + g + b) / 3;
-        if (brightness > 180) {
-            // 白色文字 → 保留為黑色（OCR 對黑字白底效果最好）
-            data[i] = data[i+1] = data[i+2] = 0;
-        } else {
-            // 其他顏色（綠色背景等）→ 白色
-            data[i] = data[i+1] = data[i+2] = 255;
-        }
-    }
+    // for (let i = 0; i < data.length; i += 4) {
+    //     const r = data[i], g = data[i+1], b = data[i+2];
+    //     // 判斷是否為白色/淺色文字（高亮度）
+    //     const brightness = (r + g + b) / 3;
+    //     if (brightness > 180) {
+    //         // 白色文字 → 保留為黑色（OCR 對黑字白底效果最好）
+    //         data[i] = data[i+1] = data[i+2] = 0;
+    //     } else {
+    //         // 其他顏色（綠色背景等）→ 白色
+    //         data[i] = data[i+1] = data[i+2] = 255;
+    //     }
+    // }
     ctx.putImageData(imageData, 0, 0);
     return dst;
 }
