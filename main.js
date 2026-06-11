@@ -1541,6 +1541,7 @@ async function ocrCanvas(canvas) {
         const data = await res.json();
         console.log('PaddleOCR結果：', data.text);
         const match = data.text?.match(/^[\d,]+/);
+        console.log('解析數字：', match);
         return match ? match[0].replace(/,/g, '') : '';
     } catch (e) {
         showToast('⚠️ 解析失敗，請手動輸入數值');
