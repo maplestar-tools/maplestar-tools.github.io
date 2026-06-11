@@ -1577,9 +1577,6 @@ async function ocrCanvas(canvas) {
         formData.append('detectOrientation', 'false');
         formData.append('scale', 'true');
         formData.append('OCREngine', '2'); // Engine 2 對遊戲字體較好
-        formData.append('filetype', 'PNG');
-        formData.append('isCreateSearchablePdf', 'false');
-        formData.append('isSearchablePdfHideTextLayer', 'false');
 
         const response = await fetch('https://api.ocr.space/parse/image', {
             method: 'POST',
