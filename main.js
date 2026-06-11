@@ -1532,64 +1532,17 @@ async function parseScreenshots() {
     }
 }
 
-const PADDLE_TOKEN = "075a69c79c732be12d92582b656253598f8c3941";
-const JOB_URL = "https://paddleocr.aistudio-app.com/api/v2/ocr/jobs";
-const MODEL = "PaddleOCR-VL-1.6";
-
 async function ocrCanvas(canvas) {
     try {
         const base64 = canvas.toDataURL('image/png').split(',')[1];
-
-        // 送出 job
-        const formData = new FormData();
-        formData.append('model', MODEL);
-        formData.append('optionalPayload', JSON.stringify({
-            useDocOrientationClassify: false,
-            useDocUnwarping: false,
-            useChartRecognition: false,
-        }));
-        const blob = await (await fetch(`data:image/png;base64,${base64}`)).blob();
-        formData.append('file', blob, 'image.png');
-
-        const jobRes = await fetch(JOB_URL, {
+        const res = await fetch('https://paddle-ocr.jack19950130.workers.dev', {
             method: 'POST',
-            headers: { Authorization: `bearer ${PADDLE_TOKEN}` },
-            body: formData,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64 }),
         });
-        const jobData = await jobRes.json();
-        const jobId = jobData.data.jobId;
-
-        // polling
-        let resultUrl = '';
-        for (let i = 0; i < 30; i++) {
-            await new Promise(r => setTimeout(r, 3000));
-            const pollRes = await fetch(`${JOB_URL}/${jobId}`, {
-                headers: { Authorization: `bearer ${PADDLE_TOKEN}` },
-            });
-            const pollData = (await pollRes.json()).data;
-            if (pollData.state === 'done') {
-                resultUrl = pollData.resultUrl.jsonUrl;
-                break;
-            } else if (pollData.state === 'failed') {
-                showToast('⚠️ OCR 失敗：' + pollData.errorMsg);
-                return '';
-            }
-        }
-
-        // 拿結果
-        const jsonlRes = await fetch(resultUrl);
-        const lines = (await jsonlRes.text()).trim().split('\n');
-        const texts = [];
-        for (const line of lines) {
-            const result = JSON.parse(line).result;
-            for (const r of result.layoutParsingResults) {
-                texts.push(r.markdown.text);
-            }
-        }
-        const full = texts.join(' ');
-        const match = full.match(/[\d,]+/);
-        return match ? match[0].replace(/,/g, '') : '';
-
+        const data = await res.json();
+        console.log('PaddleOCR結果：', data.text);
+        return data.number || '';
     } catch (e) {
         showToast('⚠️ 解析失敗，請手動輸入數值');
         return '';
