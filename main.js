@@ -1558,6 +1558,9 @@ function preprocessCanvas(srcCanvas) {
         }
     }
     ctx.putImageData(imageData, 0, 0);
+    // 加在 return dst; 之前
+    document.body.appendChild(dst);
+    dst.style.cssText = 'position:fixed;top:0;left:0;z-index:99999;border:2px solid red;';
     return dst;
 }
 
