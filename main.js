@@ -1580,33 +1580,48 @@ const OCR_API_KEY = 'K89346209788957';
 async function ocrCanvas(canvas) {
     try {
         const processed = preprocessCanvas(canvas);
-        
-        const { createWorker } = Tesseract;
-        const worker = await createWorker('eng', 1, {
-            workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/worker.min.js',
-            langPath: 'https://tessdata.projectnaptha.com/4.0.0',
-            corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@5/tesseract-core.wasm.js',
+        const base64 = processed.toDataURL('image/png').split(',')[1];
+
+        const formData = new FormData();
+        formData.append('base64Image', 'data:image/png;base64,' + base64);
+        formData.append('apikey', OCR_API_KEY);
+        formData.append('language', 'eng');
+        formData.append('isOverlayRequired', 'false');
+        formData.append('detectOrientation', 'false');
+        formData.append('scale', 'true');
+        formData.append('OCREngine', '1'); // Engine 2 對遊戲字體較好
+
+        const response = await fetch('https://api.ocr.space/parse/image', {
+            method: 'POST',
+            body: formData
         });
-        
-        await worker.setParameters({
-            tessedit_char_whitelist: '0123456789[].,% ',
-            tessedit_pageseg_mode: '7',
-        });
-        
-        const { data: { text } } = await worker.recognize(processed);
-        await worker.terminate();
-        
-        console.log('Tesseract 原始結果：', JSON.stringify(text));
-        
-        const clean = text.trim();
-        const beforeBracket = clean.split('[')[0];
-        const match = beforeBracket.match(/(\d+)/);
-        if (match) return match[1];
-        
+
+        if (response.status === 429) {
+            showToast('⚠️ API 次數已用完，請手動輸入數值');
+            throw new Error('quota exceeded');
+        }
+
+        const data = await response.json();
+
+        if (data.IsErroredOnProcessing) {
+            showToast('⚠️ 解析失敗，請手動輸入數值');
+            throw new Error('ocr error');
+        }
+
+        const text = data.ParsedResults?.[0]?.ParsedText || '';
+        console.log('OCR原始結果：', JSON.stringify(text));
+
+        // 只取 [ 之前的第一組純數字
+        const beforeBracket = text.split('[')[0];
+        const match = beforeBracket.match(/(\d[\d,]+)/);
+        if (match) return match[1].replace(/,/g, '');
+
         showToast('⚠️ 解析失敗，請手動輸入數值');
         return '';
     } catch(e) {
-        showToast('⚠️ 解析失敗，請手動輸入數值');
+        if (e.message !== 'quota exceeded' && e.message !== 'ocr error') {
+            showToast('⚠️ 解析失敗，請手動輸入數值');
+        }
         throw e;
     }
 }
