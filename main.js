@@ -1533,24 +1533,25 @@ async function parseScreenshots() {
 }
 
 // Google Cloud Vision OCR
-const VISION_API_KEY = 'AIzaSyCm41DLNwd-e7SFgNJxssWhd2H6H6MhOQY';
+const OCR_API_KEY = 'K89346209788957';
 
 async function ocrCanvas(canvas) {
     try {
         const base64 = canvas.toDataURL('image/png').split(',')[1];
-        const response = await fetch(
-            `https://vision.googleapis.com/v1/images:annotate?key=${VISION_API_KEY}`,
-            {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    requests: [{
-                        image: { content: base64 },
-                        features: [{ type: 'TEXT_DETECTION', maxResults: 1 }]
-                    }]
-                })
-            }
-        );
+
+        const formData = new FormData();
+        formData.append('base64Image', 'data:image/png;base64,' + base64);
+        formData.append('apikey', OCR_API_KEY);
+        formData.append('language', 'eng');
+        formData.append('isOverlayRequired', 'false');
+        formData.append('detectOrientation', 'false');
+        formData.append('scale', 'true');
+        formData.append('OCREngine', '2'); // Engine 2 對遊戲字體較好
+
+        const response = await fetch('https://api.ocr.space/parse/image', {
+            method: 'POST',
+            body: formData
+        });
 
         if (response.status === 429) {
             showToast('⚠️ API 次數已用完，請手動輸入數值');
@@ -1558,7 +1559,13 @@ async function ocrCanvas(canvas) {
         }
 
         const data = await response.json();
-        const text = data.responses?.[0]?.fullTextAnnotation?.text || '';
+
+        if (data.IsErroredOnProcessing) {
+            showToast('⚠️ 解析失敗，請手動輸入數值');
+            throw new Error('ocr error');
+        }
+
+        const text = data.ParsedResults?.[0]?.ParsedText || '';
 
         // 只取 [ 之前的第一組純數字
         const beforeBracket = text.split('[')[0];
@@ -1568,29 +1575,26 @@ async function ocrCanvas(canvas) {
         showToast('⚠️ 解析失敗，請手動輸入數值');
         return '';
     } catch(e) {
-        if (e.message !== 'quota exceeded') showToast('⚠️ 解析失敗，請手動輸入數值');
+        if (e.message !== 'quota exceeded' && e.message !== 'ocr error') {
+            showToast('⚠️ 解析失敗，請手動輸入數值');
+        }
         throw e;
     }
 }
 
 async function captureRegionToCanvas() {
-    if (!captureStream || !captureRegion) { console.log('截圖失敗：stream或region為null'); return null; }
     try {
         const track = captureStream.getVideoTracks()[0];
-        console.log('track狀態：', track.readyState, '設定：', track.getSettings());
 
         if (typeof ImageCapture !== 'undefined') {
             const imageCapture = new ImageCapture(track);
             await new Promise(r => setTimeout(r, 300));
-            console.log('準備 grabFrame...');
             const bitmap = await imageCapture.grabFrame();
-            console.log('grabFrame 成功，bitmap尺寸：', bitmap.width, bitmap.height);
             const canvas = document.createElement('canvas');
             canvas.width  = captureRegion.w;
             canvas.height = captureRegion.h;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(bitmap, captureRegion.x, captureRegion.y, captureRegion.w, captureRegion.h, 0, 0, captureRegion.w, captureRegion.h);
-            console.log('drawImage 完成');
             return canvas;
         }
 
@@ -1599,7 +1603,6 @@ async function captureRegionToCanvas() {
             video.srcObject = captureStream;
             video.autoplay  = true;
             video.onplaying = () => {
-                console.log('video playing，尺寸：', video.videoWidth, video.videoHeight);
                 const canvas = document.createElement('canvas');
                 canvas.width  = captureRegion.w;
                 canvas.height = captureRegion.h;
@@ -1608,7 +1611,6 @@ async function captureRegionToCanvas() {
                 video.pause();
                 resolve(canvas);
             };
-            setTimeout(() => { console.log('截圖timeout'); resolve(null); }, 5000);
         });
 
     } catch(e) {
@@ -1665,7 +1667,7 @@ async function startExpTimer() {
     document.getElementById('btn-stop-timer').disabled  = false;
 
     // 10 秒倒數
-    let countdown = 10;
+    let countdown = 5;
     document.getElementById('timer-status').innerText = '準備中，請切換到遊戲視窗...';
     document.getElementById('timer-display').style.color = '#ff9f43';
 
