@@ -1540,28 +1540,32 @@ function preprocessCanvas(srcCanvas) {
     dst.height = srcCanvas.height * 4;
     const ctx = dst.getContext('2d');
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(srcCanvas, 0, 0, dst.width, dst.height);
+
+    // 裁掉頂部 30% 和底部 10%（排除邊框和反光帶）
+    const cropTop    = Math.floor(srcCanvas.height * 0.30);
+    const cropBottom = Math.floor(srcCanvas.height * 0.10);
+    const cropH      = srcCanvas.height - cropTop - cropBottom;
+
+    ctx.drawImage(
+        srcCanvas,
+        0, cropTop, srcCanvas.width, cropH,
+        0, 0, dst.width, dst.height
+    );
 
     const imageData = ctx.getImageData(0, 0, dst.width, dst.height);
     const data = imageData.data;
 
-    // 第一步：找全圖最亮的像素，動態決定閾值
     let maxBrightness = 0;
     for (let i = 0; i < data.length; i += 4) {
-        const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
-        if (brightness > maxBrightness) maxBrightness = brightness;
+        const b = (data[i] + data[i+1] + data[i+2]) / 3;
+        if (b > maxBrightness) maxBrightness = b;
     }
 
-    // 閾值 = 最亮值的 85%，只保留接近最亮的像素（數字筆劃）
     const threshold = maxBrightness * 0.75;
 
     for (let i = 0; i < data.length; i += 4) {
-        const brightness = (data[i] + data[i+1] + data[i+2]) / 3;
-        if (brightness >= threshold) {
-            data[i] = data[i+1] = data[i+2] = 0;   // 數字筆劃 → 黑
-        } else {
-            data[i] = data[i+1] = data[i+2] = 255; // 背景 → 白
-        }
+        const b = (data[i] + data[i+1] + data[i+2]) / 3;
+        data[i] = data[i+1] = data[i+2] = b >= threshold ? 0 : 255;
     }
 
     ctx.putImageData(imageData, 0, 0);
