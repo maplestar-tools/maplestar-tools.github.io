@@ -1566,20 +1566,42 @@ const OCR_API_KEY = 'K89346209788957';
 
 async function ocrCanvas(canvas) {
     try {
-        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
-        const formData = new FormData();
-        formData.append('file', blob, 'exp.png');
+        
+        const base64 = canvas.toDataURL('image/png').split(',')[1];
 
-        const response = await fetch('https://api.easyocr.org/ocr', {
+        const formData = new FormData();
+        formData.append('base64Image', 'data:image/png;base64,' + base64);
+        formData.append('apikey', OCR_API_KEY);
+        formData.append('language', 'eng');
+        formData.append('isOverlayRequired', 'false');
+        formData.append('detectOrientation', 'false');
+        formData.append('scale', 'true');
+        formData.append('OCREngine', '2'); // Engine 2 對遊戲字體較好
+        formData.append('filetype', 'PNG');
+        formData.append('isCreateSearchablePdf', 'false');
+        formData.append('isSearchablePdfHideTextLayer', 'false');
+
+        const response = await fetch('https://api.ocr.space/parse/image', {
             method: 'POST',
             body: formData
         });
 
-        const data = await response.json();
-        const words = data.words || [];
-        const text = words.map(w => w.text).join(' ');
-        console.log('EasyOCR 原始結果：', text);
+        if (response.status === 429) {
+            showToast('⚠️ API 次數已用完，請手動輸入數值');
+            throw new Error('quota exceeded');
+        }
 
+        const data = await response.json();
+
+        if (data.IsErroredOnProcessing) {
+            showToast('⚠️ 解析失敗，請手動輸入數值');
+            throw new Error('ocr error');
+        }
+
+        const text = data.ParsedResults?.[0]?.ParsedText || '';
+        console.log('OCR原始結果：', JSON.stringify(text));
+
+        // 只取 [ 之前的第一組純數字
         const beforeBracket = text.split('[')[0];
         const match = beforeBracket.match(/(\d[\d,]+)/);
         if (match) return match[1].replace(/,/g, '');
@@ -1587,7 +1609,9 @@ async function ocrCanvas(canvas) {
         showToast('⚠️ 解析失敗，請手動輸入數值');
         return '';
     } catch(e) {
-        showToast('⚠️ 解析失敗，請手動輸入數值');
+        if (e.message !== 'quota exceeded' && e.message !== 'ocr error') {
+            showToast('⚠️ 解析失敗，請手動輸入數值');
+        }
         throw e;
     }
 }
