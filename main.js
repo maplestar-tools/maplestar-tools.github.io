@@ -1579,8 +1579,8 @@ const OCR_API_KEY = 'K89346209788957';
 
 async function ocrCanvas(canvas) {
     try {
-        
-        const base64 = canvas.toDataURL('image/png').split(',')[1];
+        const processedCanvas = preprocessCanvas(canvas);
+        const base64 = processedCanvas
 
         const formData = new FormData();
         formData.append('base64Image', 'data:image/png;base64,' + base64);
