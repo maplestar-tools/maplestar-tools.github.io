@@ -1536,12 +1536,25 @@ async function parseScreenshots() {
 // 圖像前處理：綠色背景轉黑，白色文字保留
 function preprocessCanvas(srcCanvas) {
     const dst = document.createElement('canvas');
-    dst.width  = srcCanvas.width  * 2; // 放大2倍提升辨識率
-    dst.height = srcCanvas.height * 2;
+
+    dst.width  = srcCanvas.width * 6;
+    dst.height = srcCanvas.height * 6;
+
     const ctx = dst.getContext('2d');
 
-    // 先放大
-    ctx.drawImage(srcCanvas, 0, 0, dst.width, dst.height);
+    ctx.imageSmoothingEnabled = false;
+
+    ctx.drawImage(
+        srcCanvas,
+        0,
+        0,
+        srcCanvas.width,
+        srcCanvas.height,
+        0,
+        0,
+        dst.width,
+        dst.height
+    );
 
     const imageData = ctx.getImageData(0, 0, dst.width, dst.height);
     const data = imageData.data;
