@@ -1349,22 +1349,30 @@ function showSelectionOverlay() {
     titleBar.innerHTML = `
         <span>🖱 拖曳框選經驗值區域，放開滑鼠完成選取</span>
         <div style="display:flex;gap:8px;align-items:center;">
-            <input type="range" id="zoom-slider" min="50" max="200" value="100" style="width:80px;cursor:pointer;">
+            <label style="font-size:12px;color:#aaa;">縮放</label>
+            <input type="range" id="zoom-slider" min="100" max="300" value="100" style="width:80px;cursor:pointer;">
             <button id="btn-change-window" style="background:#1e88e5;border:none;color:white;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">🔄 更換視窗</button>
             <button id="btn-cancel-select" style="background:#e55353;border:none;color:white;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">✕ 取消</button>
         </div>
     `;
     overlay.appendChild(titleBar);
 
-    // 影片容器
+    // 影片容器（可捲動）
     const videoWrap = document.createElement('div');
-    videoWrap.style.cssText = 'position:relative;flex:1;overflow:hidden;cursor:crosshair;';
+    videoWrap.style.cssText = 'position:relative;flex:1;overflow:auto;cursor:crosshair;background:#000;';
 
     const video = document.createElement('video');
     video.srcObject = captureStream;
     video.autoplay  = true;
-    video.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;background:#000;';
+    // 預設寬度 100%，高度自動，讓 video 可以被捲動容器捲動
+    video.style.cssText = 'width:100%;height:auto;display:block;background:#000;';
     videoWrap.appendChild(video);
+
+    // 載入中遮罩（等 video 播放後才移除）
+    const loadingMask = document.createElement('div');
+    loadingMask.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;font-size:16px;color:#aaa;z-index:10;pointer-events:all;cursor:default;';
+    loadingMask.innerText = '載入中...';
+    videoWrap.appendChild(loadingMask);
 
     // 選取框
     const selBox = document.createElement('div');
@@ -1377,11 +1385,9 @@ function showSelectionOverlay() {
     // 等瀏覽器完成 reflow 再綁定所有事件，避免第一次框選座標偏移
     requestAnimationFrame(() => {
 
-        // 縮放滑桿
+        // 縮放滑桿（控制 video 寬度，videoWrap 可捲動，不用 transform）
         document.getElementById('zoom-slider').addEventListener('input', (e) => {
-            const scale = e.target.value / 100;
-            video.style.transform = `scale(${scale})`;
-            video.style.transformOrigin = 'center center';
+            video.style.width = e.target.value + '%';
         });
 
         // 取消按鈕
@@ -1407,14 +1413,22 @@ function showSelectionOverlay() {
             }
         });
 
+        // video 開始播放後移除載入遮罩，開放框選
+        video.addEventListener('playing', () => {
+            loadingMask.remove();
+        }, { once: true });
+
         // 框選邏輯
         let startX, startY, isDragging = false;
 
         videoWrap.addEventListener('mousedown', (e) => {
+            // 遮罩還在時不允許框選
+            if (loadingMask.parentNode) return;
             isDragging = true;
             const rect = videoWrap.getBoundingClientRect();
-            startX = e.clientX - rect.left;
-            startY = e.clientY - rect.top;
+            // 加上 scrollLeft/scrollTop，確保捲動後座標正確
+            startX = e.clientX - rect.left + videoWrap.scrollLeft;
+            startY = e.clientY - rect.top  + videoWrap.scrollTop;
             selBox.style.cssText = `position:absolute;border:2px solid #4dae4c;background:rgba(77,174,76,0.15);pointer-events:none;display:block;left:${startX}px;top:${startY}px;width:0;height:0;`;
             e.preventDefault();
         });
@@ -1422,8 +1436,8 @@ function showSelectionOverlay() {
         videoWrap.addEventListener('mousemove', (e) => {
             if (!isDragging) return;
             const rect = videoWrap.getBoundingClientRect();
-            const cx = e.clientX - rect.left;
-            const cy = e.clientY - rect.top;
+            const cx = e.clientX - rect.left + videoWrap.scrollLeft;
+            const cy = e.clientY - rect.top  + videoWrap.scrollTop;
             const w  = cx - startX, h = cy - startY;
             selBox.style.left   = (w < 0 ? cx : startX) + 'px';
             selBox.style.top    = (h < 0 ? cy : startY) + 'px';
@@ -1435,39 +1449,27 @@ function showSelectionOverlay() {
             if (!isDragging) return;
             isDragging = false;
 
-            const wrapRect = videoWrap.getBoundingClientRect();
             const selRect  = selBox.getBoundingClientRect();
             if (selRect.width < 10 || selRect.height < 10) return;
 
-            // 計算影片在 videoWrap 裡的實際顯示區域（考慮 object-fit:contain 的黑邊）
-            const wrapW      = wrapRect.width;
-            const wrapH      = wrapRect.height;
-            const vidAspect  = vidW / vidH;
-            const wrapAspect = wrapW / wrapH;
+            // video 實際顯示寬高（受 zoom 滑桿影響）
+            const videoRect = video.getBoundingClientRect();
+            const dispW = videoRect.width;
+            const dispH = videoRect.height;
 
-            let dispW, dispH, offX, offY;
-            if (vidAspect > wrapAspect) {
-                dispW = wrapW;
-                dispH = wrapW / vidAspect;
-                offX  = 0;
-                offY  = (wrapH - dispH) / 2;
-            } else {
-                dispH = wrapH;
-                dispW = wrapH * vidAspect;
-                offX  = (wrapW - dispW) / 2;
-                offY  = 0;
-            }
-
-            const relX   = selRect.left - wrapRect.left;
-            const relY   = selRect.top  - wrapRect.top;
+            // 縮放比例：影片原始解析度 / video 元素顯示大小
             const scaleX = vidW / dispW;
             const scaleY = vidH / dispH;
 
+            // selBox 是 absolute，left/top 已含 scroll，直接對應 video 顯示座標
+            const selLeft = parseFloat(selBox.style.left);
+            const selTop  = parseFloat(selBox.style.top);
+
             captureRegion = {
-                x: Math.max(0, Math.round((relX - offX) * scaleX)),
-                y: Math.max(0, Math.round((relY - offY) * scaleY)),
-                w: Math.round(selRect.width  * scaleX),
-                h: Math.round(selRect.height * scaleY),
+                x: Math.max(0, Math.round(selLeft * scaleX)),
+                y: Math.max(0, Math.round(selTop  * scaleY)),
+                w: Math.round(parseFloat(selBox.style.width)  * scaleX),
+                h: Math.round(parseFloat(selBox.style.height) * scaleY),
             };
             captureRegion.w = Math.min(captureRegion.w, vidW - captureRegion.x);
             captureRegion.h = Math.min(captureRegion.h, vidH - captureRegion.y);
