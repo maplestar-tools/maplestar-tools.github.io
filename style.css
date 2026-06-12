@@ -71,7 +71,7 @@ h1 {
     align-items: center;
 }
 
-.tab-content { display: none; width: 100%; box-sizing: border-box; }
+.tab-content { display: none; width: 100%; box-sizing: border-box; position: relative; }
 .tab-content.active { display: block; }
 .tab-content h3 { text-align: center; margin-top: 0; color: #fff; }
 .tab-content p { text-align: center; font-size: 13px; color: #aaa; margin-bottom: 20px; }
