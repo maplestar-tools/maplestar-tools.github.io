@@ -451,6 +451,11 @@
                         <button class="timer-opt calc-btn btn-gray" data-minutes="0" style="margin:0;padding:8px 0;font-size:12px;">無限</button>
                     </div>
 
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                        <button id="btn-start-timer" class="calc-btn btn-green" style="margin:0;">▶ 開始（5秒後截圖）</button>
+                        <button id="btn-stop-timer" class="calc-btn btn-red" style="margin:0;" disabled>⏹ 停止並截圖</button>
+                    </div>
+
                     <!-- 計時顯示 -->
                     <div id="timer-display" style="font-size:36px;font-weight:bold;color:#64b5f6;text-align:center;padding:8px 0;letter-spacing:2px;">00:00</div>
                     <div id="timer-status" style="font-size:12px;color:#888;text-align:center;margin-bottom:12px;">尚未開始</div>
@@ -464,7 +469,7 @@
                             <div style="font-size:11px;color:#888;margin-bottom:6px;">起始截圖</div>
                             <div id="ocr-start-img" style="width:100%;min-height:44px;overflow:hidden;background:#333;border-radius:4px;margin-bottom:8px;"></div>
                             <div class="form-group" style="margin:0;">
-                                <label>解析數值</label>
+                                <label>起始經驗</label>
                                 <input type="number" id="ocr-start-val" class="cloud-input" placeholder="0">
                             </div>
                         </div>
@@ -472,7 +477,7 @@
                             <div style="font-size:11px;color:#888;margin-bottom:6px;">結束截圖</div>
                             <div id="ocr-end-img" style="width:100%;min-height:44px;overflow:hidden;background:#333;border-radius:4px;margin-bottom:8px;"></div>
                             <div class="form-group" style="margin:0;">
-                                <label>解析數值</label>
+                                <label>結束經驗</label>
                                 <input type="number" id="ocr-end-val" class="cloud-input" placeholder="0">
                             </div>
                         </div>
