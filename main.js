@@ -52,14 +52,12 @@ let currentHistoryIndex  = -1;
 // 🚀 初始化
 // ==========================================================================
 window.addEventListener('DOMContentLoaded', async () => {
+    setLoggedOut();
     const localData = localStorage.getItem('maple_tool_data');
     if (localData) {
         try {
             fillValues(JSON.parse(localData));
             updateSyncUI('synced');
-            // 本地還原後同步更新右上角帳號顯示
-            const kc = document.getElementById('userKeyCode')?.value.trim();
-            if (kc) document.getElementById('display-keycode').innerText = kc;
         }
         catch (e) { console.error("本地資料還原失敗", e); }
     }
@@ -232,6 +230,16 @@ function expandSection(sectionId) {
 // ==========================================================================
 // ☁️ 雲端同步
 // ==========================================================================
+function setLoggedIn(kc) {
+    document.getElementById('display-keycode').innerText = kc;
+    document.getElementById('btn-manual-sync').disabled = false;
+}
+
+function setLoggedOut() {
+    document.getElementById('display-keycode').innerText = '無';
+    document.getElementById('btn-manual-sync').disabled = true;
+}
+
 function updateSyncUI(status, message = '') {
     const dot  = document.getElementById('sync-dot');
     const text = document.getElementById('sync-status-text');
@@ -268,7 +276,7 @@ async function saveAllToCloud(isManual = false) {
         lastSavedData = JSON.parse(JSON.stringify(data));
         localStorage.setItem('maple_tool_data', JSON.stringify(data));
         updateSyncUI('synced');
-        document.getElementById('display-keycode').innerText = kc;
+        setLoggedIn(kc);
         if (isManual) showToast("💾 手動同步成功");
     } catch (e) {
         updateSyncUI('error', '同步失敗');
@@ -305,7 +313,7 @@ async function loadFromCloud(silent = false) {
             lastSavedData = JSON.parse(JSON.stringify(newData));
             localStorage.setItem('maple_tool_data', JSON.stringify(newData));
             updateSyncUI('synced');
-            document.getElementById('display-keycode').innerText = kc;
+            setLoggedIn(kc);
             renderBossSelect();
             renderAllDropItemSelects();
             checkIsAdmin();
@@ -329,7 +337,7 @@ async function loadFromCloud(silent = false) {
         localStorage.setItem('maple_tool_data', JSON.stringify(data));
         lastSavedData = JSON.parse(JSON.stringify(data));
         updateSyncUI('synced');
-        document.getElementById('display-keycode').innerText = kc;
+        setLoggedIn(kc);
         updateDynamicPrices();
         calculateFinalAtk();
 
