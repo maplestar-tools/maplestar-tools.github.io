@@ -1251,13 +1251,47 @@ function renderModalItemList() {
     const items = bossItemMap[boss] || [];
     if (items.length === 0) { el.innerHTML = '<div style="color:#666;font-size:13px;">此王尚無掉落物</div>'; return; }
     el.innerHTML = items.map((item, i) => `
-        <div class="modal-list-item">
+        <div class="modal-list-item" draggable="true" data-index="${i}" style="cursor:grab;">
+            <span style="color:#aaa;margin-right:8px;">☰</span>
             <span>${item}</span>
             <button class="del-btn modal-del-item" data-boss="${boss}" data-index="${i}" style="margin:0;">✕</button>
         </div>
     `).join('');
+
+    // 拖曳排序
+    let dragIdx = null;
+    el.querySelectorAll('.modal-list-item').forEach(item => {
+        item.addEventListener('dragstart', () => {
+            dragIdx = parseInt(item.dataset.index);
+            item.style.opacity = '0.5';
+        });
+        item.addEventListener('dragend', () => {
+            item.style.opacity = '1';
+        });
+        item.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            item.style.background = '#333';
+        });
+        item.addEventListener('dragleave', () => {
+            item.style.background = '#252525';
+        });
+        item.addEventListener('drop', async () => {
+            item.style.background = '#252525';
+            const dropIdx = parseInt(item.dataset.index);
+            if (dragIdx === null || dragIdx === dropIdx) return;
+            const moved = bossItemMap[boss].splice(dragIdx, 1)[0];
+            bossItemMap[boss].splice(dropIdx, 0, moved);
+            await saveSharedLists();
+            renderModalItemList();
+            renderAllDropItemSelects();
+            showToast('✅ 排序已儲存');
+        });
+    });
+
+    // 刪除
     el.querySelectorAll('.modal-del-item').forEach(btn => {
-        btn.addEventListener('click', async () => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
             const b   = btn.dataset.boss;
             const idx = parseInt(btn.dataset.index);
             if (!confirm(`確定要刪除「${bossItemMap[b][idx]}」嗎？`)) return;
