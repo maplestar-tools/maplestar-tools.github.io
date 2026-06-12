@@ -22,6 +22,11 @@ const db  = getFirestore(app);
 let adminKeycodes = [];
 let isAdmin = false;
 
+// 產生 6 位亂數字串，作為隊員唯一碼
+function generateId() {
+    return Math.random().toString(36).substring(2, 8);
+}
+
 function checkIsAdmin() {
     const kc = document.getElementById('userKeyCode')?.value.trim();
     isAdmin = adminKeycodes.includes(kc);
@@ -34,7 +39,7 @@ function checkIsAdmin() {
 // ==========================================================================
 let saveTimer            = null;
 let lastSavedData        = null;
-let members              = [];     // [{ name, checked, ratio }]
+let members              = [];     // [{ id, name, checked, ratio }]
 let bossList             = [];
 let bossItemMap          = {};
 let dropRows             = [];
@@ -265,7 +270,7 @@ async function saveAllToCloud(isManual = false) {
     try {
         const data = getFormValues();
         data.lastUpdated = new Date().toISOString();
-        // 個人雲端存 checked/ratio（以名稱為 key）
+        // 個人雲端存 checked/ratio（以 id 為 key）
         data.memberSettings = buildMemberSettings();
         await setDoc(doc(db, "player_data", kc), data, { merge: true });
         lastSavedData = JSON.parse(JSON.stringify(data));
@@ -279,10 +284,12 @@ async function saveAllToCloud(isManual = false) {
     }
 }
 
-// 建立以名稱為 key 的個人設定物件
+// 建立以 id 為 key 的個人設定物件（checked、ratio）
 function buildMemberSettings() {
     const settings = {};
-    members.forEach(m => { if (m.name.trim()) settings[m.name] = { checked: m.checked, ratio: m.ratio }; });
+    members.forEach(m => {
+        if (m.id) settings[m.id] = { checked: m.checked, ratio: m.ratio };
+    });
     return settings;
 }
 
@@ -320,12 +327,13 @@ async function loadFromCloud(silent = false) {
         const data = snap.data();
         fillValues(data);
 
-        // 合併共用名單與個人 checked/ratio
+        // 合併共用名單與個人 checked/ratio（以 id 為 key）
         const memberSettings = data.memberSettings || {};
         members = members.map(m => ({
+            id:      m.id,
             name:    m.name,
-            checked: memberSettings[m.name]?.checked ?? false,
-            ratio:   memberSettings[m.name]?.ratio   ?? 1
+            checked: memberSettings[m.id]?.checked ?? false,
+            ratio:   memberSettings[m.id]?.ratio   ?? 1
         }));
         renderMembers();
 
@@ -445,24 +453,29 @@ async function loadSharedData() {
     try {
         const snap = await getDoc(doc(db, "shared_data", "team_data"));
         if (snap.exists()) {
-            const d     = snap.data();
-            // 共用雲端只存名稱
-            const names  = d.memberNames || d.members?.map(m => m.name) || [];
-            bossList     = d.bossList    || [];
-            bossItemMap  = d.bossItemMap || {};
+            const d = snap.data();
+            // 支援新格式 { id, name } 和舊格式（純字串）
+            // 舊格式沒有 id，自動補上 generateId()
+            const rawMembers = d.members || d.memberNames || [];
+            bossList      = d.bossList      || [];
+            bossItemMap   = d.bossItemMap   || {};
             adminKeycodes = d.adminKeycodes || [];
-            // 還原本地個人設定
             const localData = localStorage.getItem('maple_tool_data');
             const memberSettings = localData ? (JSON.parse(localData).memberSettings || {}) : {};
-            members = names.map(name => ({
-                name,
-                checked: memberSettings[name]?.checked ?? false,
-                ratio:   memberSettings[name]?.ratio   ?? 1
-            }));
+            members = rawMembers.map(m => {
+                const id   = (typeof m === 'object' ? m.id : null) || generateId();
+                const name = (typeof m === 'object' ? m.name : m) || '';
+                return {
+                    id,
+                    name,
+                    checked: memberSettings[id]?.checked ?? false,
+                    ratio:   memberSettings[id]?.ratio   ?? 1
+                };
+            });
         }
     } catch (e) {
         console.error("共用資料讀取失敗：", e);
-        bossList    = ['混沌哈卡斯','混沌紫克圖斯','黑魔法師','希拉'];
+        bossList    = [];
         bossItemMap = {};
     } finally {
         renderMembers();
@@ -475,16 +488,22 @@ async function saveMembersToCloud() {
     const kc = document.getElementById('userKeyCode').value.trim();
     if (!kc) { alert("🔒 尚未登入代碼，無法同步！"); return; }
     try {
-        // 共用雲端只存名稱
-        const memberNames = members.map(m => m.name).filter(n => n.trim() !== '');
-        await setDoc(doc(db, "shared_data", "team_data"), { memberNames, bossList, bossItemMap }, { merge: false });
-        // 個人設定存個人雲端
+        // 存 { id, name } 物件陣列到共用雲端
+        const memberList = members
+            .filter(m => m.name.trim() !== '')
+            .map(m => ({ id: m.id, name: m.name }));
+        await setDoc(doc(db, "shared_data", "team_data"), { members: memberList, bossList, bossItemMap, adminKeycodes }, { merge: false });
         await saveAllToCloud(false);
         alert("✅ 共用名單已同步至雲端！");
     } catch (e) { alert("同步失敗：" + e.message); }
 }
 
-function addMember() { members.push({ name: "", ratio: 1, checked: false }); renderMembers(); }
+// 新增隊員時補上唯一碼 id
+function addMember() {
+    members.push({ id: generateId(), name: "", ratio: 1, checked: false });
+    renderMembers();
+}
+
 function removeMember(i) { members.splice(i, 1); renderMembers(); }
 function updateMemberData(i, field, val) { if (members[i]) members[i][field] = val; }
 
@@ -505,7 +524,10 @@ function renderMembers() {
         tr.style.verticalAlign = "middle";
         tr.innerHTML = `
             <td style="text-align:center;padding:4px;"><input type="checkbox" class="mem-check" data-index="${i}" ${m.checked ? 'checked' : ''}></td>
-            <td style="padding:5px;"><input type="text" value="${m.name}" class="cloud-input mem-name" data-index="${i}" placeholder="名稱..."></td>
+            <td style="padding:5px;">
+                <input type="text" value="${m.name}" class="cloud-input mem-name" data-index="${i}" placeholder="名稱...">
+                <input type="hidden" class="mem-id" data-index="${i}" value="${m.id}">
+            </td>
             <td style="padding:5px;"><input type="number" value="${m.ratio}" class="cloud-input mem-ratio" data-index="${i}"></td>
         `;
         tbody.appendChild(tr);
@@ -514,7 +536,16 @@ function renderMembers() {
     refreshSnowUserOptions();
 }
 
-function getActiveMembers() { return members.filter(m => m.checked && m.name.trim() !== ''); }
+// 取得目前勾選參加的隊員（含 id）
+function getActiveMembers() {
+    return members.filter(m => m.checked && m.name.trim() !== '');
+}
+
+// 根據 id 查名稱；查不到就回傳備用名稱（舊資料相容）
+function getMemberNameById(id, fallbackName = '') {
+    const found = members.find(m => m.id === id);
+    return found ? found.name : (fallbackName || id);
+}
 
 // ==========================================================================
 // 👑 王選擇
@@ -614,8 +645,9 @@ async function handleAddNew(type, selectEl) {
 async function saveSharedLists() {
     const kc = document.getElementById('userKeyCode')?.value.trim();
     if (!kc) return;
-    const memberNames = members.map(m => m.name).filter(n => n.trim() !== '');
-    try { await setDoc(doc(db, "shared_data", "team_data"), { memberNames, bossList, bossItemMap, adminKeycodes }, { merge: false }); }
+    // 存 { id, name } 物件陣列
+    const memberList = members.filter(m => m.name.trim() !== '').map(m => ({ id: m.id, name: m.name }));
+    try { await setDoc(doc(db, "shared_data", "team_data"), { members: memberList, bossList, bossItemMap, adminKeycodes }, { merge: false }); }
     catch (e) { console.error("名單儲存失敗：", e); }
 }
 
@@ -632,13 +664,18 @@ function onDropTableChange(e) {
     if (e.target.classList.contains('drop-price'))   { dropRows[i].price   = parseFloat(e.target.value) || 0; recalcDropRow(i); }
     if (e.target.classList.contains('drop-fee'))     { dropRows[i].fee     = parseFloat(e.target.value) || 0; recalcDropRow(i); }
     if (e.target.classList.contains('drop-scissor')) { dropRows[i].scissor = e.target.value;                  recalcDropRow(i); }
-    if (e.target.classList.contains('drop-seller'))  { dropRows[i].seller  = e.target.value; }
+    if (e.target.classList.contains('drop-seller'))  {
+        // seller 存 { id, name }，方便歷史紀錄顯示時用 id 查最新名稱
+        const selectedId = e.target.value;
+        const member = members.find(m => m.id === selectedId);
+        dropRows[i].seller = member ? { id: member.id, name: member.name } : null;
+    }
 }
 function onDropTableClick(e) { if (e.target.classList.contains('drop-del')) removeDropRow(parseInt(e.target.dataset.index)); }
 
 function addDropRow(type) {
     const i = dropRows.length;
-    dropRows.push({ type, item: '', price: 0, fee: 6, scissor: 'none', seller: '', net: 0 });
+    dropRows.push({ type, item: '', price: 0, fee: 6, scissor: 'none', seller: null, net: 0 });
     appendDropRow(i);
     expandSection('drops-section');
 }
@@ -646,6 +683,8 @@ function addDropRow(type) {
 function appendDropRow(i) {
     const row    = dropRows[i];
     const isSell = row.type === 'sell';
+    // seller 支援 { id, name } 新格式，也相容舊格式字串（id 欄位取不到就用空字串）
+    const sellerId = row.seller?.id || '';
     const tr     = document.createElement('tr');
     tr.id = `drop-row-${i}`;
     tr.style.borderBottom = '1px solid #2a2a2a';
@@ -675,7 +714,7 @@ function appendDropRow(i) {
         </td>
         <td style="padding:6px 4px;vertical-align:middle;">
             <select class="cloud-input drop-seller" data-index="${i}" style="font-size:13px;padding:6px 8px;">
-                ${buildSellerOptions(row.seller)}
+                ${buildSellerOptions(sellerId)}
             </select>
         </td>
         <td style="padding:6px 4px;text-align:right;vertical-align:middle;">
@@ -710,14 +749,17 @@ function rerenderDropTable() {
     temp.forEach((row, i) => { dropRows.push(row); appendDropRow(i); });
 }
 
+// 重新整理所有賣家下拉選單（保留目前選取的 id）
 function refreshSellerOptions() {
     document.querySelectorAll('.drop-seller').forEach(sel => { const cur = sel.value; sel.innerHTML = buildSellerOptions(cur); });
 }
 
-function buildSellerOptions(selected = '') {
+// 建立賣家/自用者下拉選項
+// value 存 id；顯示名稱取自 members（確保改名後下拉也即時反映）
+function buildSellerOptions(selectedId = '') {
     const active = getActiveMembers();
     let html = '<option value="">— 選擇 —</option>';
-    active.forEach(m => { html += `<option value="${m.name}" ${selected === m.name ? 'selected' : ''}>${m.name}</option>`; });
+    active.forEach(m => { html += `<option value="${m.id}" ${selectedId === m.id ? 'selected' : ''}>${m.name}</option>`; });
     return html;
 }
 
@@ -727,27 +769,34 @@ function buildSellerOptions(selected = '') {
 function onSnowTableChange(e) {
     const i = parseInt(e.target.dataset.index);
     if (isNaN(i) || !snowRows[i]) return;
-    if (e.target.classList.contains('snow-user'))  snowRows[i].user  = e.target.value;
+    if (e.target.classList.contains('snow-user')) {
+        // user 存 { id, name }，方便歷史紀錄顯示時用 id 查最新名稱
+        const selectedId = e.target.value;
+        const member = members.find(m => m.id === selectedId);
+        snowRows[i].user = member ? { id: member.id, name: member.name } : null;
+    }
     if (e.target.classList.contains('snow-count')) { snowRows[i].count = parseFloat(e.target.value) || 0; recalcSnowRow(i); }
 }
 function onSnowTableClick(e) { if (e.target.classList.contains('snow-del')) removeSnowRow(parseInt(e.target.dataset.index)); }
 
 function addSnowRow() {
     const i = snowRows.length;
-    snowRows.push({ user: '', count: 0, cost: 0 });
+    snowRows.push({ user: null, count: 0, cost: 0 });
     appendSnowRow(i);
     expandSection('drops-section');
 }
 
 function appendSnowRow(i) {
     const row = snowRows[i];
+    // user 支援 { id, name } 新格式，也相容舊格式字串
+    const userId = row.user?.id || '';
     const tr  = document.createElement('tr');
     tr.id = `snow-row-${i}`;
     tr.style.borderBottom = '1px solid #2a2a2a';
     tr.innerHTML = `
         <td style="padding:6px 4px;vertical-align:middle;">
             <select class="cloud-input snow-user" data-index="${i}" style="font-size:13px;padding:6px 8px;">
-                ${buildSellerOptions(row.user)}
+                ${buildSellerOptions(userId)}
             </select>
         </td>
         <td style="padding:6px 4px;vertical-align:middle;">
@@ -778,6 +827,7 @@ function rerenderSnowTable() {
     temp.forEach((row, i) => { snowRows.push(row); appendSnowRow(i); });
 }
 
+// 重新整理所有雪花使用者下拉選單（保留目前選取的 id）
 function refreshSnowUserOptions() {
     document.querySelectorAll('.snow-user').forEach(sel => { const cur = sel.value; sel.innerHTML = buildSellerOptions(cur); });
 }
@@ -810,11 +860,11 @@ function clearDrops() {
 // ==========================================================================
 function validateBeforeSettle() {
     for (let i = 0; i < dropRows.length; i++) {
-        if (!dropRows[i].item)   { alert(`第 ${i+1} 筆掉落物尚未選擇名稱！`);       return false; }
-        if (!dropRows[i].seller) { alert(`第 ${i+1} 筆掉落物尚未選擇賣家/自用者！`); return false; }
+        if (!dropRows[i].item)            { alert(`第 ${i+1} 筆掉落物尚未選擇名稱！`);       return false; }
+        if (!dropRows[i].seller?.id)      { alert(`第 ${i+1} 筆掉落物尚未選擇賣家/自用者！`); return false; }
     }
     for (let i = 0; i < snowRows.length; i++) {
-        if (!snowRows[i].user) { alert(`第 ${i+1} 筆雪花紀錄尚未選擇使用者！`); return false; }
+        if (!snowRows[i].user?.id) { alert(`第 ${i+1} 筆雪花紀錄尚未選擇使用者！`); return false; }
     }
     if (getActiveMembers().length === 0)                { alert("請先在隊員表格勾選參加的隊員！"); return false; }
     if (dropRows.length === 0 && snowRows.length === 0) { alert("請先登記掉落物或雪花！");         return false; }
@@ -829,37 +879,39 @@ function executeSettlement() {
     const active = getActiveMembers();
     const prices = getPrices();
 
-    // 每人實際收入（賣出 + 自用都算）
+    // 每人實際收入（以 id 為 key）
     const actualIncome = {};
-    active.forEach(m => { actualIncome[m.name] = 0; });
+    active.forEach(m => { actualIncome[m.id] = 0; });
     dropRows.forEach(row => {
-        if (row.seller && actualIncome.hasOwnProperty(row.seller)) actualIncome[row.seller] += row.net;
+        const sid = row.seller?.id;
+        if (sid && actualIncome.hasOwnProperty(sid)) actualIncome[sid] += row.net;
     });
 
     // 總池
     let totalPool = 0;
     dropRows.forEach(row => { totalPool += row.net; });
 
-    // 雪花從總池扣，記錄每人雪花成本
+    // 雪花從總池扣，記錄每人雪花成本（以 id 為 key）
     const snowCostPerMember = {};
-    active.forEach(m => { snowCostPerMember[m.name] = 0; });
+    active.forEach(m => { snowCostPerMember[m.id] = 0; });
     let totalSnowCost = 0;
     snowRows.forEach(row => {
         totalPool -= row.cost; totalSnowCost += row.cost;
-        if (row.user && snowCostPerMember.hasOwnProperty(row.user)) snowCostPerMember[row.user] += row.cost;
+        const uid = row.user?.id;
+        if (uid && snowCostPerMember.hasOwnProperty(uid)) snowCostPerMember[uid] += row.cost;
     });
 
-    // 每人應得 = 依比例分總池 + 加回自己雪花成本
+    // 每人應得 = 依比例分總池 + 加回自己雪花成本（以 id 為 key）
     const totalRatio = active.reduce((s, m) => s + (m.ratio || 1), 0);
     const shouldGet  = {};
     active.forEach(m => {
         const base = Math.round((totalPool * (m.ratio || 1) / totalRatio) * 10) / 10;
-        shouldGet[m.name] = Math.round((base + (snowCostPerMember[m.name] || 0)) * 10) / 10;
+        shouldGet[m.id] = Math.round((base + (snowCostPerMember[m.id] || 0)) * 10) / 10;
     });
 
-    // 差額（正=多拿要付出，負=少拿要收回）
+    // 差額（正=多拿要付出，負=少拿要收回）（以 id 為 key）
     const diff = {};
-    active.forEach(m => { diff[m.name] = Math.round((actualIncome[m.name] - shouldGet[m.name]) * 10) / 10; });
+    active.forEach(m => { diff[m.id] = Math.round((actualIncome[m.id] - shouldGet[m.id]) * 10) / 10; });
 
     const payments = calcPayments(diff, active, prices);
     const result   = { totalPool, totalSnowCost, shouldGet, actualIncome, diff, payments };
@@ -869,14 +921,16 @@ function executeSettlement() {
 }
 
 function calcPayments(diff, active, prices) {
-    let payers    = active.filter(m => diff[m.name] >  0.01).map(m => ({ name: m.name, amount:  diff[m.name] }));
-    let receivers = active.filter(m => diff[m.name] < -0.01).map(m => ({ name: m.name, amount: -diff[m.name] }));
+    // diff 的 key 為 id；payers/receivers 記錄 { id, name, amount }
+    let payers    = active.filter(m => diff[m.id] >  0.01).map(m => ({ id: m.id, name: m.name, amount:  diff[m.id] }));
+    let receivers = active.filter(m => diff[m.id] < -0.01).map(m => ({ id: m.id, name: m.name, amount: -diff[m.id] }));
     const payments = [];
     let pi = 0, ri = 0;
     while (pi < payers.length && ri < receivers.length) {
         const p = payers[pi], r = receivers[ri];
         const amount = Math.round(Math.min(p.amount, r.amount) * 10) / 10;
-        payments.push({ from: p.name, to: r.name, amount, ...suggestBlocks(amount, prices) });
+        // 付款指示存名稱（顯示用），同時存 id（供未來查詢用）
+        payments.push({ fromId: p.id, from: p.name, toId: r.id, to: r.name, amount, ...suggestBlocks(amount, prices) });
         p.amount = Math.round((p.amount - amount) * 10) / 10;
         r.amount = Math.round((r.amount - amount) * 10) / 10;
         if (p.amount < 0.01) pi++;
@@ -902,39 +956,52 @@ function renderSettlementResult(result, active, dropsSnapshot, snowsSnapshot) {
     const displaySnows = snowsSnapshot || snowRows;
     document.getElementById('settlement-detail').style.display = 'block';
 
+    // 掉落物顯示：seller 取 id 查最新名稱，查不到就顯示存的舊 name（相容舊資料）
     let dropsHtml = '<div class="detail-section-title">📦 掉落物收入</div>';
     if (displayDrops.length === 0) {
         dropsHtml += '<div class="detail-row" style="color:#666;">（無）</div>';
     } else {
         displayDrops.forEach(d => {
-            const label = d.type === 'sell' ? `${d.item}（${d.seller}）` : `${d.item}（${d.seller} 自用）`;
+            const sellerName = d.seller?.id
+                ? getMemberNameById(d.seller.id, d.seller.name)
+                : (d.seller?.name || d.seller || '');
+            const label = d.type === 'sell'
+                ? `${d.item}（${sellerName}）`
+                : `${d.item}（${sellerName} 自用）`;
             const color = d.type === 'sell' ? '#64b5f6' : '#b39ddb';
             dropsHtml += `<div class="detail-row"><span>${label}</span><span style="color:${color};">${d.net.toFixed(1)}萬</span></div>`;
         });
     }
     document.getElementById('detail-drops').innerHTML = dropsHtml;
 
+    // 雪花顯示：user 取 id 查最新名稱，查不到就顯示存的舊 name
     let snowHtml = '<div class="detail-section-title">❄️ 雪花消耗</div>';
     if (displaySnows.length === 0) {
         snowHtml += '<div class="detail-row" style="color:#666;">（無）</div>';
     } else {
-        displaySnows.forEach(s => { snowHtml += `<div class="detail-row"><span>${s.user} × ${s.count}個</span><span style="color:#ff6b6b;">-${s.cost.toFixed(1)}萬</span></div>`; });
+        displaySnows.forEach(s => {
+            const userName = s.user?.id
+                ? getMemberNameById(s.user.id, s.user.name)
+                : (s.user?.name || s.user || '');
+            snowHtml += `<div class="detail-row"><span>${userName} × ${s.count}個</span><span style="color:#ff6b6b;">-${s.cost.toFixed(1)}萬</span></div>`;
+        });
     }
     document.getElementById('detail-snow').innerHTML = snowHtml;
     document.getElementById('detail-total').innerText = totalPool.toFixed(1) + '萬';
 
+    // 每人分紅明細：以 id 為 key 查金額，顯示名稱
     const tbody = document.getElementById('settlement-member-body');
     tbody.innerHTML = '';
     active.forEach(m => {
-        const d = diff[m.name];
+        const d = diff[m.id] ?? 0;
         const color = d >= 0 ? '#ff9f43' : '#64b5f6';
         const sign  = d >= 0 ? '+' : '';
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid #2a2a2a';
         tr.innerHTML = `
             <td style="padding:6px 4px;">${m.name}</td>
-            <td style="padding:6px 4px;text-align:right;color:#ccc;">${(actualIncome[m.name]||0).toFixed(1)}萬</td>
-            <td style="padding:6px 4px;text-align:right;color:#ccc;">${(shouldGet[m.name]||0).toFixed(1)}萬</td>
+            <td style="padding:6px 4px;text-align:right;color:#ccc;">${(actualIncome[m.id]||0).toFixed(1)}萬</td>
+            <td style="padding:6px 4px;text-align:right;color:#ccc;">${(shouldGet[m.id]||0).toFixed(1)}萬</td>
             <td style="padding:6px 4px;text-align:right;color:${color};font-weight:bold;">${sign}${d.toFixed(1)}萬</td>
         `;
         tbody.appendChild(tr);
@@ -973,8 +1040,10 @@ function saveSettlementRecord() {
         date:    document.getElementById('settlement-date')?.value || new Date().toISOString().split('T')[0],
         boss:    document.getElementById('boss-select')?.value || '未知',
         result:  lastSettlementResult,
+        // drops/snows 的 seller/user 已是 { id, name } 格式，直接存
         drops:   JSON.parse(JSON.stringify(dropRows)),
         snows:   JSON.parse(JSON.stringify(snowRows)),
+        // members 存 { id, name, ratio }，歷史顯示時用 id 查最新名稱
         members: JSON.parse(JSON.stringify(getActiveMembers()))
     };
 
@@ -1048,12 +1117,14 @@ function loadHistoryRecord() {
     currentHistoryIndex = parseInt(idx);
 
     // 1. 先還原隊員勾選（buildSellerOptions 需要用到）
+    //    用 id 比對，id 不存在時以名稱 fallback（舊格式相容）
     if (record.members) {
+        const checkedIds   = record.members.map(m => m.id).filter(Boolean);
         const checkedNames = record.members.map(m => m.name);
         members = members.map(m => ({
             ...m,
-            checked: checkedNames.includes(m.name),
-            ratio:   record.members.find(rm => rm.name === m.name)?.ratio ?? m.ratio
+            checked: checkedIds.includes(m.id) || (!m.id && checkedNames.includes(m.name)),
+            ratio:   record.members.find(rm => rm.id === m.id || rm.name === m.name)?.ratio ?? m.ratio
         }));
         renderMembers();
     }
@@ -1077,6 +1148,8 @@ function loadHistoryRecord() {
     rerenderSnowTable();
 
     // 6. 渲染結算結果
+    //    result 裡 shouldGet/actualIncome/diff 的 key 為 id；
+    //    renderSettlementResult 會用 active（從 members 取）來顯示名稱
     lastSettlementResult = record.result;
     renderSettlementResult(record.result, record.members || getActiveMembers(), record.drops, record.snows);
     document.getElementById('btn-save-record').disabled   = false;
@@ -1148,28 +1221,31 @@ async function addAdminKeycode() {
     showToast(`✅ 已新增管理員「${kc}」`);
 }
 
-// 分頁2：隊員名單
+// 分頁2：隊員名單（顯示 name，刪除以 id 為準）
 function renderModalMemberList() {
     const el = document.getElementById('modal-member-list');
     if (!el) return;
-    const names = members.map(m => m.name).filter(n => n.trim() !== '');
-    if (names.length === 0) { el.innerHTML = '<div style="color:#666;font-size:13px;">尚無隊員</div>'; return; }
-    el.innerHTML = names.map((name, i) => `
+    const validMembers = members.filter(m => m.name.trim() !== '');
+    if (validMembers.length === 0) { el.innerHTML = '<div style="color:#666;font-size:13px;">尚無隊員</div>'; return; }
+    el.innerHTML = validMembers.map((m, i) => `
         <div class="modal-list-item">
-            <span>${name}</span>
-            <button class="del-btn modal-del-member" data-index="${i}" style="margin:0;">✕</button>
+            <span>${m.name}</span>
+            <span style="font-size:11px;color:#555;margin-right:auto;padding-left:6px;">${m.id}</span>
+            <button class="del-btn modal-del-member" data-id="${m.id}" style="margin:0;">✕</button>
         </div>
     `).join('');
     el.querySelectorAll('.modal-del-member').forEach(btn => {
         btn.addEventListener('click', async () => {
-            const idx  = parseInt(btn.dataset.index);
-            const name = names[idx];
-            if (!confirm(`確定要刪除隊員「${name}」嗎？`)) return;
-            members = members.filter(m => m.name !== name);
+            const targetId = btn.dataset.id;
+            const target   = members.find(m => m.id === targetId);
+            if (!target) return;
+            if (!confirm(`確定要刪除隊員「${target.name}」嗎？`)) return;
+            // 以 id 刪除，避免同名隊員誤刪
+            members = members.filter(m => m.id !== targetId);
             renderMembers();
             await saveSharedLists();
             renderModalMemberList();
-            showToast(`🗑 已刪除隊員「${name}」`);
+            showToast(`🗑 已刪除隊員「${target.name}」`);
         });
     });
 }
