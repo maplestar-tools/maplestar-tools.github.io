@@ -1337,6 +1337,7 @@ function showSelectionOverlay() {
     const settings = vTrack.getSettings();
     const vidW     = settings.width;
     const vidH     = settings.height;
+    console.log('vidW:', vidW, 'vidH:', vidH);
 
     // 全螢幕容器
     const overlay = document.createElement('div');
