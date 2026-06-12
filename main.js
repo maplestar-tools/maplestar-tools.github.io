@@ -126,6 +126,8 @@ function bindEvents() {
     initMapleCheckboxes();
 
     // 經驗計算
+    document.getElementById('btn-toggle-rest').addEventListener('click', (e) => toggleSection(e.currentTarget, 'rest-section'));
+    document.getElementById('btnCalcRest').addEventListener('click', calculateRestExp);
     document.getElementById('btn-toggle-exp').addEventListener('click',  (e) => toggleSection(e.currentTarget, 'exp-section'));
     document.getElementById('btn-capture-select').addEventListener('click', startCaptureSelect);
     document.getElementById('btn-start-timer').addEventListener('click', startExpTimer);
@@ -1723,4 +1725,20 @@ function calculateExpResult() {
         document.getElementById('rest-remain-time').innerText = '—';
         document.getElementById('rest-max-exp').innerText     = '—';
     }
+}
+// --- 休息經驗計算 ---
+function calculateRestExp() {
+    const current = parseFloat(document.getElementById('restCurrent').value) || 0;
+    const after   = parseFloat(document.getElementById('restAfter').value)   || 0;
+    if (after <= current) { alert('獲得後的數值必須大於當前數值！'); return; }
+
+    const perMinute   = after - current;                        // 每分鐘休息經驗
+    const accumulated = current / perMinute;                    // 已累積分鐘數
+    const maxExp      = Math.round(perMinute * 60 * 24);       // 24小時上限
+
+    const hours   = Math.floor(accumulated / 60);
+    const minutes = Math.floor(accumulated % 60);
+
+    document.getElementById('restAccumTime').innerText = `${hours}小時${minutes}分`;
+    document.getElementById('restMaxExp').innerText    = maxExp.toLocaleString();
 }
