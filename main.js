@@ -1705,27 +1705,19 @@ function calculateExpResult() {
     document.getElementById('exp-per10').innerText  = per10.toLocaleString();
     document.getElementById('exp-per30').innerText  = per30.toLocaleString();
 
-    // 選1分時額外計算休息經驗結果，否則維持 —
+    // 選1分時額外計算桑拿經驗（8/16/20小時），否則維持 —
     if (selectedMinutes === 1) {
-        const perMinute   = totalExp;                              // 1分鐘的經驗差就是每分鐘恢復量
-        const accumulated = startVal / perMinute;                  // 已累積分鐘數
-        const maxExp      = Math.round(perMinute * 60 * 24);      // 24小時上限
-        const remainMin   = Math.max(0, 60 * 24 - accumulated);   // 距離上限分鐘數
-
-        const accumHours   = Math.floor(accumulated / 60);
-        const accumMinutes = Math.floor(accumulated % 60);
-        const remainHours  = Math.floor(remainMin / 60);
-        const remainMins   = Math.floor(remainMin % 60);
-
-        document.getElementById('rest-accum-time').innerText  = `${accumHours}小時${accumMinutes}分`;
-        document.getElementById('rest-remain-time').innerText = `${remainHours}小時${remainMins}分`;
-        document.getElementById('rest-max-exp').innerText     = maxExp.toLocaleString();
+        const perMinute = totalExp;                             // 計時1分鐘，差值即為每分鐘獲得經驗
+        document.getElementById('exp-per8h').innerText  = Math.round(perMinute * 60 * 8).toLocaleString();
+        document.getElementById('exp-per16h').innerText = Math.round(perMinute * 60 * 16).toLocaleString();
+        document.getElementById('exp-per20h').innerText = Math.round(perMinute * 60 * 20).toLocaleString();
     } else {
-        document.getElementById('rest-accum-time').innerText  = '—';
-        document.getElementById('rest-remain-time').innerText = '—';
-        document.getElementById('rest-max-exp').innerText     = '—';
+        document.getElementById('exp-per8h').innerText  = '—';
+        document.getElementById('exp-per16h').innerText = '—';
+        document.getElementById('exp-per20h').innerText = '—';
     }
 }
+
 // --- 休息經驗計算 ---
 function calculateRestExp() {
     const current = parseFloat(document.getElementById('restCurrent').value) || 0;
@@ -1735,10 +1727,14 @@ function calculateRestExp() {
     const perMinute   = after - current;                        // 每分鐘休息經驗
     const accumulated = current / perMinute;                    // 已累積分鐘數
     const maxExp      = Math.round(perMinute * 60 * 24);       // 24小時上限
+    const remainMin   = Math.max(0, 60 * 24 - accumulated);    // 距離上限分鐘數
 
-    const hours   = Math.floor(accumulated / 60);
-    const minutes = Math.floor(accumulated % 60);
+    const accumHours   = Math.floor(accumulated / 60);
+    const accumMinutes = Math.floor(accumulated % 60);
+    const remainHours  = Math.floor(remainMin / 60);
+    const remainMins   = Math.floor(remainMin % 60);
 
-    document.getElementById('restAccumTime').innerText = `${hours}小時${minutes}分`;
-    document.getElementById('restMaxExp').innerText    = maxExp.toLocaleString();
+    document.getElementById('restAccumTime').innerText  = `${accumHours}小時${accumMinutes}分`;
+    document.getElementById('restRemainTime').innerText = `${remainHours}小時${remainMins}分`;
+    document.getElementById('restMaxExp').innerText     = maxExp.toLocaleString();
 }

@@ -385,7 +385,7 @@
     <!-- ===== 經驗計算 ===== -->
     <div id="exp-calc" class="tab-content">
         <h3>📊 經驗計算</h3>
-        
+
         <!-- 休息經驗計算 -->
         <div class="calc-card settings-card">
             <h4 class="title-orange" id="btn-toggle-rest" style="cursor:pointer;display:flex;justify-content:space-between;margin:0;">
@@ -404,10 +404,14 @@
                         </div>
                     </div>
                     <button id="btnCalcRest" class="calc-btn btn-orange">計算</button>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:4px;">
                         <div class="result-box">
                             <div style="font-size:13px;color:#aaa;margin-bottom:4px;">已累積時間</div>
                             <div id="restAccumTime" style="font-size:20px;font-weight:bold;color:#ff9f43;">—</div>
+                        </div>
+                        <div class="result-box">
+                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">距離上限時間</div>
+                            <div id="restRemainTime" style="font-size:20px;font-weight:bold;color:#ff6b6b;">—</div>
                         </div>
                         <div class="result-box">
                             <div style="font-size:13px;color:#aaa;margin-bottom:4px;">休息經驗上限(24小時)</div>
@@ -436,7 +440,7 @@
 
                     <!-- 計時選擇 -->
                     <div style="font-size:13px;color:#aaa;font-weight:bold;margin-bottom:4px;">計時長度</div>
-                    <div style="font-size:11px;color:#666;margin-bottom:8px;">★ 選1分時可計算休息經驗</div>
+                    <div style="font-size:11px;color:#666;margin-bottom:8px;">★ 選1分時可計算桑拿經驗</div>
                     <div id="timer-options" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:12px;">
                         <button class="timer-opt calc-btn btn-gray" data-minutes="1" style="margin:0;padding:8px 0;font-size:12px;">1分★</button>
                         <button class="timer-opt calc-btn btn-gray" data-minutes="3" style="margin:0;padding:8px 0;font-size:12px;">3分</button>
@@ -445,11 +449,6 @@
                         <button class="timer-opt calc-btn btn-gray" data-minutes="15" style="margin:0;padding:8px 0;font-size:12px;">15分</button>
                         <button class="timer-opt calc-btn btn-gray" data-minutes="30" style="margin:0;padding:8px 0;font-size:12px;">30分</button>
                         <button class="timer-opt calc-btn btn-gray" data-minutes="0" style="margin:0;padding:8px 0;font-size:12px;">無限</button>
-                    </div>
-
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-                        <button id="btn-start-timer" class="calc-btn btn-green" style="margin:0;">▶ 開始（5秒後截圖）</button>
-                        <button id="btn-stop-timer" class="calc-btn btn-red" style="margin:0;" disabled>⏹ 停止並截圖</button>
                     </div>
 
                     <!-- 計時顯示 -->
@@ -499,19 +498,19 @@
                         </div>
                     </div>
 
-                    <!-- 休息經驗結果（選1分時計算，其他時間顯示 —） -->
+                    <!-- 桑拿經驗結果（選1分時計算，其他時間顯示 —） -->
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px;">
                         <div class="result-box">
-                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">已累積時間(休息經驗)</div>
-                            <div id="rest-accum-time" style="font-size:20px;font-weight:bold;color:#ff9f43;">—</div>
+                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">8小時獲得經驗</div>
+                            <div id="exp-per8h" style="font-size:20px;font-weight:bold;color:#ff9f43;">—</div>
                         </div>
                         <div class="result-box">
-                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">距離上限時間(休息經驗)</div>
-                            <div id="rest-remain-time" style="font-size:20px;font-weight:bold;color:#ff6b6b;">—</div>
+                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">16小時獲得經驗</div>
+                            <div id="exp-per16h" style="font-size:20px;font-weight:bold;color:#64b5f6;">—</div>
                         </div>
                         <div class="result-box">
-                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">24小時上限(休息經驗)</div>
-                            <div id="rest-max-exp" style="font-size:20px;font-weight:bold;color:#64b5f6;">—</div>
+                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">20小時獲得經驗</div>
+                            <div id="exp-per20h" style="font-size:20px;font-weight:bold;color:#4dae4c;">—</div>
                         </div>
                     </div>
 
