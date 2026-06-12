@@ -17,6 +17,19 @@ const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
 // ==========================================================================
+// 🔐 管理員權限
+// ==========================================================================
+let adminKeycodes = [];
+let isAdmin = false;
+
+function checkIsAdmin() {
+    const kc = document.getElementById('userKeyCode')?.value.trim();
+    isAdmin = adminKeycodes.includes(kc);
+    const btn = document.getElementById('btn-admin-panel');
+    if (btn) btn.style.display = isAdmin ? 'inline-flex' : 'none';
+}
+
+// ==========================================================================
 // 🌐 全域狀態
 // ==========================================================================
 let saveTimer            = null;
@@ -164,15 +177,19 @@ function bindEvents() {
         }
     });
 
-    // Modal
-    const openBtn  = document.getElementById('btn-open-list-manager');
-    const closeBtn = document.getElementById('btn-close-list-manager');
-    if (openBtn)  openBtn.addEventListener('click',  openListManager);
-    if (closeBtn) closeBtn.addEventListener('click', closeListManager);
-    document.getElementById('modal-list-manager')?.addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) closeListManager();
+    // 🔐 管理員設定 Modal
+    document.getElementById('btn-admin-panel')?.addEventListener('click', openAdminPanel);
+    document.getElementById('btn-close-admin-panel')?.addEventListener('click', closeAdminPanel);
+    document.getElementById('modal-admin-panel')?.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeAdminPanel();
     });
+    document.getElementById('btn-add-admin')?.addEventListener('click', addAdminKeycode);
     document.getElementById('modal-boss-filter')?.addEventListener('change', renderModalItemList);
+
+    // 管理員分頁切換
+    document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => switchAdminTab(btn.dataset.tab));
+    });
 }
 
 // ==========================================================================
@@ -286,6 +303,7 @@ async function loadFromCloud(silent = false) {
             document.getElementById('display-keycode').innerText = kc;
             renderBossSelect();
             renderAllDropItemSelects();
+            checkIsAdmin();
             if (!silent) alert("✅ 已建立新帳號！");
             else showAutoLoadStatus('✅ 已建立新帳號');
             return;
@@ -423,6 +441,7 @@ async function loadSharedData() {
             const names  = d.memberNames || d.members?.map(m => m.name) || [];
             bossList     = d.bossList    || [];
             bossItemMap  = d.bossItemMap || {};
+            adminKeycodes = d.adminKeycodes || [];
             // 還原本地個人設定
             const localData = localStorage.getItem('maple_tool_data');
             const memberSettings = localData ? (JSON.parse(localData).memberSettings || {}) : {};
@@ -588,7 +607,7 @@ async function saveSharedLists() {
     const kc = document.getElementById('userKeyCode')?.value.trim();
     if (!kc) return;
     const memberNames = members.map(m => m.name).filter(n => n.trim() !== '');
-    try { await setDoc(doc(db, "shared_data", "team_data"), { memberNames, bossList, bossItemMap }, { merge: false }); }
+    try { await setDoc(doc(db, "shared_data", "team_data"), { memberNames, bossList, bossItemMap, adminKeycodes }, { merge: false }); }
     catch (e) { console.error("名單儲存失敗：", e); }
 }
 
@@ -1057,19 +1076,93 @@ function loadHistoryRecord() {
 }
 
 // ==========================================================================
-// 🪟 管理王／物品清單 Modal
+// 🔐 管理員設定 Modal
 // ==========================================================================
-function openListManager() {
-    const kc = document.getElementById('userKeyCode')?.value.trim();
-    if (!kc) { alert("🔒 請先輸入代碼才能管理清單！"); return; }
+function openAdminPanel() {
+    renderModalAdminList();
+    renderModalMemberList();
     renderModalBossList();
     renderModalBossFilter();
     renderModalItemList();
-    document.getElementById('modal-list-manager').classList.add('active');
+    switchAdminTab('admin');
+    document.getElementById('modal-admin-panel').classList.add('active');
 }
 
-function closeListManager() {
-    document.getElementById('modal-list-manager').classList.remove('active');
+function closeAdminPanel() {
+    document.getElementById('modal-admin-panel').classList.remove('active');
+}
+
+function switchAdminTab(tab) {
+    document.querySelectorAll('.admin-tab-content').forEach(el => el.style.display = 'none');
+    document.getElementById(`admin-tab-${tab}`).style.display = 'block';
+    document.querySelectorAll('.admin-tab-btn').forEach(btn => {
+        btn.classList.remove('btn-blue');
+        btn.classList.add('btn-gray');
+    });
+    document.querySelector(`.admin-tab-btn[data-tab="${tab}"]`).classList.remove('btn-gray');
+    document.querySelector(`.admin-tab-btn[data-tab="${tab}"]`).classList.add('btn-blue');
+}
+
+// 分頁1：管理員名單
+function renderModalAdminList() {
+    const el = document.getElementById('modal-admin-list');
+    if (!el) return;
+    if (adminKeycodes.length === 0) { el.innerHTML = '<div style="color:#666;font-size:13px;">尚無管理員</div>'; return; }
+    el.innerHTML = adminKeycodes.map((kc, i) => `
+        <div class="modal-list-item">
+            <span>${kc}</span>
+            <button class="del-btn modal-del-admin" data-index="${i}" style="margin:0;">✕</button>
+        </div>
+    `).join('');
+    el.querySelectorAll('.modal-del-admin').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const idx = parseInt(btn.dataset.index);
+            const kc  = adminKeycodes[idx];
+            if (!confirm(`確定要移除管理員「${kc}」嗎？`)) return;
+            adminKeycodes.splice(idx, 1);
+            await saveSharedLists();
+            renderModalAdminList();
+            showToast(`🗑 已移除管理員「${kc}」`);
+        });
+    });
+}
+
+async function addAdminKeycode() {
+    const input = document.getElementById('new-admin-keycode');
+    const kc    = input?.value.trim();
+    if (!kc) { alert('請輸入 keycode！'); return; }
+    if (adminKeycodes.includes(kc)) { alert('此 keycode 已是管理員！'); return; }
+    adminKeycodes.push(kc);
+    await saveSharedLists();
+    input.value = '';
+    renderModalAdminList();
+    showToast(`✅ 已新增管理員「${kc}」`);
+}
+
+// 分頁2：隊員名單
+function renderModalMemberList() {
+    const el = document.getElementById('modal-member-list');
+    if (!el) return;
+    const names = members.map(m => m.name).filter(n => n.trim() !== '');
+    if (names.length === 0) { el.innerHTML = '<div style="color:#666;font-size:13px;">尚無隊員</div>'; return; }
+    el.innerHTML = names.map((name, i) => `
+        <div class="modal-list-item">
+            <span>${name}</span>
+            <button class="del-btn modal-del-member" data-index="${i}" style="margin:0;">✕</button>
+        </div>
+    `).join('');
+    el.querySelectorAll('.modal-del-member').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const idx  = parseInt(btn.dataset.index);
+            const name = names[idx];
+            if (!confirm(`確定要刪除隊員「${name}」嗎？`)) return;
+            members = members.filter(m => m.name !== name);
+            renderMembers();
+            await saveSharedLists();
+            renderModalMemberList();
+            showToast(`🗑 已刪除隊員「${name}」`);
+        });
+    });
 }
 
 function renderModalBossList() {

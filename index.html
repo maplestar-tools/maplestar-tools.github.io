@@ -39,7 +39,10 @@
 
     <!-- ===== 團隊分紅 ===== -->
     <div id="money-split" class="tab-content">
-        <h3>💰 團隊分紅計算</h3>
+        <div style="display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:0;">
+            <h3 style="margin:0;">💰 團隊分紅計算</h3>
+            <button id="btn-admin-panel" class="calc-btn btn-red" style="display:none;width:auto;padding:8px 16px;margin:0;">🔐 管理員設定</button>
+        </div>
 
         <!-- 基礎設定（可折疊） -->
         <div class="calc-card settings-card">
@@ -121,7 +124,6 @@
                     <label style="display:block;margin-bottom:6px;font-size:14px;">選擇王</label>
                     <div style="display:flex;gap:10px;align-items:center;">
                         <select id="boss-select" class="cloud-input" style="flex:1;"></select>
-                        <button id="btn-open-list-manager" class="calc-btn btn-orange" style="width:auto;padding:10px 14px;margin:0;white-space:nowrap;flex-shrink:0;">⚙️ 管理清單</button>
                     </div>
                 </div>
 
@@ -541,30 +543,55 @@
     <button id="btn-manual-sync" style="width:100%;background:#4a90e2;border:none;color:white;padding:5px;border-radius:6px;cursor:pointer;font-size:12px;">手動同步</button>
 </div>
 
-<!-- 管理王／物品清單 Modal -->
-<div id="modal-list-manager" class="modal-overlay">
-    <div class="modal-box">
-        <h4>⚙️ 管理王／物品清單</h4>
+<!-- 🔐 管理員設定 Modal -->
+<div id="modal-admin-panel" class="modal-overlay">
+    <div class="modal-box" style="max-width:580px;">
+        <h4>🔐 管理員設定</h4>
 
-        <!-- 王名單 -->
-        <div style="margin-bottom:20px;">
-            <div style="font-size:13px;font-weight:bold;color:#ff9f43;margin-bottom:8px;">👑 王名單</div>
-            <div id="modal-boss-list"></div>
+        <!-- 分頁按鈕 -->
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+            <button class="admin-tab-btn calc-btn btn-blue" data-tab="admin" style="flex:1;margin:0;padding:8px 0;font-size:13px;">🔑 管理員</button>
+            <button class="admin-tab-btn calc-btn btn-gray" data-tab="member" style="flex:1;margin:0;padding:8px 0;font-size:13px;">👥 隊員</button>
+            <button class="admin-tab-btn calc-btn btn-gray" data-tab="boss" style="flex:1;margin:0;padding:8px 0;font-size:13px;">👑 王與掉落物</button>
         </div>
 
-        <!-- 掉落物清單 -->
-        <div>
-            <div style="font-size:13px;font-weight:bold;color:#64b5f6;margin-bottom:8px;">📦 掉落物清單</div>
-            <div style="margin-bottom:10px;">
-                <select id="modal-boss-filter" class="cloud-input" style="font-size:13px;padding:8px;">
-                    <option value="">— 選擇王查看物品 —</option>
-                </select>
+        <!-- 分頁1：管理員名單 -->
+        <div id="admin-tab-admin" class="admin-tab-content">
+            <div style="font-size:13px;color:#aaa;margin-bottom:10px;">管理員 keycode 列表，只有列表內的人才能進入此設定。</div>
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <input type="text" id="new-admin-keycode" class="cloud-input" placeholder="輸入新管理員 keycode" style="flex:1;">
+                <button id="btn-add-admin" class="calc-btn btn-green" style="width:auto;padding:8px 16px;margin:0;white-space:nowrap;">+ 新增</button>
             </div>
-            <div id="modal-item-list"></div>
+            <div id="modal-admin-list"></div>
+        </div>
+
+        <!-- 分頁2：隊員名單 -->
+        <div id="admin-tab-member" class="admin-tab-content" style="display:none;">
+            <div style="font-size:13px;color:#aaa;margin-bottom:10px;">刪除後隊員將從共用名單移除，個人設定不受影響。</div>
+            <div id="modal-member-list"></div>
+        </div>
+
+        <!-- 分頁3：王與掉落物 -->
+        <div id="admin-tab-boss" class="admin-tab-content" style="display:none;">
+            <!-- 王名單 -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:13px;font-weight:bold;color:#ff9f43;margin-bottom:8px;">👑 王名單</div>
+                <div id="modal-boss-list"></div>
+            </div>
+            <!-- 掉落物清單 -->
+            <div>
+                <div style="font-size:13px;font-weight:bold;color:#64b5f6;margin-bottom:8px;">📦 掉落物清單</div>
+                <div style="margin-bottom:10px;">
+                    <select id="modal-boss-filter" class="cloud-input" style="font-size:13px;padding:8px;">
+                        <option value="">— 選擇王查看物品 —</option>
+                    </select>
+                </div>
+                <div id="modal-item-list"></div>
+            </div>
         </div>
 
         <div style="margin-top:20px;">
-            <button id="btn-close-list-manager" class="calc-btn btn-blue">關閉</button>
+            <button id="btn-close-admin-panel" class="calc-btn btn-blue">關閉</button>
         </div>
     </div>
 </div>
