@@ -985,6 +985,7 @@ function saveSettlementRecord() {
         // 新增到最前面，索引為 0
         settlementHistory.unshift(record);
         if (settlementHistory.length > 100) settlementHistory.pop();
+        settlementHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
         currentHistoryIndex = 0;
     }
 
@@ -1178,13 +1179,47 @@ function renderModalBossList() {
     if (!el) return;
     if (bossList.length === 0) { el.innerHTML = '<div style="color:#666;font-size:13px;">尚無王名單</div>'; return; }
     el.innerHTML = bossList.map((boss, i) => `
-        <div class="modal-list-item">
+        <div class="modal-list-item" draggable="true" data-index="${i}" style="cursor:grab;">
+            <span style="color:#aaa;margin-right:8px;">☰</span>
             <span>${boss}</span>
             <button class="del-btn modal-del-boss" data-index="${i}" style="margin:0;">✕</button>
         </div>
     `).join('');
+
+    // 拖曳排序
+    let dragIdx = null;
+    el.querySelectorAll('.modal-list-item').forEach(item => {
+        item.addEventListener('dragstart', () => {
+            dragIdx = parseInt(item.dataset.index);
+            item.style.opacity = '0.5';
+        });
+        item.addEventListener('dragend', () => {
+            item.style.opacity = '1';
+        });
+        item.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            item.style.background = '#333';
+        });
+        item.addEventListener('dragleave', () => {
+            item.style.background = '#252525';
+        });
+        item.addEventListener('drop', async () => {
+            item.style.background = '#252525';
+            const dropIdx = parseInt(item.dataset.index);
+            if (dragIdx === null || dragIdx === dropIdx) return;
+            const moved = bossList.splice(dragIdx, 1)[0];
+            bossList.splice(dropIdx, 0, moved);
+            await saveSharedLists();
+            renderModalBossList();
+            renderBossSelect();
+            showToast('✅ 排序已儲存');
+        });
+    });
+
+    // 刪除
     el.querySelectorAll('.modal-del-boss').forEach(btn => {
-        btn.addEventListener('click', async () => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
             const idx      = parseInt(btn.dataset.index);
             const bossName = bossList[idx];
             if (!confirm(`確定要刪除「${bossName}」及其所有掉落物嗎？`)) return;
