@@ -24,8 +24,13 @@ let isAdmin = false;
 
 function checkIsAdmin() {
     const kc = document.getElementById('userKeyCode')?.value.trim();
+    console.log('checkIsAdmin 執行');
+    console.log('當前 keycode：', kc);
+    console.log('adminKeycodes：', adminKeycodes);
+    console.log('isAdmin：', adminKeycodes.includes(kc));
     isAdmin = adminKeycodes.includes(kc);
     const btn = document.getElementById('btn-admin-panel');
+    console.log('btn-admin-panel 元素：', btn);
     if (btn) btn.style.display = isAdmin ? 'inline-flex' : 'none';
 }
 
