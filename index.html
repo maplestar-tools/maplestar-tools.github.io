@@ -403,9 +403,10 @@
                     </div>
 
                     <!-- 計時選擇 -->
-                    <div style="font-size:13px;color:#aaa;font-weight:bold;margin-bottom:8px;">計時長度</div>
+                    <div style="font-size:13px;color:#aaa;font-weight:bold;margin-bottom:4px;">計時長度</div>
+                    <div style="font-size:11px;color:#666;margin-bottom:8px;">★ 選1分時可計算休息經驗</div>
                     <div id="timer-options" style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:12px;">
-                        <button class="timer-opt calc-btn btn-gray" data-minutes="1" style="margin:0;padding:8px 0;font-size:12px;">1分</button>
+                        <button class="timer-opt calc-btn btn-gray" data-minutes="1" style="margin:0;padding:8px 0;font-size:12px;">1分★</button>
                         <button class="timer-opt calc-btn btn-gray" data-minutes="3" style="margin:0;padding:8px 0;font-size:12px;">3分</button>
                         <button class="timer-opt calc-btn btn-gray" data-minutes="5" style="margin:0;padding:8px 0;font-size:12px;">5分</button>
                         <button class="timer-opt calc-btn btn-blue active-timer" data-minutes="10" style="margin:0;padding:8px 0;font-size:12px;">10分</button>
@@ -469,15 +470,15 @@
                     <!-- 休息經驗結果（選1分時計算，其他時間顯示 —） -->
                     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px;">
                         <div class="result-box">
-                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">已累積時間</div>
+                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">已累積時間(休息經驗)</div>
                             <div id="rest-accum-time" style="font-size:20px;font-weight:bold;color:#ff9f43;">—</div>
                         </div>
                         <div class="result-box">
-                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">距離上限時間</div>
+                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">距離上限時間(休息經驗)</div>
                             <div id="rest-remain-time" style="font-size:20px;font-weight:bold;color:#ff6b6b;">—</div>
                         </div>
                         <div class="result-box">
-                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">24小時上限</div>
+                            <div style="font-size:13px;color:#aaa;margin-bottom:4px;">24小時上限(休息經驗)</div>
                             <div id="rest-max-exp" style="font-size:20px;font-weight:bold;color:#64b5f6;">—</div>
                         </div>
                     </div>
