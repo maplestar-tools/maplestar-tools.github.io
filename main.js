@@ -341,6 +341,7 @@ async function loadFromCloud(silent = false) {
 
         renderBossSelect();
         renderAllDropItemSelects();
+        checkIsAdmin();
 
         if (!silent) alert("📥 設定讀取成功！");
         else showAutoLoadStatus('✅ 自動載入成功');
