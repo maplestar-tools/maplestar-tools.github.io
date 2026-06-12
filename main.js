@@ -1177,6 +1177,7 @@ function closeAdminPanel() {
 
 // 歷史紀錄 migration：將舊格式 seller/user 字串補上 id
 async function migrateHistoryIds() {
+    console.log('migration 開始', settlementHistory.length, members);
     const statusEl = document.getElementById('migrate-status');
     if (settlementHistory.length === 0) { statusEl.innerText = '⚠️ 沒有歷史紀錄'; return; }
 
