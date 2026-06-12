@@ -187,7 +187,6 @@ function bindEvents() {
         if (e.target === e.currentTarget) closeAdminPanel();
     });
     document.getElementById('btn-add-admin')?.addEventListener('click', addAdminKeycode);
-    document.getElementById('btn-migrate-history')?.addEventListener('click', migrateHistoryIds);
     document.getElementById('modal-boss-filter')?.addEventListener('change', renderModalItemList);
 
     // 管理員分頁切換
@@ -1173,50 +1172,6 @@ function openAdminPanel() {
 
 function closeAdminPanel() {
     document.getElementById('modal-admin-panel').classList.remove('active');
-}
-
-// 歷史紀錄 migration：將舊格式 seller/user 字串補上 id
-async function migrateHistoryIds() {
-    console.log('migration 開始', settlementHistory.length, members);
-    const statusEl = document.getElementById('migrate-status');
-    if (settlementHistory.length === 0) { statusEl.innerText = '⚠️ 沒有歷史紀錄'; return; }
-
-    let fixedCount = 0;
-    settlementHistory.forEach(record => {
-        (record.members || []).forEach((m, idx) => {
-            if (!m.id) {
-                const found = members.find(mb => mb.name === m.name);
-                if (found) record.members[idx] = { ...m, id: found.id };
-            }
-        });
-        (record.drops || []).forEach(d => {
-            if (typeof d.seller === 'string' && d.seller !== '') {
-                const found = members.find(m => m.name === d.seller);
-                d.seller = found ? { id: found.id, name: found.name } : { id: '', name: d.seller };
-                fixedCount++;
-            }
-        });
-        (record.snows || []).forEach(s => {
-            if (typeof s.user === 'string' && s.user !== '') {
-                const found = members.find(m => m.name === s.user);
-                s.user = found ? { id: found.id, name: found.name } : { id: '', name: s.user };
-                fixedCount++;
-            }
-        });
-    });
-
-    localStorage.setItem('maple_settlement_history', JSON.stringify(settlementHistory));
-    const kc = document.getElementById('userKeyCode')?.value.trim();
-    if (kc) {
-        try {
-            await setDoc(doc(db, "player_history", kc), { history: settlementHistory }, { merge: false });
-            statusEl.innerText = `✅ 完成，共修復 ${fixedCount} 筆，已同步雲端`;
-        } catch(e) {
-            statusEl.innerText = `⚠️ 本地已修復 ${fixedCount} 筆，但雲端同步失敗`;
-        }
-    } else {
-        statusEl.innerText = `✅ 完成，共修復 ${fixedCount} 筆（未登入，僅存本地）`;
-    }
 }
 
 function switchAdminTab(tab) {
