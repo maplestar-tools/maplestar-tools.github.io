@@ -957,7 +957,7 @@ function saveSettlementRecord() {
     } else {
         // 新增到最前面，索引為 0
         settlementHistory.unshift(record);
-        if (settlementHistory.length > 50) settlementHistory.pop();
+        if (settlementHistory.length > 100) settlementHistory.pop();
         currentHistoryIndex = 0;
     }
 
