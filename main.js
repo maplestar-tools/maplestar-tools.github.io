@@ -1348,7 +1348,8 @@ function showSelectionOverlay() {
     titleBar.style.cssText = 'background:rgba(0,0,0,0.85);padding:10px 16px;font-size:13px;color:#aaa;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;';
     titleBar.innerHTML = `
         <span>🖱 拖曳框選經驗值區域，放開滑鼠完成選取</span>
-        <div style="display:flex;gap:8px;">
+        <div style="display:flex;gap:8px;align-items:center;">
+            <input type="range" id="zoom-slider" min="50" max="200" value="100" style="width:80px;cursor:pointer;">
             <button id="btn-change-window" style="background:#1e88e5;border:none;color:white;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">🔄 更換視窗</button>
             <button id="btn-cancel-select" style="background:#e55353;border:none;color:white;padding:6px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:bold;">✕ 取消</button>
         </div>
@@ -1373,100 +1374,112 @@ function showSelectionOverlay() {
     overlay.appendChild(videoWrap);
     document.body.appendChild(overlay);
 
-    // 取消按鈕
-    document.getElementById('btn-cancel-select').addEventListener('click', () => {
-        document.body.removeChild(overlay);
-    });
+    // 等瀏覽器完成 reflow 再綁定所有事件，避免第一次框選座標偏移
+    requestAnimationFrame(() => {
 
-    // 更換視窗按鈕
-    document.getElementById('btn-change-window').addEventListener('click', async () => {
-        document.body.removeChild(overlay);
-        try {
-            // 停止舊的 stream
-            if (captureStream) captureStream.getTracks().forEach(t => t.stop());
-            captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
-            captureStream.getTracks()[0].addEventListener('ended', () => {
-                captureStream = null;
-                document.getElementById('btn-capture-select').innerText = captureRegion ? '授權並截圖' : '授權並框選';
-                document.getElementById('capture-preview').innerText = '授權已結束';
-            });
-            showSelectionOverlay();
-        } catch(e) {
-            alert('授權失敗或已取消：' + e.message);
-        }
-    });
+        // 縮放滑桿
+        document.getElementById('zoom-slider').addEventListener('input', (e) => {
+            const scale = e.target.value / 100;
+            video.style.transform = `scale(${scale})`;
+            video.style.transformOrigin = 'center center';
+        });
 
-    // 框選邏輯
-    let startX, startY, isDragging = false;
+        // 取消按鈕
+        document.getElementById('btn-cancel-select').addEventListener('click', () => {
+            document.body.removeChild(overlay);
+        });
 
-    videoWrap.addEventListener('mousedown', (e) => {
-        isDragging = true;
-        const rect = videoWrap.getBoundingClientRect();
-        startX = e.clientX - rect.left;
-        startY = e.clientY - rect.top;
-        selBox.style.cssText = `position:absolute;border:2px solid #4dae4c;background:rgba(77,174,76,0.15);pointer-events:none;display:block;left:${startX}px;top:${startY}px;width:0;height:0;`;
-        e.preventDefault();
-    });
+        // 更換視窗按鈕
+        document.getElementById('btn-change-window').addEventListener('click', async () => {
+            document.body.removeChild(overlay);
+            try {
+                // 停止舊的 stream
+                if (captureStream) captureStream.getTracks().forEach(t => t.stop());
+                captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                captureStream.getTracks()[0].addEventListener('ended', () => {
+                    captureStream = null;
+                    document.getElementById('btn-capture-select').innerText = captureRegion ? '授權並截圖' : '授權並框選';
+                    document.getElementById('capture-preview').innerText = '授權已結束';
+                });
+                showSelectionOverlay();
+            } catch(e) {
+                alert('授權失敗或已取消：' + e.message);
+            }
+        });
 
-    videoWrap.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        const rect = videoWrap.getBoundingClientRect();
-        const cx = e.clientX - rect.left;
-        const cy = e.clientY - rect.top;
-        const w  = cx - startX, h = cy - startY;
-        selBox.style.left   = (w < 0 ? cx : startX) + 'px';
-        selBox.style.top    = (h < 0 ? cy : startY) + 'px';
-        selBox.style.width  = Math.abs(w) + 'px';
-        selBox.style.height = Math.abs(h) + 'px';
-    });
+        // 框選邏輯
+        let startX, startY, isDragging = false;
 
-    videoWrap.addEventListener('mouseup', (e) => {
-        if (!isDragging) return;
-        isDragging = false;
+        videoWrap.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            const rect = videoWrap.getBoundingClientRect();
+            startX = e.clientX - rect.left;
+            startY = e.clientY - rect.top;
+            selBox.style.cssText = `position:absolute;border:2px solid #4dae4c;background:rgba(77,174,76,0.15);pointer-events:none;display:block;left:${startX}px;top:${startY}px;width:0;height:0;`;
+            e.preventDefault();
+        });
 
-        const wrapRect = videoWrap.getBoundingClientRect();
-        const selRect  = selBox.getBoundingClientRect();
-        if (selRect.width < 10 || selRect.height < 10) return;
+        videoWrap.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            const rect = videoWrap.getBoundingClientRect();
+            const cx = e.clientX - rect.left;
+            const cy = e.clientY - rect.top;
+            const w  = cx - startX, h = cy - startY;
+            selBox.style.left   = (w < 0 ? cx : startX) + 'px';
+            selBox.style.top    = (h < 0 ? cy : startY) + 'px';
+            selBox.style.width  = Math.abs(w) + 'px';
+            selBox.style.height = Math.abs(h) + 'px';
+        });
 
-        // 計算影片在 videoWrap 裡的實際顯示區域（考慮 object-fit:contain 的黑邊）
-        const wrapW      = wrapRect.width;
-        const wrapH      = wrapRect.height;
-        const vidAspect  = vidW / vidH;
-        const wrapAspect = wrapW / wrapH;
+        videoWrap.addEventListener('mouseup', (e) => {
+            if (!isDragging) return;
+            isDragging = false;
 
-        let dispW, dispH, offX, offY;
-        if (vidAspect > wrapAspect) {
-            dispW = wrapW;
-            dispH = wrapW / vidAspect;
-            offX  = 0;
-            offY  = (wrapH - dispH) / 2;
-        } else {
-            dispH = wrapH;
-            dispW = wrapH * vidAspect;
-            offX  = (wrapW - dispW) / 2;
-            offY  = 0;
-        }
+            const wrapRect = videoWrap.getBoundingClientRect();
+            const selRect  = selBox.getBoundingClientRect();
+            if (selRect.width < 10 || selRect.height < 10) return;
 
-        const relX   = selRect.left - wrapRect.left;
-        const relY   = selRect.top  - wrapRect.top;
-        const scaleX = vidW / dispW;
-        const scaleY = vidH / dispH;
+            // 計算影片在 videoWrap 裡的實際顯示區域（考慮 object-fit:contain 的黑邊）
+            const wrapW      = wrapRect.width;
+            const wrapH      = wrapRect.height;
+            const vidAspect  = vidW / vidH;
+            const wrapAspect = wrapW / wrapH;
 
-        captureRegion = {
-            x: Math.max(0, Math.round((relX - offX) * scaleX)),
-            y: Math.max(0, Math.round((relY - offY) * scaleY)),
-            w: Math.round(selRect.width  * scaleX),
-            h: Math.round(selRect.height * scaleY),
-        };
-        captureRegion.w = Math.min(captureRegion.w, vidW - captureRegion.x);
-        captureRegion.h = Math.min(captureRegion.h, vidH - captureRegion.y);
+            let dispW, dispH, offX, offY;
+            if (vidAspect > wrapAspect) {
+                dispW = wrapW;
+                dispH = wrapW / vidAspect;
+                offX  = 0;
+                offY  = (wrapH - dispH) / 2;
+            } else {
+                dispH = wrapH;
+                dispW = wrapH * vidAspect;
+                offX  = (wrapW - dispW) / 2;
+                offY  = 0;
+            }
 
-        localStorage.setItem('maple_capture_region', JSON.stringify(captureRegion));
-        document.body.removeChild(overlay);
-        updateCaptureCoords();
-        takePreviewShot();
-        document.getElementById('btn-capture-select').innerText = '重新框選';
-    });
+            const relX   = selRect.left - wrapRect.left;
+            const relY   = selRect.top  - wrapRect.top;
+            const scaleX = vidW / dispW;
+            const scaleY = vidH / dispH;
+
+            captureRegion = {
+                x: Math.max(0, Math.round((relX - offX) * scaleX)),
+                y: Math.max(0, Math.round((relY - offY) * scaleY)),
+                w: Math.round(selRect.width  * scaleX),
+                h: Math.round(selRect.height * scaleY),
+            };
+            captureRegion.w = Math.min(captureRegion.w, vidW - captureRegion.x);
+            captureRegion.h = Math.min(captureRegion.h, vidH - captureRegion.y);
+
+            localStorage.setItem('maple_capture_region', JSON.stringify(captureRegion));
+            document.body.removeChild(overlay);
+            updateCaptureCoords();
+            takePreviewShot();
+            document.getElementById('btn-capture-select').innerText = '重新框選';
+        });
+
+    }); // requestAnimationFrame 結束
 }
 
 function updateCaptureCoords() {
@@ -1528,9 +1541,21 @@ async function parseScreenshots() {
     }
 }
 
+// 截圖高度不足時等比放大，確保 OCR 辨識率
+function resizeCanvas(src, targetHeight) {
+    const scale = targetHeight / src.height;
+    const dst = document.createElement('canvas');
+    dst.width  = Math.round(src.width * scale);
+    dst.height = targetHeight;
+    dst.getContext('2d').drawImage(src, 0, 0, dst.width, dst.height);
+    return dst;
+}
+
 async function ocrCanvas(canvas) {
     try {
-        const base64 = canvas.toDataURL('image/png').split(',')[1];
+        // 高度不足 60px 才放大，避免多餘處理
+        const resized = canvas.height < 60 ? resizeCanvas(canvas, 60) : canvas;
+        const base64 = resized.toDataURL('image/png').split(',')[1];
         const res = await fetch('https://paddle-ocr.jack19950130.workers.dev', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
