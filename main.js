@@ -1183,6 +1183,12 @@ async function migrateHistoryIds() {
 
     let fixedCount = 0;
     settlementHistory.forEach(record => {
+        (record.members || []).forEach((m, idx) => {
+            if (!m.id) {
+                const found = members.find(mb => mb.name === m.name);
+                if (found) record.members[idx] = { ...m, id: found.id };
+            }
+        });
         (record.drops || []).forEach(d => {
             if (typeof d.seller === 'string' && d.seller !== '') {
                 const found = members.find(m => m.name === d.seller);
