@@ -1333,11 +1333,10 @@ async function startCaptureSelect() {
 }
 
 function showSelectionOverlay() {
-    const vTrack   = captureStream.getVideoTracks()[0];
-    const settings = vTrack.getSettings();
-    const vidW     = settings.width;
-    const vidH     = settings.height;
-    console.log('vidW:', vidW, 'vidH:', vidH);
+    // vidW/vidH 改為在 video playing 後從 video.videoWidth/videoHeight 取得，
+    // 避免 getDisplayMedia 剛建立時 getSettings() 回傳不正確的尺寸
+    let vidW = 0;
+    let vidH = 0;
 
     // 全螢幕容器
     const overlay = document.createElement('div');
@@ -1369,7 +1368,7 @@ function showSelectionOverlay() {
     video.style.cssText = 'width:100%;height:auto;display:block;background:#000;';
     videoWrap.appendChild(video);
 
-    // 載入中遮罩（等 video 播放後才移除）
+    // 載入中遮罩（等 video playing 且 vidW/vidH 確認後才移除）
     const loadingMask = document.createElement('div');
     loadingMask.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;font-size:16px;color:#aaa;z-index:10;pointer-events:all;cursor:default;';
     loadingMask.innerText = '載入中...';
@@ -1414,8 +1413,12 @@ function showSelectionOverlay() {
             }
         });
 
-        // video 開始播放後移除載入遮罩，開放框選
+        // video 開始播放後，從 video.videoWidth/videoHeight 取得正確解析度，
+        // 確保 getDisplayMedia 剛建立時 getSettings() 尺寸不穩定的問題不影響座標換算
         video.addEventListener('playing', () => {
+            vidW = video.videoWidth;
+            vidH = video.videoHeight;
+            console.log('video playing, vidW:', vidW, 'vidH:', vidH);
             loadingMask.remove();
         }, { once: true });
 
@@ -1450,7 +1453,7 @@ function showSelectionOverlay() {
             if (!isDragging) return;
             isDragging = false;
 
-            const selRect  = selBox.getBoundingClientRect();
+            const selRect = selBox.getBoundingClientRect();
             if (selRect.width < 10 || selRect.height < 10) return;
 
             // video 實際顯示寬高（受 zoom 滑桿影響）
@@ -1458,11 +1461,11 @@ function showSelectionOverlay() {
             const dispW = videoRect.width;
             const dispH = videoRect.height;
 
-            // 縮放比例：影片原始解析度 / video 元素顯示大小
+            // 縮放比例：影片原始解析度（video.videoWidth/Height）/ video 元素顯示大小
             const scaleX = vidW / dispW;
             const scaleY = vidH / dispH;
 
-            // selBox 是 absolute，left/top 已含 scroll，直接對應 video 顯示座標
+            // selBox 的 left/top 已含 scroll offset，直接對應 video 顯示座標換算
             const selLeft = parseFloat(selBox.style.left);
             const selTop  = parseFloat(selBox.style.top);
 
