@@ -187,7 +187,6 @@ function bindEvents() {
         if (e.target === e.currentTarget) closeAdminPanel();
     });
     document.getElementById('btn-add-admin')?.addEventListener('click', addAdminKeycode);
-    document.getElementById('btn-migrate-history')?.addEventListener('click', migrateHistoryIds);
     document.getElementById('modal-boss-filter')?.addEventListener('change', renderModalItemList);
 
     // 管理員分頁切換
@@ -1178,78 +1177,6 @@ function openAdminPanel() {
 
 function closeAdminPanel() {
     document.getElementById('modal-admin-panel').classList.remove('active');
-}
-
-async function migrateHistoryIds() {
-    const statusEl = document.getElementById('migrate-status');
-    if (settlementHistory.length === 0) { statusEl.innerText = '⚠️ 沒有歷史紀錄'; return; }
-
-    let fixedCount = 0;
-
-    // 建立名稱 → id 的對照表
-    const nameToId = {};
-    members.forEach(m => { if (m.name) nameToId[m.name] = m.id; });
-
-    settlementHistory.forEach(record => {
-        // 補 record.members 的 id
-        (record.members || []).forEach((m, idx) => {
-            if (!m.id && nameToId[m.name]) {
-                record.members[idx] = { ...m, id: nameToId[m.name] };
-                fixedCount++;
-            }
-        });
-
-        // 補 drops/snows 的 seller/user
-        (record.drops || []).forEach(d => {
-            if (typeof d.seller === 'string' && d.seller !== '') {
-                d.seller = { id: nameToId[d.seller] || '', name: d.seller };
-                fixedCount++;
-            }
-        });
-        (record.snows || []).forEach(s => {
-            if (typeof s.user === 'string' && s.user !== '') {
-                s.user = { id: nameToId[s.user] || '', name: s.user };
-                fixedCount++;
-            }
-        });
-
-        // 補 result 裡的 key（actualIncome、shouldGet、diff）
-        if (record.result) {
-            ['actualIncome', 'shouldGet', 'diff'].forEach(field => {
-                const obj = record.result[field];
-                if (!obj) return;
-                const newObj = {};
-                Object.keys(obj).forEach(key => {
-                    if (nameToId[key]) {
-                        newObj[nameToId[key]] = obj[key];
-                        fixedCount++;
-                    } else {
-                        newObj[key] = obj[key];
-                    }
-                });
-                record.result[field] = newObj;
-            });
-
-            // 補 payments 的 fromId/toId
-            (record.result.payments || []).forEach(p => {
-                if (!p.fromId && nameToId[p.from]) { p.fromId = nameToId[p.from]; fixedCount++; }
-                if (!p.toId   && nameToId[p.to])   { p.toId   = nameToId[p.to];   fixedCount++; }
-            });
-        }
-    });
-
-    localStorage.setItem('maple_settlement_history', JSON.stringify(settlementHistory));
-    const kc = document.getElementById('userKeyCode')?.value.trim();
-    if (kc) {
-        try {
-            await setDoc(doc(db, "player_history", kc), { history: settlementHistory }, { merge: false });
-            statusEl.innerText = `✅ 完成，共修復 ${fixedCount} 筆，已同步雲端`;
-        } catch(e) {
-            statusEl.innerText = `⚠️ 本地已修復 ${fixedCount} 筆，但雲端同步失敗`;
-        }
-    } else {
-        statusEl.innerText = `✅ 完成，共修復 ${fixedCount} 筆（未登入，僅存本地）`;
-    }
 }
 
 function switchAdminTab(tab) {
