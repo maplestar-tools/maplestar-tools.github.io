@@ -994,15 +994,20 @@ function renderSettlementResult(result, active, dropsSnapshot, snowsSnapshot) {
     const tbody = document.getElementById('settlement-member-body');
     tbody.innerHTML = '';
     active.forEach(m => {
-        const d = diff[m.id] ?? 0;
+        // 先用 id 查，查不到再用 name fallback（相容舊格式）
+        const income = actualIncome[m.id] ?? actualIncome[m.name] ?? 0;
+        const should = shouldGet[m.id]    ?? shouldGet[m.name]    ?? 0;
+        const d      = diff[m.id]         ?? diff[m.name]         ?? 0;
+        // 名稱：有 id 就查最新名稱，查不到就用快照舊名稱
+        const displayName = getMemberNameById(m.id, m.name);
         const color = d >= 0 ? '#ff9f43' : '#64b5f6';
         const sign  = d >= 0 ? '+' : '';
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid #2a2a2a';
         tr.innerHTML = `
-            <td style="padding:6px 4px;">${m.name}</td>
-            <td style="padding:6px 4px;text-align:right;color:#ccc;">${(actualIncome[m.id]||0).toFixed(1)}萬</td>
-            <td style="padding:6px 4px;text-align:right;color:#ccc;">${(shouldGet[m.id]||0).toFixed(1)}萬</td>
+            <td style="padding:6px 4px;">${displayName}</td>
+            <td style="padding:6px 4px;text-align:right;color:#ccc;">${income.toFixed(1)}萬</td>
+            <td style="padding:6px 4px;text-align:right;color:#ccc;">${should.toFixed(1)}萬</td>
             <td style="padding:6px 4px;text-align:right;color:${color};font-weight:bold;">${sign}${d.toFixed(1)}萬</td>
         `;
         tbody.appendChild(tr);
@@ -1012,12 +1017,12 @@ function renderSettlementResult(result, active, dropsSnapshot, snowsSnapshot) {
     if (payments.length === 0) {
         payEl.innerHTML = '<div style="color:#666;font-size:13px;">無需付款，大家收支平衡！</div>';
     } else {
-        payEl.innerHTML = payments.map(p => `
+        payments.map(p => `
             <div class="payment-row">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                    <span style="color:#ff6b6b;font-weight:bold;">${p.from}</span>
+                    <span style="color:#ff6b6b;font-weight:bold;">${getMemberNameById(p.fromId, p.from)}</span>
                     <span style="color:#666;">→</span>
-                    <span style="color:#4dae4c;font-weight:bold;">${p.to}</span>
+                    <span style="color:#4dae4c;font-weight:bold;">${getMemberNameById(p.toId, p.to)}</span>
                     <span style="margin-left:auto;color:#fff;font-weight:bold;">${p.amount.toFixed(1)}萬</span>
                 </div>
                 <div style="font-size:12px;color:#aaa;padding-left:4px;">
