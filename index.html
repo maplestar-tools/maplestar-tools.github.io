@@ -49,7 +49,7 @@
             </h4>
             <div id="settings-section" style="overflow:hidden;transition:max-height 0.3s ease-out;max-height:500px;">
                 <div class="inner-narrow">
-                <p class="card-desc" style="margin-top:12px;">設定匯率與方塊價格，下方價格將隨里程匯率即時變動。</p>
+                <p class="card-desc" style="margin-top:12px;">設定匯率、方塊價格與預設拍賣手續費，下方價格將隨里程匯率即時變動。</p>
                 <div class="sim-input-grid" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;align-items:end;">
                     <div class="form-group">
                         <label>1000萬楓幣換算里程</label>
@@ -99,19 +99,19 @@
         <!-- 隊員名單（可折疊） -->
         <div class="calc-card settings-card" style="margin-top:20px;">
             <h4 class="title-blue" id="btn-toggle-member" style="cursor:pointer;display:flex;justify-content:space-between;margin:0;">
-                👥 隊員分紅表格 (共用雲端) <span>▼</span>
+                👥 隊員表格 (共用雲端) <span>▼</span>
             </h4>
             <div id="member-section" style="overflow:hidden;transition:max-height 0.3s ease-out;max-height:1000px;">
                 <div class="inner-narrow">
-                <p class="card-desc" style="margin-top:12px;">在表格中進行編輯，確認後請點擊「新增至雲端」按鈕。</p>
+                <p class="card-desc" style="margin-top:12px;">勾選本次有參加的隊員，比例為分紅比例（預設 1 為平均分配）。新增隊員後才需點「💾 新增至雲端」，勾選與比例會自動儲存至個人雲端。</p>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
-                    <div style="display:flex;gap:6px;padding:0 8px;font-size:12px;color:#aaa;">
-                        <span style="width:16px;flex-shrink:0;text-align:center;">✓</span>
+                    <div style="display:flex;gap:6px;padding:0 8px;font-size:12px;color:#aaa;align-items:center;">
+                        <span style="width:16px;flex-shrink:0;"></span>
                         <span style="flex:1;text-align:center;">名稱</span>
                         <span style="width:56px;text-align:center;">比例</span>
                     </div>
-                    <div style="display:flex;gap:6px;padding:0 8px;font-size:12px;color:#aaa;">
-                        <span style="width:16px;flex-shrink:0;text-align:center;">✓</span>
+                    <div class="member-header-right" style="display:flex;gap:6px;padding:0 8px;font-size:12px;color:#aaa;align-items:center;">
+                        <span style="width:16px;flex-shrink:0;"></span>
                         <span style="flex:1;text-align:center;">名稱</span>
                         <span style="width:56px;text-align:center;">比例</span>
                     </div>
@@ -296,7 +296,7 @@
             <!-- 第二張：裝備屬性反推 -->
             <div class="calc-card">
                 <h4 class="title-green">🧬 裝備屬性反推</h4>
-                <p class="card-desc">反推裝備提供的固定主屬與副屬。</p>
+                <p class="card-desc">輸入面板總屬性、基礎屬性與屬性%，反推裝備提供的固定主屬或副屬數值。</p>
 
                 <div style="font-size:12px;font-weight:bold;color:#aaa;margin-bottom:8px;">主屬性</div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
