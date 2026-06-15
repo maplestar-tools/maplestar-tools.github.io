@@ -63,20 +63,6 @@
                         <label>可疑的方塊價格(萬)</label>
                         <input type="number" id="cubeSuspiciousPrice" class="cloud-input" value="50">
                     </div>
-                </div>
-                <div style="margin-top:16px;">
-                    <label style="font-size:14px;color:#aaa;display:block;margin-bottom:8px;">拍賣手續費預設</label>
-                    <div style="display:flex;gap:20px;">
-                        <label style="font-size:14px;color:#e0e0e0;cursor:pointer;display:flex;align-items:center;gap:6px;">
-                            <input type="radio" name="defaultFee" id="defaultFee0" value="0"> 0%
-                        </label>
-                        <label style="font-size:14px;color:#e0e0e0;cursor:pointer;display:flex;align-items:center;gap:6px;">
-                            <input type="radio" name="defaultFee" id="defaultFee3" value="3"> 3%
-                        </label>
-                        <label style="font-size:14px;color:#e0e0e0;cursor:pointer;display:flex;align-items:center;gap:6px;">
-                            <input type="radio" name="defaultFee" id="defaultFee6" value="6" checked> 6%
-                        </label>
-                    </div>
                 </div>                
                 <div style="margin-top:16px;background:#252525;padding:15px;border-radius:8px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center;">
                     <div>
@@ -92,6 +78,20 @@
                         <div id="priceSnow" style="font-size:16px;font-weight:bold;color:#64b5f6;">0</div>
                     </div>
                 </div>
+                <div style="margin-top:16px;">
+                    <label style="font-size:14px;color:#aaa;display:block;margin-bottom:8px;">拍賣手續費預設</label>
+                    <div style="display:flex;gap:20px;">
+                        <label style="font-size:14px;color:#e0e0e0;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                            <input type="radio" name="defaultFee" id="defaultFee0" value="0"> 0%
+                        </label>
+                        <label style="font-size:14px;color:#e0e0e0;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                            <input type="radio" name="defaultFee" id="defaultFee3" value="3"> 3%
+                        </label>
+                        <label style="font-size:14px;color:#e0e0e0;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                            <input type="radio" name="defaultFee" id="defaultFee6" value="6" checked> 6%
+                        </label>
+                    </div>
+                </div>                
                 </div>
             </div>
         </div>
@@ -104,6 +104,18 @@
             <div id="member-section" style="overflow:hidden;transition:max-height 0.3s ease-out;max-height:1000px;">
                 <div class="inner-narrow">
                 <p class="card-desc" style="margin-top:12px;">在表格中進行編輯，確認後請點擊「新增至雲端」按鈕。</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px;">
+                    <div style="display:flex;gap:6px;padding:0 8px;font-size:12px;color:#aaa;">
+                        <span style="width:16px;flex-shrink:0;text-align:center;">參加</span>
+                        <span style="flex:1;">名稱</span>
+                        <span style="width:56px;text-align:center;">比例</span>
+                    </div>
+                    <div style="display:flex;gap:6px;padding:0 8px;font-size:12px;color:#aaa;">
+                        <span style="width:16px;flex-shrink:0;text-align:center;">參加</span>
+                        <span style="flex:1;">名稱</span>
+                        <span style="width:56px;text-align:center;">比例</span>
+                    </div>
+                </div>                
                 <div id="member-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:15px;"></div>
                 <div style="display:flex;gap:10px;">
                     <button id="btn-add-member" class="calc-btn btn-green">+ 新增隊員</button>

@@ -283,7 +283,10 @@ h1 {
     .calc-grid { grid-template-columns: 1fr; }
     .settings-card { max-width: 100%; }
     .sim-input-grid { grid-template-columns: 1fr !important; }
+    .member-header-right { display: none; }
+    #member-grid { grid-template-columns: 1fr; }
 }
+
 /* 隊員 grid */
 .member-cell {
     display: flex;
@@ -311,8 +314,4 @@ h1 {
     font-size: 13px;
     padding: 6px 8px;
     text-align: center;
-}
-
-@media (max-width: 600px) {
-    #member-grid { grid-template-columns: 1fr; }
 }
