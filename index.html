@@ -64,6 +64,20 @@
                         <input type="number" id="cubeSuspiciousPrice" class="cloud-input" value="50">
                     </div>
                 </div>
+                <div style="margin-top:16px;">
+                    <label style="font-size:14px;color:#aaa;display:block;margin-bottom:8px;">拍賣手續費預設</label>
+                    <div style="display:flex;gap:20px;">
+                        <label style="font-size:14px;color:#e0e0e0;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                            <input type="radio" name="defaultFee" id="defaultFee0" value="0"> 0%
+                        </label>
+                        <label style="font-size:14px;color:#e0e0e0;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                            <input type="radio" name="defaultFee" id="defaultFee3" value="3"> 3%
+                        </label>
+                        <label style="font-size:14px;color:#e0e0e0;cursor:pointer;display:flex;align-items:center;gap:6px;">
+                            <input type="radio" name="defaultFee" id="defaultFee6" value="6" checked> 6%
+                        </label>
+                    </div>
+                </div>                
                 <div style="margin-top:16px;background:#252525;padding:15px;border-radius:8px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;text-align:center;">
                     <div>
                         <div style="font-size:12px;color:#aaa;">神奇剪刀(萬)</div>
@@ -90,16 +104,7 @@
             <div id="member-section" style="overflow:hidden;transition:max-height 0.3s ease-out;max-height:1000px;">
                 <div class="inner-narrow">
                 <p class="card-desc" style="margin-top:12px;">在表格中進行編輯，確認後請點擊「新增至雲端」按鈕。</p>
-                <table style="width:100%;border-collapse:collapse;margin-bottom:15px;">
-                    <thead>
-                        <tr style="border-bottom:1px solid #444;">
-                            <th style="text-align:center;padding:8px;width:40px;">參加</th>
-                            <th style="text-align:left;padding:8px;">名稱</th>
-                            <th style="text-align:left;padding:8px;width:80px;">比例</th>
-                        </tr>
-                    </thead>
-                    <tbody id="member-table-body"></tbody>
-                </table>
+                <div id="member-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:15px;"></div>
                 <div style="display:flex;gap:10px;">
                     <button id="btn-add-member" class="calc-btn btn-green">+ 新增隊員</button>
                     <button id="btn-save-members" class="calc-btn btn-blue">💾 新增至雲端</button>

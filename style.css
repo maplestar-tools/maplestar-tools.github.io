@@ -284,3 +284,35 @@ h1 {
     .settings-card { max-width: 100%; }
     .sim-input-grid { grid-template-columns: 1fr !important; }
 }
+/* 隊員 grid */
+.member-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #252525;
+    border-radius: 8px;
+    padding: 6px 8px;
+}
+.member-cell input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.member-cell .mem-name {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    padding: 6px 8px;
+}
+.member-cell .mem-ratio {
+    width: 56px;
+    flex-shrink: 0;
+    font-size: 13px;
+    padding: 6px 8px;
+    text-align: center;
+}
+
+@media (max-width: 600px) {
+    #member-grid { grid-template-columns: 1fr; }
+}

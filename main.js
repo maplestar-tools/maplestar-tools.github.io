@@ -114,8 +114,8 @@ function bindEvents() {
 
     document.getElementById('btn-add-member').addEventListener('click', addMember);
     document.getElementById('btn-save-members').addEventListener('click', saveMembersToCloud);
-    document.getElementById('member-table-body').addEventListener('change', onMemberTableChange);
-    document.getElementById('member-table-body').addEventListener('click',  onMemberTableClick);
+    document.getElementById('member-grid').addEventListener('change', onMemberTableChange);
+    document.getElementById('member-grid').addEventListener('click',  onMemberTableClick);
 
     document.getElementById('boss-select').addEventListener('change', onBossSelectChange);
 
@@ -380,6 +380,10 @@ function getFormValues() {
     const data = {};
     ids.forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
 
+    // 手續費 radio 另外存
+    const checkedFee = document.querySelector('input[name="defaultFee"]:checked');
+    if (checkedFee) data.defaultFee = checkedFee.value;
+
     // 勾選狀態另外存
     ['mapleCheckMain','mapleCheckSub','mapleCheckA','mapleCheckB'].forEach(id => {
         const el = document.getElementById(id);
@@ -414,6 +418,11 @@ function fillValues(obj) {
         } else if (typeof obj[key] !== 'object') {
             el.value = obj[key];
         }
+    }
+    // 還原手續費 radio
+    if (obj.defaultFee !== undefined) {
+        const radio = document.getElementById(`defaultFee${obj.defaultFee}`);
+        if (radio) radio.checked = true;
     }
 }
 
@@ -516,21 +525,19 @@ function onMemberTableChange(e) {
 function onMemberTableClick(e) { if (e.target.classList.contains('mem-del')) removeMember(e.target.dataset.index); }
 
 function renderMembers() {
-    const tbody = document.getElementById('member-table-body');
-    if (!tbody) return;
-    tbody.innerHTML = '';
+    const grid = document.getElementById('member-grid');
+    if (!grid) return;
+    grid.innerHTML = '';
     members.forEach((m, i) => {
-        const tr = document.createElement('tr');
-        tr.style.verticalAlign = "middle";
-        tr.innerHTML = `
-            <td style="text-align:center;padding:4px;"><input type="checkbox" class="mem-check" data-index="${i}" ${m.checked ? 'checked' : ''}></td>
-            <td style="padding:5px;">
-                <input type="text" value="${m.name}" class="cloud-input mem-name" data-index="${i}" placeholder="名稱...">
-                <input type="hidden" class="mem-id" data-index="${i}" value="${m.id}">
-            </td>
-            <td style="padding:5px;"><input type="number" value="${m.ratio}" class="cloud-input mem-ratio" data-index="${i}"></td>
+        const cell = document.createElement('div');
+        cell.className = 'member-cell';
+        cell.innerHTML = `
+            <input type="checkbox" class="mem-check" data-index="${i}" ${m.checked ? 'checked' : ''}>
+            <input type="hidden" class="mem-id" data-index="${i}" value="${m.id}">
+            <input type="text" value="${m.name}" class="cloud-input mem-name" data-index="${i}" placeholder="名稱...">
+            <input type="number" value="${m.ratio}" class="cloud-input mem-ratio" data-index="${i}">
         `;
-        tbody.appendChild(tr);
+        grid.appendChild(cell);
     });
     refreshSellerOptions();
     refreshSnowUserOptions();
@@ -675,7 +682,9 @@ function onDropTableClick(e) { if (e.target.classList.contains('drop-del')) remo
 
 function addDropRow(type) {
     const i = dropRows.length;
-    dropRows.push({ type, item: '', price: 0, fee: 6, scissor: 'none', seller: null, net: 0 });
+    // 讀取基礎設定的手續費預設值
+    const defaultFee = parseInt(document.querySelector('input[name="defaultFee"]:checked')?.value ?? 6);
+    dropRows.push({ type, item: '', price: 0, fee: type === 'sell' ? defaultFee : 0, scissor: 'none', seller: null, net: 0 });
     appendDropRow(i);
     expandSection('drops-section');
 }
