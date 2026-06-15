@@ -1025,7 +1025,7 @@ function renderSettlementResult(result, active, dropsSnapshot, snowsSnapshot) {
     if (payments.length === 0) {
         payEl.innerHTML = '<div style="color:#666;font-size:13px;">無需付款，大家收支平衡！</div>';
     } else {
-        payments.map(p => `
+        payEl.innerHTML = payments.map(p => `
             <div class="payment-row">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
                     <span style="color:#ff6b6b;font-weight:bold;">${getMemberNameById(p.fromId, p.from)}</span>
