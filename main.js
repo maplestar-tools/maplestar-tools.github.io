@@ -37,10 +37,14 @@ function checkIsAdmin() {
     updateMemberNameLockState();
 }
 
-// 根據 isAdmin 狀態，更新隊員表格內所有名稱輸入框的 disabled
+// 根據 isAdmin 狀態與隊員目前名稱，更新隊員表格內所有名稱輸入框的 disabled
+// 規則需與 renderMembers() 保持一致：管理員可隨時編輯；非管理員僅能在名稱尚為空時輸入
 function updateMemberNameLockState() {
     document.querySelectorAll('#member-grid .mem-name').forEach(input => {
-        input.disabled = !isAdmin;
+        const idx = input.dataset.index;
+        const m   = members[idx];
+        const nameLocked = !isAdmin && m && m.name.trim() !== '';
+        input.disabled = nameLocked;
     });
 }
 
@@ -571,10 +575,13 @@ function renderMembers() {
     members.forEach((m, i) => {
         const cell = document.createElement('div');
         cell.className = 'member-cell';
+        // 名稱欄位鎖定規則：管理員可隨時編輯；非管理員僅能在「名稱尚為空」時輸入（新增隊員流程），
+        // 一旦該隊員存過非空名稱，就只有管理員能再修改
+        const nameLocked = !isAdmin && m.name.trim() !== '';
         cell.innerHTML = `
             <input type="checkbox" class="mem-check" data-index="${i}" ${m.checked ? 'checked' : ''}>
             <input type="hidden" class="mem-id" data-index="${i}" value="${m.id}">
-            <input type="text" value="${m.name}" class="cloud-input mem-name" data-index="${i}" placeholder="名稱..." ${isAdmin ? '' : 'disabled'}>
+            <input type="text" value="${m.name}" class="cloud-input mem-name" data-index="${i}" placeholder="名稱..." ${nameLocked ? 'disabled' : ''}>
             <input type="number" value="${m.ratio}" class="cloud-input mem-ratio" data-index="${i}">
         `;
         grid.appendChild(cell);
