@@ -33,6 +33,15 @@ function checkIsAdmin() {
     isAdmin = adminKeycodes.includes(kc);
     const btn = document.getElementById('btn-admin-panel');
     if (btn) btn.style.display = isAdmin ? 'inline-flex' : 'none';
+    // 同步更新隊員表格名稱欄位的鎖定狀態（僅管理員可改名）
+    updateMemberNameLockState();
+}
+
+// 根據 isAdmin 狀態，更新隊員表格內所有名稱輸入框的 disabled
+function updateMemberNameLockState() {
+    document.querySelectorAll('#member-grid .mem-name').forEach(input => {
+        input.disabled = !isAdmin;
+    });
 }
 
 // ==========================================================================
@@ -565,7 +574,7 @@ function renderMembers() {
         cell.innerHTML = `
             <input type="checkbox" class="mem-check" data-index="${i}" ${m.checked ? 'checked' : ''}>
             <input type="hidden" class="mem-id" data-index="${i}" value="${m.id}">
-            <input type="text" value="${m.name}" class="cloud-input mem-name" data-index="${i}" placeholder="名稱...">
+            <input type="text" value="${m.name}" class="cloud-input mem-name" data-index="${i}" placeholder="名稱..." ${isAdmin ? '' : 'disabled'}>
             <input type="number" value="${m.ratio}" class="cloud-input mem-ratio" data-index="${i}">
         `;
         grid.appendChild(cell);
