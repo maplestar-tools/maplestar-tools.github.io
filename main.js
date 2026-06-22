@@ -424,6 +424,8 @@ function getFormValues() {
         'maplePercentMain','maplePercentSub',
         'calcBaseAtkA','calcAtkPercentA','calcMainBaseA','calcMainEquipA','calcMainPercentA','calcSubBaseA','calcSubEquipA','calcSubPercentA','maplePercentA',
         'calcBaseAtkB','calcAtkPercentB','calcMainBaseB','calcMainEquipB','calcMainPercentB','calcSubBaseB','calcSubEquipB','calcSubPercentB','maplePercentB',
+        // 加成設定輸入框
+        'bonus-prayer-val','bonus-2x-val',
     ];
     const data = {};
     ids.forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
@@ -433,7 +435,8 @@ function getFormValues() {
     if (checkedFee) data.defaultFee = checkedFee.value;
 
     // checkbox 狀態另外存
-    ['mapleCheckMain','mapleCheckSub','mapleCheckA','mapleCheckB'].forEach(id => {
+    ['mapleCheckMain','mapleCheckSub','mapleCheckA','mapleCheckB',
+     'bonus-prayer','bonus-2x','bonus-rest'].forEach(id => {
         const el = document.getElementById(id);
         if (el) data[id] = el.checked;
     });
@@ -450,10 +453,13 @@ function fillValues(obj) {
             // 還原 checkbox 狀態，並同步 disabled 輸入框
             el.checked = obj[key];
             const inputMap = {
-                mapleCheckMain: 'maplePercentMain',
-                mapleCheckSub:  'maplePercentSub',
-                mapleCheckA:    'maplePercentA',
-                mapleCheckB:    'maplePercentB',
+                mapleCheckMain:  'maplePercentMain',
+                mapleCheckSub:   'maplePercentSub',
+                mapleCheckA:     'maplePercentA',
+                mapleCheckB:     'maplePercentB',
+                // 加成設定 checkbox 對應的輸入框
+                'bonus-prayer':  'bonus-prayer-val',
+                'bonus-2x':      'bonus-2x-val',
             };
             const inputId = inputMap[key];
             if (inputId) {
