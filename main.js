@@ -1853,8 +1853,10 @@ async function parseScreenshots() {
     btn.innerText = '解析中...';
 
     try {
-        const startResult = await ocrCanvas(startCanvas);
-        const endResult   = await ocrCanvas(endCanvas);
+        const [startResult, endResult] = await Promise.all([
+            ocrCanvas(startCanvas),
+            ocrCanvas(endCanvas),
+        ]);
 
         if (startResult) document.getElementById('ocr-start-val').value = startResult;
         if (endResult)   document.getElementById('ocr-end-val').value   = endResult;
