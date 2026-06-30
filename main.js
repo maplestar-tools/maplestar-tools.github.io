@@ -2108,11 +2108,14 @@ function calculateExpResult(silent = false) {
         document.getElementById('exp-per20h').innerText = '—';
     }
 
-    // 有勾楓幣時計算楓幣結果（不需加成換算，直接顯示原始差值）
+    // 有勾楓幣時計算楓幣結果（不需加成換算，直接顯示原始差值，允許 0 或負數）
     if (captureWithMeso) {
-        const mesoStart = parseFloat(document.getElementById('ocr-start-val-meso').value) || 0;
-        const mesoEnd   = parseFloat(document.getElementById('ocr-end-val-meso').value)   || 0;
-        if (mesoEnd > mesoStart) {
+        const mesoStartStr = document.getElementById('ocr-start-val-meso').value.trim();
+        const mesoEndStr   = document.getElementById('ocr-end-val-meso').value.trim();
+        // 兩欄位都有填值才計算（不限制結束必須大於起始，可能沒變或減少）
+        if (mesoStartStr !== '' && mesoEndStr !== '') {
+            const mesoStart = parseFloat(mesoStartStr) || 0;
+            const mesoEnd   = parseFloat(mesoEndStr)   || 0;
             const totalMeso = mesoEnd - mesoStart;
             const mesoPer10 = Math.round(totalMeso / timerSeconds * 600);
             const mesoPer30 = Math.round(totalMeso / timerSeconds * 1800);
