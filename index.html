@@ -464,12 +464,42 @@
             <div id="exp-section" style="overflow:hidden;transition:max-height 0.5s ease-out;max-height:3000px;">
                 <div style="margin-top:14px;">
 
-                    <!-- 螢幕框選區域 -->
+                    <!-- 螢幕框選區域：左右並排，左為經驗、右為楓幣 -->
                     <div style="font-size:13px;color:#aaa;font-weight:bold;margin-bottom:8px;">截圖框選區域</div>
-                    <div style="background:#252525;border-radius:8px;padding:12px;margin-bottom:10px;">
-                        <div id="capture-preview" style="width:100%;min-height:60px;background:#333;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#555;margin-bottom:8px;overflow:hidden;">尚未授權</div>
-                        <div id="capture-coords" style="font-size:11px;color:#888;text-align:center;margin-bottom:8px;">—</div>
-                        <button id="btn-capture-select" class="calc-btn btn-green" style="margin:0;">授權並框選</button>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+
+                        <!-- 左欄：經驗值框選 -->
+                        <div style="background:#252525;border-radius:8px;padding:12px;">
+                            <div style="font-size:12px;color:#aaa;font-weight:bold;margin-bottom:8px;">📊 經驗值</div>
+                            <div id="capture-preview" style="width:100%;min-height:60px;background:#333;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#555;margin-bottom:8px;overflow:hidden;">尚未授權</div>
+                            <div id="capture-coords" style="font-size:11px;color:#888;text-align:center;margin-bottom:8px;">—</div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                                <button id="btn-capture-select" class="calc-btn btn-gray" style="margin:0;font-size:12px;padding:7px 4px;">授權並框選</button>
+                                <button id="btn-preview-exp" class="calc-btn btn-green" style="margin:0;font-size:12px;padding:7px 4px;" disabled>📷 重新截圖</button>
+                            </div>
+                        </div>
+
+                        <!-- 右欄：楓幣框選（勾選後才啟用） -->
+                        <div style="background:#252525;border-radius:8px;padding:12px;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                                <div style="font-size:12px;color:#aaa;font-weight:bold;">🪙 楓幣</div>
+                                <!-- 同時截楓幣勾選：狀態存 localStorage 和雲端 -->
+                                <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:12px;color:#aaa;">
+                                    <input type="checkbox" id="meso-enabled" style="width:13px;height:13px;cursor:pointer;">
+                                    同時截楓幣
+                                </label>
+                            </div>
+                            <!-- 未勾選時整欄灰掉不可操作 -->
+                            <div id="meso-capture-panel" style="opacity:0.35;pointer-events:none;">
+                                <div id="capture-preview-meso" style="width:100%;min-height:60px;background:#333;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;color:#555;margin-bottom:8px;overflow:hidden;">尚未框選</div>
+                                <div id="capture-coords-meso" style="font-size:11px;color:#888;text-align:center;margin-bottom:8px;">—</div>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+                                    <button id="btn-capture-select-meso" class="calc-btn btn-gray" style="margin:0;font-size:12px;padding:7px 4px;">授權並框選</button>
+                                    <button id="btn-preview-meso" class="calc-btn btn-green" style="margin:0;font-size:12px;padding:7px 4px;" disabled>📷 重新截圖</button>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
 
                     <!-- 計時長度選擇 -->
@@ -496,71 +526,73 @@
 
                     <hr style="border:none;border-top:1px dashed #444;margin:10px 0;">
 
-                    <!-- OCR 截圖解析結果 -->
-                    <div style="font-size:13px;color:#aaa;font-weight:bold;margin-bottom:8px;">截圖解析結果（可手動修改數值）</div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
-                        <div style="background:#252525;border-radius:8px;padding:10px;">
-                            <div style="font-size:11px;color:#888;margin-bottom:6px;">起始截圖</div>
-                            <div id="ocr-start-img" style="width:100%;min-height:44px;overflow:hidden;background:#333;border-radius:4px;margin-bottom:8px;"></div>
-                            <div class="form-group" style="margin:0;">
-                                <label>起始經驗</label>
-                                <input type="number" id="ocr-start-val" class="cloud-input" placeholder="0">
+                    <!-- OCR 截圖解析結果：截圖預覽預設收起，四格輸入框永遠顯示 -->
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                        <div style="font-size:13px;color:#aaa;font-weight:bold;">截圖解析結果（可手動修改數值）</div>
+                        <button id="btn-toggle-screenshots" class="calc-btn btn-gray" style="margin:0;padding:5px 12px;font-size:12px;width:auto;">查看截圖預覽 ▼</button>
+                    </div>
+
+                    <!-- 四格截圖預覽（預設收起，點按鈕展開） -->
+                    <div id="screenshots-preview" style="display:none;margin-bottom:10px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;">
+                            <div>
+                                <div style="font-size:10px;color:#888;margin-bottom:4px;text-align:center;">起始（經驗）</div>
+                                <div id="ocr-start-img" style="width:100%;min-height:44px;overflow:hidden;background:#333;border-radius:4px;"></div>
                             </div>
-                        </div>
-                        <div style="background:#252525;border-radius:8px;padding:10px;">
-                            <div style="font-size:11px;color:#888;margin-bottom:6px;">結束截圖</div>
-                            <div id="ocr-end-img" style="width:100%;min-height:44px;overflow:hidden;background:#333;border-radius:4px;margin-bottom:8px;"></div>
-                            <div class="form-group" style="margin:0;">
-                                <label>結束經驗</label>
-                                <input type="number" id="ocr-end-val" class="cloud-input" placeholder="0">
+                            <div>
+                                <div style="font-size:10px;color:#888;margin-bottom:4px;text-align:center;">結束（經驗）</div>
+                                <div id="ocr-end-img" style="width:100%;min-height:44px;overflow:hidden;background:#333;border-radius:4px;"></div>
+                            </div>
+                            <!-- 楓幣截圖格：未勾楓幣時灰掉 -->
+                            <div id="ocr-meso-start-wrap">
+                                <div style="font-size:10px;color:#888;margin-bottom:4px;text-align:center;">起始（楓幣）</div>
+                                <div id="ocr-start-img-meso" style="width:100%;min-height:44px;overflow:hidden;background:#333;border-radius:4px;"></div>
+                            </div>
+                            <div id="ocr-meso-end-wrap">
+                                <div style="font-size:10px;color:#888;margin-bottom:4px;text-align:center;">結束（楓幣）</div>
+                                <div id="ocr-end-img-meso" style="width:100%;min-height:44px;overflow:hidden;background:#333;border-radius:4px;"></div>
                             </div>
                         </div>
                     </div>
-                    <!-- 加成設定（勾選代表本次計算包含這些加成，用於回推基礎經驗） -->
-                    <div style="background:#252525;border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:6px;flex-wrap:nowrap;">
-                        <input type="checkbox" id="bonus-prayer" style="width:15px;height:15px;cursor:pointer;">
-                        <label for="bonus-prayer" style="font-size:14px;color:#e0e0e0;cursor:pointer;white-space:nowrap;">祈禱</label>
-                        <input type="number" id="bonus-prayer-val" value="20" disabled class="cloud-input" style="width:52px;padding:5px 6px;font-size:13px;text-align:center;opacity:0.4;margin:0;">
-                        <span style="font-size:13px;color:#aaa;">%</span>
-                        <div style="width:1px;height:20px;background:#444;margin:0 6px;flex-shrink:0;"></div>
-                        <input type="checkbox" id="bonus-2x" style="width:15px;height:15px;cursor:pointer;">
-                        <label for="bonus-2x" style="font-size:14px;color:#e0e0e0;cursor:pointer;white-space:nowrap;">加倍卷</label>
-                        <input type="number" id="bonus-2x-val" value="2" disabled class="cloud-input" style="width:52px;padding:5px 6px;font-size:13px;text-align:center;opacity:0.4;margin:0;">
-                        <span style="font-size:13px;color:#aaa;">倍</span>
-                        <div style="width:1px;height:20px;background:#444;margin:0 6px;flex-shrink:0;"></div>
-                        <input type="checkbox" id="bonus-rest" style="width:15px;height:15px;cursor:pointer;">
-                        <label for="bonus-rest" style="font-size:14px;color:#e0e0e0;cursor:pointer;white-space:nowrap;">休息獎勵</label>
+
+                    <!-- 四格數值輸入框（永遠顯示） -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;margin-bottom:10px;">
+                        <div class="form-group" style="margin:0;">
+                            <label>起始經驗</label>
+                            <input type="number" id="ocr-start-val" class="cloud-input" placeholder="0">
+                        </div>
+                        <div class="form-group" style="margin:0;">
+                            <label>結束經驗</label>
+                            <input type="number" id="ocr-end-val" class="cloud-input" placeholder="0">
+                        </div>
+                        <!-- 楓幣輸入格：未勾楓幣時灰掉不可輸入 -->
+                        <div class="form-group" id="ocr-meso-start-input-wrap" style="margin:0;opacity:0.35;pointer-events:none;">
+                            <label>起始楓幣</label>
+                            <input type="number" id="ocr-start-val-meso" class="cloud-input" placeholder="0">
+                        </div>
+                        <div class="form-group" id="ocr-meso-end-input-wrap" style="margin:0;opacity:0.35;pointer-events:none;">
+                            <label>結束楓幣</label>
+                            <input type="number" id="ocr-end-val-meso" class="cloud-input" placeholder="0">
+                        </div>
                     </div>
+
                     <button id="btn-ocr" class="calc-btn btn-green" style="margin-bottom:10px;" disabled>🔍 解析截圖</button>
                     <button id="btn-calc-exp" class="calc-btn btn-blue">確認並計算</button>
 
                     <!-- 獲得經驗結果（10分/30分換算） -->
-                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px;">
+                    <div style="font-size:12px;color:#aaa;font-weight:bold;margin-top:12px;margin-bottom:6px;">經驗值</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
                         <div class="result-box">
                             <div style="font-size:13px;color:#aaa;margin-bottom:4px;" id="exp-total-label">總獲得經驗</div>
                             <div id="exp-total" style="font-size:20px;font-weight:bold;color:#4dae4c;">—</div>
-                            <div id="exp-total-base-row" style="display:none;margin-top:6px;">
-                                <span style="font-size:11px;color:#666;">基礎　</span>
-                                <span id="exp-total-base" style="font-size:14px;color:#888;">—</span>
-                            </div>
                         </div>
-
                         <div class="result-box">
                             <div style="font-size:13px;color:#aaa;margin-bottom:4px;">10分鐘獲得經驗</div>
                             <div id="exp-per10" style="font-size:20px;font-weight:bold;color:#64b5f6;">—</div>
-                            <div id="exp-per10-base-row" style="display:none;margin-top:6px;">
-                                <span style="font-size:11px;color:#666;">基礎　</span>
-                                <span id="exp-per10-base" style="font-size:14px;color:#888;">—</span>
-                            </div>
                         </div>
-
                         <div class="result-box">
                             <div style="font-size:13px;color:#aaa;margin-bottom:4px;">30分鐘獲得經驗</div>
                             <div id="exp-per30" style="font-size:20px;font-weight:bold;color:#ff9f43;">—</div>
-                            <div id="exp-per30-base-row" style="display:none;margin-top:6px;">
-                                <span style="font-size:11px;color:#666;">基礎　</span>
-                                <span id="exp-per30-base" style="font-size:14px;color:#888;">—</span>
-                            </div>
                         </div>
                     </div>
 
@@ -577,6 +609,25 @@
                         <div class="result-box">
                             <div style="font-size:13px;color:#aaa;margin-bottom:4px;">20小時獲得經驗</div>
                             <div id="exp-per20h" style="font-size:20px;font-weight:bold;color:#4dae4c;">—</div>
+                        </div>
+                    </div>
+
+                    <!-- 楓幣結果列（有勾楓幣才顯示） -->
+                    <div id="meso-result-section" style="display:none;margin-top:10px;">
+                        <div style="font-size:12px;color:#aaa;font-weight:bold;margin-bottom:6px;">🪙 楓幣</div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+                            <div class="result-box">
+                                <div style="font-size:13px;color:#aaa;margin-bottom:4px;">總獲得楓幣</div>
+                                <div id="meso-total" style="font-size:20px;font-weight:bold;color:#4dae4c;">—</div>
+                            </div>
+                            <div class="result-box">
+                                <div style="font-size:13px;color:#aaa;margin-bottom:4px;">楓幣/10分鐘</div>
+                                <div id="meso-per10" style="font-size:20px;font-weight:bold;color:#64b5f6;">—</div>
+                            </div>
+                            <div class="result-box">
+                                <div style="font-size:13px;color:#aaa;margin-bottom:4px;">楓幣/30分鐘</div>
+                                <div id="meso-per30" style="font-size:20px;font-weight:bold;color:#ff9f43;">—</div>
+                            </div>
                         </div>
                     </div>
 
@@ -620,22 +671,19 @@
                 <input type="text" id="new-admin-keycode" class="cloud-input" placeholder="輸入新管理員 keycode" style="flex:1;">
                 <button id="btn-add-admin" class="calc-btn btn-green" style="width:auto;padding:8px 16px;margin:0;white-space:nowrap;">+ 新增</button>
             </div>
-            <!-- 由 JS renderModalAdminList() 動態產生 -->
             <div id="modal-admin-list"></div>
         </div>
 
-        <!-- 分頁2：隊員名單（刪除以 id 為準） -->
+        <!-- 分頁2：隊員名單 -->
         <div id="admin-tab-member" class="admin-tab-content" style="display:none;">
             <div style="font-size:13px;color:#aaa;margin-bottom:10px;">刪除後隊員將從共用名單移除，個人設定不受影響。</div>
-            <!-- 由 JS renderModalMemberList() 動態產生 -->
             <div id="modal-member-list"></div>
         </div>
 
-        <!-- 分頁3：王名單 & 掉落物清單（支援拖曳排序） -->
+        <!-- 分頁3：王名單 & 掉落物清單 -->
         <div id="admin-tab-boss" class="admin-tab-content" style="display:none;">
             <div style="margin-bottom:20px;">
                 <div style="font-size:13px;font-weight:bold;color:#ff9f43;margin-bottom:8px;">👑 王名單</div>
-                <!-- 由 JS renderModalBossList() 動態產生 -->
                 <div id="modal-boss-list"></div>
             </div>
             <div>
@@ -645,7 +693,6 @@
                         <option value="">— 選擇王查看物品 —</option>
                     </select>
                 </div>
-                <!-- 由 JS renderModalItemList() 動態產生 -->
                 <div id="modal-item-list"></div>
             </div>
         </div>

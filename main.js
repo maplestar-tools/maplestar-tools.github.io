@@ -33,19 +33,6 @@ function checkIsAdmin() {
     isAdmin = adminKeycodes.includes(kc);
     const btn = document.getElementById('btn-admin-panel');
     if (btn) btn.style.display = isAdmin ? 'inline-flex' : 'none';
-    // 同步更新隊員表格名稱欄位的鎖定狀態（僅管理員可改名）
-    updateMemberNameLockState();
-}
-
-// 根據 isAdmin 狀態與隊員目前名稱，更新隊員表格內所有名稱輸入框的 disabled
-// 規則需與 renderMembers() 保持一致：管理員可隨時編輯；非管理員僅能在名稱尚為空時輸入
-function updateMemberNameLockState() {
-    document.querySelectorAll('#member-grid .mem-name').forEach(input => {
-        const idx = input.dataset.index;
-        const m   = members[idx];
-        const nameLocked = !isAdmin && m && m.name.trim() !== '';
-        input.disabled = nameLocked;
-    });
 }
 
 // ==========================================================================
@@ -172,27 +159,35 @@ function bindEvents() {
     document.getElementById('btn-toggle-rest').addEventListener('click', (e) => toggleSection(e.currentTarget, 'rest-section'));
     document.getElementById('btnCalcRest').addEventListener('click', calculateRestExp);
     document.getElementById('btn-toggle-exp').addEventListener('click',  (e) => toggleSection(e.currentTarget, 'exp-section'));
-    document.getElementById('btn-capture-select').addEventListener('click', startCaptureSelect);
+
+    // 框選與截圖按鈕（經驗）
+    document.getElementById('btn-capture-select').addEventListener('click', () => startCaptureSelect('exp'));
+    document.getElementById('btn-preview-exp').addEventListener('click', () => takePreviewShot('exp'));
+
+    // 框選與截圖按鈕（楓幣）
+    document.getElementById('btn-capture-select-meso').addEventListener('click', () => startCaptureSelect('meso'));
+    document.getElementById('btn-preview-meso').addEventListener('click', () => takePreviewShot('meso'));
+
+    // 同時截楓幣勾選：控制右欄啟用/停用、截圖預覽格、輸入框、結果列
+    document.getElementById('meso-enabled').addEventListener('change', onMesoEnabledChange);
+
+    // 截圖預覽展開/收合
+    document.getElementById('btn-toggle-screenshots').addEventListener('click', () => {
+        const area = document.getElementById('screenshots-preview');
+        const btn  = document.getElementById('btn-toggle-screenshots');
+        const open = area.style.display === 'block';
+        area.style.display = open ? 'none' : 'block';
+        btn.innerText = open ? '查看截圖預覽 ▼' : '收起截圖預覽 ▲';
+    });
+
     document.getElementById('btn-start-timer').addEventListener('click', startExpTimer);
-    document.getElementById('btn-stop-timer').addEventListener('click',  stopExpTimer);
+    document.getElementById('btn-stop-timer').addEventListener('click',  () => stopExpTimer(false)); // 手動停止
     document.getElementById('btn-calc-exp').addEventListener('click',    calculateExpResult);
     document.getElementById('btn-ocr').addEventListener('click', parseScreenshots);
 
-    // 監聽解析數值輸入框，兩個都清空才恢復可按
-    ['ocr-start-val','ocr-end-val'].forEach(id => {
+    // 監聽解析數值輸入框，有值時不讓重新解析（避免覆蓋手動修改）
+    ['ocr-start-val','ocr-end-val','ocr-start-val-meso','ocr-end-val-meso'].forEach(id => {
         document.getElementById(id).addEventListener('input', updateOcrBtnState);
-    });
-
-    // 加成設定 checkbox：勾選時啟用對應輸入框
-    document.getElementById('bonus-prayer').addEventListener('change', (e) => {
-        const inp = document.getElementById('bonus-prayer-val');
-        inp.disabled = !e.target.checked;
-        inp.style.opacity = e.target.checked ? '1' : '0.4';
-    });
-    document.getElementById('bonus-2x').addEventListener('change', (e) => {
-        const inp = document.getElementById('bonus-2x-val');
-        inp.disabled = !e.target.checked;
-        inp.style.opacity = e.target.checked ? '1' : '0.4';
     });
 
     // 計時選項按鈕
@@ -208,7 +203,7 @@ function bindEvents() {
         });
     });
 
-    // keycode 輸入時重新渲染王下拉與物品下拉（控制是否顯示「新增」選項）
+    // keycode 輸入時重新渲染王下拉與物品下拉
     document.getElementById('userKeyCode').addEventListener('input', () => {
         renderBossSelect();
         renderAllDropItemSelects();
@@ -250,7 +245,6 @@ function switchTab(tabId) {
 // ==========================================================================
 // 📂 折疊開關
 // ==========================================================================
-// 點擊標題列切換區塊展開/收合
 function toggleSection(headerEl, sectionId) {
     const content = document.getElementById(sectionId);
     if (!content) return;
@@ -264,7 +258,6 @@ function toggleSection(headerEl, sectionId) {
     }
 }
 
-// 強制展開指定區塊（結算完成後自動展開用）
 function expandSection(sectionId) {
     const el = document.getElementById(sectionId);
     if (el && el.style.maxHeight !== '0px') el.style.maxHeight = el.scrollHeight + 1000 + "px";
@@ -283,7 +276,6 @@ function setLoggedOut() {
     document.getElementById('btn-manual-sync').disabled = true;
 }
 
-// 更新右上角同步狀態面板
 function updateSyncUI(status, message = '') {
     const dot  = document.getElementById('sync-dot');
     const text = document.getElementById('sync-status-text');
@@ -292,7 +284,6 @@ function updateSyncUI(status, message = '') {
     if (text && s[status]) text.innerText = message || s[status][1];
 }
 
-// 輸入變動後 15 秒自動存雲端（避免過於頻繁）
 function triggerAutoSave() {
     updateDynamicPrices();
     const cur = getFormValues();
@@ -308,7 +299,6 @@ function triggerAutoSave() {
     }
 }
 
-// 儲存個人設定到個人雲端（player_data/{keycode}）
 async function saveAllToCloud(isManual = false) {
     const kc = document.getElementById('userKeyCode')?.value.trim();
     if (!kc) { if (isManual) alert("請先輸入代碼！"); return; }
@@ -316,7 +306,6 @@ async function saveAllToCloud(isManual = false) {
     try {
         const data = getFormValues();
         data.lastUpdated = new Date().toISOString();
-        // 個人雲端存 checked/ratio（以 id 為 key）
         data.memberSettings = buildMemberSettings();
         await setDoc(doc(db, "player_data", kc), data, { merge: true });
         lastSavedData = JSON.parse(JSON.stringify(data));
@@ -330,7 +319,6 @@ async function saveAllToCloud(isManual = false) {
     }
 }
 
-// 建立以 id 為 key 的個人設定物件（checked、ratio）
 function buildMemberSettings() {
     const settings = {};
     members.forEach(m => {
@@ -343,7 +331,6 @@ function showAutoLoadStatus(msg) {
     showToast(msg);
 }
 
-// 從個人雲端載入設定（player_data/{keycode}）
 async function loadFromCloud(silent = false) {
     const kc = document.getElementById('userKeyCode')?.value.trim();
     if (!kc) { if (!silent) alert('請先輸入代碼！'); return; }
@@ -351,7 +338,6 @@ async function loadFromCloud(silent = false) {
         const snap = await getDoc(doc(db, "player_data", kc));
 
         if (!snap.exists()) {
-            // 新 keycode：建立新帳號，本地歷史保留並上傳
             const newData = getFormValues();
             newData.lastUpdated    = new Date().toISOString();
             newData.memberSettings = buildMemberSettings();
@@ -374,7 +360,6 @@ async function loadFromCloud(silent = false) {
         const data = snap.data();
         fillValues(data);
 
-        // 合併共用名單與個人 checked/ratio（以 id 為 key）
         const memberSettings = data.memberSettings || {};
         members = members.map(m => ({
             id:      m.id,
@@ -391,7 +376,6 @@ async function loadFromCloud(silent = false) {
         updateDynamicPrices();
         calculateFinalAtk();
 
-        // 以雲端歷史覆蓋本地
         const histSnap = await getDoc(doc(db, "player_history", kc));
         settlementHistory = histSnap.exists() ? (histSnap.data().history || []) : [];
         localStorage.setItem('maple_settlement_history', JSON.stringify(settlementHistory));
@@ -411,9 +395,8 @@ async function loadFromCloud(silent = false) {
 }
 
 // ==========================================================================
-// 📋 表單資料（扁平化）
+// 📋 表單資料
 // ==========================================================================
-// 收集所有輸入框的值，用於存到 localStorage / 雲端
 function getFormValues() {
     const ids = [
         'userKeyCode',
@@ -424,19 +407,15 @@ function getFormValues() {
         'maplePercentMain','maplePercentSub',
         'calcBaseAtkA','calcAtkPercentA','calcMainBaseA','calcMainEquipA','calcMainPercentA','calcSubBaseA','calcSubEquipA','calcSubPercentA','maplePercentA',
         'calcBaseAtkB','calcAtkPercentB','calcMainBaseB','calcMainEquipB','calcMainPercentB','calcSubBaseB','calcSubEquipB','calcSubPercentB','maplePercentB',
-        // 加成設定輸入框
-        'bonus-prayer-val','bonus-2x-val',
     ];
     const data = {};
     ids.forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
 
-    // 手續費 radio 另外存
     const checkedFee = document.querySelector('input[name="defaultFee"]:checked');
     if (checkedFee) data.defaultFee = checkedFee.value;
 
-    // checkbox 狀態另外存
-    ['mapleCheckMain','mapleCheckSub','mapleCheckA','mapleCheckB',
-     'bonus-prayer','bonus-2x','bonus-rest'].forEach(id => {
+    // checkbox 狀態：含楓幣勾選
+    ['mapleCheckMain','mapleCheckSub','mapleCheckA','mapleCheckB','meso-enabled'].forEach(id => {
         const el = document.getElementById(id);
         if (el) data[id] = el.checked;
     });
@@ -444,22 +423,17 @@ function getFormValues() {
     return data;
 }
 
-// 將儲存的資料填回表單
 function fillValues(obj) {
     for (const key in obj) {
         const el = document.getElementById(key);
         if (!el) continue;
         if (typeof obj[key] === 'boolean') {
-            // 還原 checkbox 狀態，並同步 disabled 輸入框
             el.checked = obj[key];
             const inputMap = {
                 mapleCheckMain:  'maplePercentMain',
                 mapleCheckSub:   'maplePercentSub',
                 mapleCheckA:     'maplePercentA',
                 mapleCheckB:     'maplePercentB',
-                // 加成設定 checkbox 對應的輸入框
-                'bonus-prayer':  'bonus-prayer-val',
-                'bonus-2x':      'bonus-2x-val',
             };
             const inputId = inputMap[key];
             if (inputId) {
@@ -469,18 +443,21 @@ function fillValues(obj) {
                     inp.style.opacity = obj[key] ? '1' : '0.4';
                 }
             }
+            // 還原楓幣勾選狀態時同步 UI
+            if (key === 'meso-enabled') {
+                captureWithMeso = obj[key];
+                applyMesoEnabledUI(obj[key]);
+            }
         } else if (typeof obj[key] !== 'object') {
             el.value = obj[key];
         }
     }
-    // 還原手續費 radio
     if (obj.defaultFee !== undefined) {
         const radio = document.getElementById(`defaultFee${obj.defaultFee}`);
         if (radio) radio.checked = true;
     }
 }
 
-// Toast 提示訊息（右下角，3 秒後消失）
 function showToast(msg) {
     const t = document.getElementById("toast");
     if (t) { t.textContent = msg; t.style.display = "block"; setTimeout(() => t.style.display = "none", 3000); }
@@ -489,7 +466,6 @@ function showToast(msg) {
 // ==========================================================================
 // 💰 動態價格計算
 // ==========================================================================
-// 根據里程匯率換算剪刀、雪花價格（萬楓幣）
 function updateDynamicPrices() {
     const r = parseFloat(document.getElementById('moneyToMileage')?.value) || 10000;
     const toWan = m => ((m / r) * 1000).toFixed(1);
@@ -499,7 +475,6 @@ function updateDynamicPrices() {
     if (el('priceSnow'))     el('priceSnow').innerText     = toWan(3500 / 11);
 }
 
-// 取得目前所有物品價格（萬楓幣）
 function getPrices() {
     const r = parseFloat(document.getElementById('moneyToMileage')?.value) || 10000;
     const toWan = m => (m / r) * 1000;
@@ -515,14 +490,11 @@ function getPrices() {
 // ==========================================================================
 // 👥 隊員管理
 // ==========================================================================
-// 從共用雲端（shared_data/team_data）讀取隊員、王、掉落物、管理員清單
 async function loadSharedData() {
     try {
         const snap = await getDoc(doc(db, "shared_data", "team_data"));
         if (snap.exists()) {
             const d = snap.data();
-            // 支援新格式 { id, name } 和舊格式（純字串）
-            // 舊格式沒有 id，自動補上 generateId()
             const rawMembers = d.members || d.memberNames || [];
             bossList      = d.bossList      || [];
             bossItemMap   = d.bossItemMap   || {};
@@ -551,7 +523,6 @@ async function loadSharedData() {
     }
 }
 
-// 將隊員名單存到共用雲端（shared_data/team_data），存 { id, name } 格式
 async function saveMembersToCloud() {
     const kc = document.getElementById('userKeyCode').value.trim();
     if (!kc) { alert("🔒 尚未登入代碼，無法同步！"); return; }
@@ -565,7 +536,6 @@ async function saveMembersToCloud() {
     } catch (e) { alert("同步失敗：" + e.message); }
 }
 
-// 新增一個空隊員（補上唯一碼 id）
 function addMember() {
     members.push({ id: generateId(), name: "", ratio: 1, checked: false });
     renderMembers();
@@ -574,7 +544,6 @@ function addMember() {
 function removeMember(i) { members.splice(i, 1); renderMembers(); }
 function updateMemberData(i, field, val) { if (members[i]) members[i][field] = val; }
 
-// 隊員表格 change 事件：更新 members 陣列，勾選變動時同步賣家/雪花下拉
 function onMemberTableChange(e) {
     const i = e.target.dataset.index;
     if (e.target.classList.contains('mem-check'))  { members[i].checked = e.target.checked; refreshSellerOptions(); refreshSnowUserOptions(); }
@@ -582,10 +551,8 @@ function onMemberTableChange(e) {
     if (e.target.classList.contains('mem-ratio'))  updateMemberData(i, 'ratio', parseFloat(e.target.value));
 }
 
-// 隊員表格 click 事件（目前表格內無刪除按鈕，保留掛點供未來擴充）
-function onMemberTableClick(e) {}
+function onMemberTableClick(e) { if (e.target.classList.contains('mem-del')) removeMember(e.target.dataset.index); }
 
-// 渲染隊員 grid（兩欄並排）
 function renderMembers() {
     const grid = document.getElementById('member-grid');
     if (!grid) return;
@@ -593,13 +560,10 @@ function renderMembers() {
     members.forEach((m, i) => {
         const cell = document.createElement('div');
         cell.className = 'member-cell';
-        // 名稱欄位鎖定規則：管理員可隨時編輯；非管理員僅能在「名稱尚為空」時輸入（新增隊員流程），
-        // 一旦該隊員存過非空名稱，就只有管理員能再修改
-        const nameLocked = !isAdmin && m.name.trim() !== '';
         cell.innerHTML = `
             <input type="checkbox" class="mem-check" data-index="${i}" ${m.checked ? 'checked' : ''}>
             <input type="hidden" class="mem-id" data-index="${i}" value="${m.id}">
-            <input type="text" value="${m.name}" class="cloud-input mem-name" data-index="${i}" placeholder="名稱..." ${nameLocked ? 'disabled' : ''}>
+            <input type="text" value="${m.name}" class="cloud-input mem-name" data-index="${i}" placeholder="名稱...">
             <input type="number" value="${m.ratio}" class="cloud-input mem-ratio" data-index="${i}">
         `;
         grid.appendChild(cell);
@@ -608,12 +572,10 @@ function renderMembers() {
     refreshSnowUserOptions();
 }
 
-// 取得目前勾選參加的隊員（含 id）
 function getActiveMembers() {
     return members.filter(m => m.checked && m.name.trim() !== '');
 }
 
-// 根據 id 查最新名稱；查不到就回傳備用名稱（舊資料相容）
 function getMemberNameById(id, fallbackName = '') {
     const found = members.find(m => m.id === id);
     return found ? found.name : (fallbackName || id);
@@ -627,7 +589,6 @@ function getCurrentBoss() {
     return (val && val !== '__add_new__') ? val : '';
 }
 
-// 切換王時若有掉落物/雪花，確認後清空
 function onBossSelectChange(e) {
     const val = e.target.value;
     if (val === '__add_new__') { handleAddNew('boss', e.target); return; }
@@ -647,7 +608,6 @@ function onBossSelectChange(e) {
     renderAllDropItemSelects();
 }
 
-// 控制「新增掉落物」按鈕是否可用（需先選王）
 function updateDropButtons() {
     const hasBoss = !!getCurrentBoss();
     ['btn-add-drop-sell','btn-add-drop-self','btn-add-snow'].forEach(id => {
@@ -656,7 +616,6 @@ function updateDropButtons() {
     });
 }
 
-// 渲染王下拉選單（有 keycode 才顯示「新增王」選項）
 function renderBossSelect() {
     const sel = document.getElementById('boss-select');
     if (!sel) return;
@@ -669,14 +628,13 @@ function renderBossSelect() {
 }
 
 // ==========================================================================
-// 📦 掉落物名稱下拉（依當前王）
+// 📦 掉落物名稱下拉
 // ==========================================================================
 function getCurrentBossItems() {
     const boss = getCurrentBoss();
     return boss ? (bossItemMap[boss] || []) : [];
 }
 
-// 建立物品下拉選項 HTML（有 keycode 才顯示「新增物品」選項）
 function buildItemOptions(selected = '') {
     const kc    = document.getElementById('userKeyCode')?.value.trim();
     const items = getCurrentBossItems();
@@ -686,7 +644,6 @@ function buildItemOptions(selected = '') {
     return html;
 }
 
-// 重新渲染所有掉落物的物品下拉（王切換後呼叫）
 function renderAllDropItemSelects() {
     document.querySelectorAll('.drop-item').forEach(sel => {
         const cur = (sel.value === '__add_new__') ? '' : sel.value;
@@ -694,7 +651,6 @@ function renderAllDropItemSelects() {
     });
 }
 
-// 處理「新增王」或「新增物品」的 prompt 流程
 async function handleAddNew(type, selectEl) {
     const label = type === 'boss' ? '王名稱' : '物品名稱';
     const name  = prompt(`請輸入新的${label}：`);
@@ -720,11 +676,9 @@ async function handleAddNew(type, selectEl) {
     updateDropButtons();
 }
 
-// 將王名單、掉落物清單、隊員名單、管理員清單存到共用雲端
 async function saveSharedLists() {
     const kc = document.getElementById('userKeyCode')?.value.trim();
     if (!kc) return;
-    // 存 { id, name } 物件陣列
     const memberList = members.filter(m => m.name.trim() !== '').map(m => ({ id: m.id, name: m.name }));
     try { await setDoc(doc(db, "shared_data", "team_data"), { members: memberList, bossList, bossItemMap, adminKeycodes }, { merge: false }); }
     catch (e) { console.error("名單儲存失敗：", e); }
@@ -733,7 +687,6 @@ async function saveSharedLists() {
 // ==========================================================================
 // 📦 掉落物表格
 // ==========================================================================
-// 掉落物表格 change 事件：更新 dropRows 陣列
 function onDropTableChange(e) {
     const i = parseInt(e.target.dataset.index);
     if (isNaN(i) || !dropRows[i]) return;
@@ -745,31 +698,25 @@ function onDropTableChange(e) {
     if (e.target.classList.contains('drop-fee'))     { dropRows[i].fee     = parseFloat(e.target.value) || 0; recalcDropRow(i); }
     if (e.target.classList.contains('drop-scissor')) { dropRows[i].scissor = e.target.value;                  recalcDropRow(i); }
     if (e.target.classList.contains('drop-seller'))  {
-        // seller 存 { id, name }，方便歷史紀錄顯示時用 id 查最新名稱
         const selectedId = e.target.value;
         const member = members.find(m => m.id === selectedId);
         dropRows[i].seller = member ? { id: member.id, name: member.name } : null;
     }
 }
 
-// 掉落物表格 click 事件：刪除列
 function onDropTableClick(e) { if (e.target.classList.contains('drop-del')) removeDropRow(parseInt(e.target.dataset.index)); }
 
-// 新增一列掉落物（手續費預設從基礎設定讀取）
 function addDropRow(type) {
     const i = dropRows.length;
-    // 讀取基礎設定的手續費預設值
     const defaultFee = parseInt(document.querySelector('input[name="defaultFee"]:checked')?.value ?? 6);
     dropRows.push({ type, item: '', price: 0, fee: type === 'sell' ? defaultFee : 0, scissor: 'none', seller: null, net: 0 });
     appendDropRow(i);
     expandSection('drops-section');
 }
 
-// 將一列掉落物 DOM 加到表格
 function appendDropRow(i) {
     const row    = dropRows[i];
     const isSell = row.type === 'sell';
-    // seller 支援 { id, name } 新格式，也相容舊格式（id 欄位取不到就用空字串）
     const sellerId = row.seller?.id || '';
     const tr     = document.createElement('tr');
     tr.id = `drop-row-${i}`;
@@ -813,7 +760,6 @@ function appendDropRow(i) {
     document.getElementById('drops-table-body').appendChild(tr);
 }
 
-// 重新計算單列掉落物淨收入（扣手續費與剪刀費用）
 function recalcDropRow(i) {
     const row = dropRows[i], p = getPrices();
     let net = row.price;
@@ -830,19 +776,16 @@ function recalcDropRow(i) {
 
 function removeDropRow(i) { dropRows.splice(i, 1); rerenderDropTable(); }
 
-// 重新渲染整個掉落物表格（刪除後重建索引）
 function rerenderDropTable() {
     document.getElementById('drops-table-body').innerHTML = '';
     const temp = [...dropRows]; dropRows = [];
     temp.forEach((row, i) => { dropRows.push(row); appendDropRow(i); });
 }
 
-// 重新整理所有賣家下拉選單（隊員勾選變動時呼叫，保留目前選取的 id）
 function refreshSellerOptions() {
     document.querySelectorAll('.drop-seller').forEach(sel => { const cur = sel.value; sel.innerHTML = buildSellerOptions(cur); });
 }
 
-// 建立賣家/自用者下拉選項（value 存 id，顯示名稱）
 function buildSellerOptions(selectedId = '') {
     const active = getActiveMembers();
     let html = '<option value="">— 選擇 —</option>';
@@ -853,12 +796,10 @@ function buildSellerOptions(selectedId = '') {
 // ==========================================================================
 // ❄️ 雪花表格
 // ==========================================================================
-// 雪花表格 change 事件：更新 snowRows 陣列
 function onSnowTableChange(e) {
     const i = parseInt(e.target.dataset.index);
     if (isNaN(i) || !snowRows[i]) return;
     if (e.target.classList.contains('snow-user')) {
-        // user 存 { id, name }，方便歷史紀錄顯示時用 id 查最新名稱
         const selectedId = e.target.value;
         const member = members.find(m => m.id === selectedId);
         snowRows[i].user = member ? { id: member.id, name: member.name } : null;
@@ -866,10 +807,8 @@ function onSnowTableChange(e) {
     if (e.target.classList.contains('snow-count')) { snowRows[i].count = parseFloat(e.target.value) || 0; recalcSnowRow(i); }
 }
 
-// 雪花表格 click 事件：刪除列
 function onSnowTableClick(e) { if (e.target.classList.contains('snow-del')) removeSnowRow(parseInt(e.target.dataset.index)); }
 
-// 新增一列雪花消耗
 function addSnowRow() {
     const i = snowRows.length;
     snowRows.push({ user: null, count: 0, cost: 0 });
@@ -877,10 +816,8 @@ function addSnowRow() {
     expandSection('drops-section');
 }
 
-// 將一列雪花消耗 DOM 加到表格
 function appendSnowRow(i) {
     const row = snowRows[i];
-    // user 支援 { id, name } 新格式，也相容舊格式字串
     const userId = row.user?.id || '';
     const tr  = document.createElement('tr');
     tr.id = `snow-row-${i}`;
@@ -904,7 +841,6 @@ function appendSnowRow(i) {
     document.getElementById('snow-table-body').appendChild(tr);
 }
 
-// 重新計算單列雪花成本
 function recalcSnowRow(i) {
     const cost = Math.round(snowRows[i].count * getPrices().snow * 10) / 10;
     snowRows[i].cost = cost;
@@ -914,14 +850,12 @@ function recalcSnowRow(i) {
 
 function removeSnowRow(i) { snowRows.splice(i, 1); rerenderSnowTable(); }
 
-// 重新渲染整個雪花表格（刪除後重建索引）
 function rerenderSnowTable() {
     document.getElementById('snow-table-body').innerHTML = '';
     const temp = [...snowRows]; snowRows = [];
     temp.forEach((row, i) => { snowRows.push(row); appendSnowRow(i); });
 }
 
-// 重新整理所有雪花使用者下拉選單（隊員勾選變動時呼叫，保留目前選取的 id）
 function refreshSnowUserOptions() {
     document.querySelectorAll('.snow-user').forEach(sel => { const cur = sel.value; sel.innerHTML = buildSellerOptions(cur); });
 }
@@ -929,7 +863,6 @@ function refreshSnowUserOptions() {
 // ==========================================================================
 // 🗑️ 清空掉落物
 // ==========================================================================
-// 重置結算 UI（隱藏結算結果、清空歷史選擇）
 function resetSettlementUI() {
     document.getElementById('settlement-detail').style.display = 'none';
     document.getElementById('history-select').value            = '';
@@ -940,7 +873,6 @@ function resetSettlementUI() {
     lastSettlementResult = null;
 }
 
-// 清空本次所有掉落物和雪花資料
 function clearDrops() {
     if (dropRows.length === 0 && snowRows.length === 0) return;
     if (!confirm("確定要清空本次所有掉落物和雪花資料嗎？")) return;
@@ -975,7 +907,6 @@ function executeSettlement() {
     const active = getActiveMembers();
     const prices = getPrices();
 
-    // 每人實際收入（以 id 為 key）
     const actualIncome = {};
     active.forEach(m => { actualIncome[m.id] = 0; });
     dropRows.forEach(row => {
@@ -983,11 +914,9 @@ function executeSettlement() {
         if (sid && actualIncome.hasOwnProperty(sid)) actualIncome[sid] += row.net;
     });
 
-    // 計算總池（所有掉落物淨收入加總）
     let totalPool = 0;
     dropRows.forEach(row => { totalPool += row.net; });
 
-    // 雪花從總池扣，記錄每人雪花成本（以 id 為 key）
     const snowCostPerMember = {};
     active.forEach(m => { snowCostPerMember[m.id] = 0; });
     let totalSnowCost = 0;
@@ -997,7 +926,6 @@ function executeSettlement() {
         if (uid && snowCostPerMember.hasOwnProperty(uid)) snowCostPerMember[uid] += row.cost;
     });
 
-    // 每人應得 = 依比例分總池 + 加回自己雪花成本（以 id 為 key）
     const totalRatio = active.reduce((s, m) => s + (m.ratio || 1), 0);
     const shouldGet  = {};
     active.forEach(m => {
@@ -1005,7 +933,6 @@ function executeSettlement() {
         shouldGet[m.id] = Math.round((base + (snowCostPerMember[m.id] || 0)) * 10) / 10;
     });
 
-    // 差額（正=多拿要付出，負=少拿要收回）（以 id 為 key）
     const diff = {};
     active.forEach(m => { diff[m.id] = Math.round((actualIncome[m.id] - shouldGet[m.id]) * 10) / 10; });
 
@@ -1016,9 +943,7 @@ function executeSettlement() {
     document.getElementById('btn-save-record').disabled = false;
 }
 
-// 計算付款指示（最小化付款次數）
 function calcPayments(diff, active, prices) {
-    // diff 的 key 為 id；payers/receivers 記錄 { id, name, amount }
     let payers    = active.filter(m => diff[m.id] >  0.01).map(m => ({ id: m.id, name: m.name, amount:  diff[m.id] }));
     let receivers = active.filter(m => diff[m.id] < -0.01).map(m => ({ id: m.id, name: m.name, amount: -diff[m.id] }));
     const payments = [];
@@ -1026,7 +951,6 @@ function calcPayments(diff, active, prices) {
     while (pi < payers.length && ri < receivers.length) {
         const p = payers[pi], r = receivers[ri];
         const amount = Math.round(Math.min(p.amount, r.amount) * 10) / 10;
-        // 付款指示存名稱（顯示用）和 id（供 getMemberNameById 查最新名稱用）
         payments.push({ fromId: p.id, from: p.name, toId: r.id, to: r.name, amount, ...suggestBlocks(amount, prices) });
         p.amount = Math.round((p.amount - amount) * 10) / 10;
         r.amount = Math.round((r.amount - amount) * 10) / 10;
@@ -1036,7 +960,6 @@ function calcPayments(diff, active, prices) {
     return payments;
 }
 
-// 建議用方塊付款（奇幻 → 可疑 → 餘額楓幣）
 function suggestBlocks(amount, prices) {
     let rem = amount, fancyCount = 0, suspCount = 0;
     if (prices.cubeFancy > 0)      { fancyCount = Math.floor(rem / prices.cubeFancy);      rem = Math.round((rem - fancyCount * prices.cubeFancy) * 10) / 10; }
@@ -1049,12 +972,10 @@ function suggestBlocks(amount, prices) {
 // ==========================================================================
 function renderSettlementResult(result, active, dropsSnapshot, snowsSnapshot) {
     const { totalPool, shouldGet, actualIncome, diff, payments } = result;
-    // 優先用快照，沒有快照才用目前的 dropRows/snowRows（歷史紀錄讀取時傳入快照）
     const displayDrops = dropsSnapshot || dropRows;
     const displaySnows = snowsSnapshot || snowRows;
     document.getElementById('settlement-detail').style.display = 'block';
 
-    // 掉落物收入：seller 用 id 查最新名稱，查不到就顯示存的舊 name（舊資料相容）
     let dropsHtml = '<div class="detail-section-title">📦 掉落物收入</div>';
     if (displayDrops.length === 0) {
         dropsHtml += '<div class="detail-row" style="color:#666;">（無）</div>';
@@ -1072,7 +993,6 @@ function renderSettlementResult(result, active, dropsSnapshot, snowsSnapshot) {
     }
     document.getElementById('detail-drops').innerHTML = dropsHtml;
 
-    // 雪花消耗：user 用 id 查最新名稱，查不到就顯示存的舊 name
     let snowHtml = '<div class="detail-section-title">❄️ 雪花消耗</div>';
     if (displaySnows.length === 0) {
         snowHtml += '<div class="detail-row" style="color:#666;">（無）</div>';
@@ -1087,14 +1007,12 @@ function renderSettlementResult(result, active, dropsSnapshot, snowsSnapshot) {
     document.getElementById('detail-snow').innerHTML = snowHtml;
     document.getElementById('detail-total').innerText = totalPool.toFixed(1) + '萬';
 
-    // 每人分紅明細：以 id 為 key 查金額，查不到再 fallback 用 name（舊格式相容）
     const tbody = document.getElementById('settlement-member-body');
     tbody.innerHTML = '';
     active.forEach(m => {
         const income = actualIncome[m.id] ?? actualIncome[m.name] ?? 0;
         const should = shouldGet[m.id]    ?? shouldGet[m.name]    ?? 0;
         const d      = diff[m.id]         ?? diff[m.name]         ?? 0;
-        // 有 id 就查最新名稱，查不到就用快照舊名稱
         const displayName = getMemberNameById(m.id, m.name);
         const color = d >= 0 ? '#ff9f43' : '#64b5f6';
         const sign  = d >= 0 ? '+' : '';
@@ -1109,7 +1027,6 @@ function renderSettlementResult(result, active, dropsSnapshot, snowsSnapshot) {
         tbody.appendChild(tr);
     });
 
-    // 付款指示：from/to 用 id 查最新名稱，查不到就顯示存的舊 name
     const payEl = document.getElementById('payment-instructions');
     if (payments.length === 0) {
         payEl.innerHTML = '<div style="color:#666;font-size:13px;">無需付款，大家收支平衡！</div>';
@@ -1137,25 +1054,20 @@ function renderSettlementResult(result, active, dropsSnapshot, snowsSnapshot) {
 // ==========================================================================
 // 📜 歷史紀錄
 // ==========================================================================
-// 儲存本次結算紀錄到 localStorage 和個人雲端（player_history/{keycode}）
 function saveSettlementRecord() {
     if (!lastSettlementResult) { alert("請先執行結算！"); return; }
     const record = {
         date:    document.getElementById('settlement-date')?.value || new Date().toISOString().split('T')[0],
         boss:    document.getElementById('boss-select')?.value || '未知',
         result:  lastSettlementResult,
-        // drops/snows 的 seller/user 已是 { id, name } 格式，直接存
         drops:   JSON.parse(JSON.stringify(dropRows)),
         snows:   JSON.parse(JSON.stringify(snowRows)),
-        // members 存 { id, name, ratio }，歷史顯示時用 id 查最新名稱
         members: JSON.parse(JSON.stringify(getActiveMembers()))
     };
 
     if (currentHistoryIndex >= 0) {
-        // 覆蓋目前查看的歷史紀錄
         settlementHistory[currentHistoryIndex] = record;
     } else {
-        // 新增到最前面，超過 100 筆刪最舊的
         settlementHistory.unshift(record);
         if (settlementHistory.length > 100) settlementHistory.pop();
         settlementHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
@@ -1169,7 +1081,6 @@ function saveSettlementRecord() {
             .catch(e => console.error("歷史雲端儲存失敗：", e));
     }
     renderHistorySelect();
-    // 用 dataset 標記暫時跳過 change 事件，避免儲存後觸發 loadHistoryRecord
     const sel = document.getElementById('history-select');
     if (sel) {
         sel.dataset.skipChange = 'true';
@@ -1181,7 +1092,6 @@ function saveSettlementRecord() {
     showToast("💾 紀錄已儲存！");
 }
 
-// 刪除目前查看的歷史紀錄
 function deleteHistoryRecord() {
     if (!confirm("確定要刪除此筆紀錄嗎？")) return;
     const idx = currentHistoryIndex >= 0 ? currentHistoryIndex : 0;
@@ -1201,7 +1111,6 @@ function deleteHistoryRecord() {
     showToast("🗑 紀錄已刪除");
 }
 
-// 渲染歷史紀錄下拉選單
 function renderHistorySelect() {
     const sel = document.getElementById('history-select');
     if (!sel) return;
@@ -1209,10 +1118,9 @@ function renderHistorySelect() {
     settlementHistory.forEach((r, i) => { sel.innerHTML += `<option value="${i}">${r.date} ${r.boss}</option>`; });
 }
 
-// 讀取並顯示歷史紀錄
 function loadHistoryRecord() {
     const sel = document.getElementById('history-select');
-    if (sel?.dataset.skipChange === 'true') return; // 儲存後更新選單時跳過
+    if (sel?.dataset.skipChange === 'true') return;
     const idx = sel?.value;
     if (idx === '' || idx === undefined) {
         currentHistoryIndex = -1;
@@ -1223,8 +1131,6 @@ function loadHistoryRecord() {
     if (!record) return;
     currentHistoryIndex = parseInt(idx);
 
-    // 1. 先還原隊員勾選（buildSellerOptions 需要用到）
-    //    用 id 比對，id 不存在時以名稱 fallback（舊格式相容）
     if (record.members) {
         const checkedIds   = record.members.map(m => m.id).filter(Boolean);
         const checkedNames = record.members.map(m => m.name);
@@ -1236,27 +1142,20 @@ function loadHistoryRecord() {
         renderMembers();
     }
 
-    // 2. 還原王（buildItemOptions 需要用到）
     if (record.boss) {
         const bossEl = document.getElementById('boss-select');
         if (bossEl) { bossEl.value = record.boss; bossEl.dataset.prev = record.boss; }
         updateDropButtons();
     }
 
-    // 3. 還原日期
     if (record.date) document.getElementById('settlement-date').value = record.date;
 
-    // 4. 還原掉落物（rerenderDropTable 內部呼叫 appendDropRow，此時王和隊員都已還原）
     dropRows = record.drops || [];
     rerenderDropTable();
 
-    // 5. 還原雪花
     snowRows = record.snows || [];
     rerenderSnowTable();
 
-    // 6. 渲染結算結果
-    //    result 裡 shouldGet/actualIncome/diff 的 key 為 id
-    //    renderSettlementResult 會用 active（從 members 取）來顯示名稱
     lastSettlementResult = record.result;
     renderSettlementResult(record.result, record.members || getActiveMembers(), record.drops, record.snows);
     document.getElementById('btn-save-record').disabled   = false;
@@ -1267,7 +1166,6 @@ function loadHistoryRecord() {
 // ==========================================================================
 // 🔐 管理員設定 Modal
 // ==========================================================================
-// 開啟管理員 Modal 並渲染各分頁內容
 function openAdminPanel() {
     renderModalAdminList();
     renderModalMemberList();
@@ -1282,7 +1180,6 @@ function closeAdminPanel() {
     document.getElementById('modal-admin-panel').classList.remove('active');
 }
 
-// 切換管理員 Modal 分頁
 function switchAdminTab(tab) {
     document.querySelectorAll('.admin-tab-content').forEach(el => el.style.display = 'none');
     document.getElementById(`admin-tab-${tab}`).style.display = 'block';
@@ -1294,7 +1191,6 @@ function switchAdminTab(tab) {
     document.querySelector(`.admin-tab-btn[data-tab="${tab}"]`).classList.add('btn-blue');
 }
 
-// 分頁1：管理員 keycode 名單
 function renderModalAdminList() {
     const el = document.getElementById('modal-admin-list');
     if (!el) return;
@@ -1318,7 +1214,6 @@ function renderModalAdminList() {
     });
 }
 
-// 新增管理員 keycode
 async function addAdminKeycode() {
     const input = document.getElementById('new-admin-keycode');
     const kc    = input?.value.trim();
@@ -1331,7 +1226,6 @@ async function addAdminKeycode() {
     showToast(`✅ 已新增管理員「${kc}」`);
 }
 
-// 分頁2：隊員名單（顯示 name 和 id，刪除以 id 為準）
 function renderModalMemberList() {
     const el = document.getElementById('modal-member-list');
     if (!el) return;
@@ -1350,7 +1244,6 @@ function renderModalMemberList() {
             const target   = members.find(m => m.id === targetId);
             if (!target) return;
             if (!confirm(`確定要刪除隊員「${target.name}」嗎？`)) return;
-            // 以 id 刪除，避免同名隊員誤刪
             members = members.filter(m => m.id !== targetId);
             renderMembers();
             await saveSharedLists();
@@ -1360,7 +1253,6 @@ function renderModalMemberList() {
     });
 }
 
-// 分頁3：王名單（支援拖曳排序）
 function renderModalBossList() {
     const el = document.getElementById('modal-boss-list');
     if (!el) return;
@@ -1373,23 +1265,12 @@ function renderModalBossList() {
         </div>
     `).join('');
 
-    // 拖曳排序
     let dragIdx = null;
     el.querySelectorAll('.modal-list-item').forEach(item => {
-        item.addEventListener('dragstart', () => {
-            dragIdx = parseInt(item.dataset.index);
-            item.style.opacity = '0.5';
-        });
-        item.addEventListener('dragend', () => {
-            item.style.opacity = '1';
-        });
-        item.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            item.style.background = '#333';
-        });
-        item.addEventListener('dragleave', () => {
-            item.style.background = '#252525';
-        });
+        item.addEventListener('dragstart', () => { dragIdx = parseInt(item.dataset.index); item.style.opacity = '0.5'; });
+        item.addEventListener('dragend',   () => { item.style.opacity = '1'; });
+        item.addEventListener('dragover',  (e) => { e.preventDefault(); item.style.background = '#333'; });
+        item.addEventListener('dragleave', () => { item.style.background = '#252525'; });
         item.addEventListener('drop', async () => {
             item.style.background = '#252525';
             const dropIdx = parseInt(item.dataset.index);
@@ -1403,7 +1284,6 @@ function renderModalBossList() {
         });
     });
 
-    // 刪除王（同時刪除該王的所有掉落物）
     el.querySelectorAll('.modal-del-boss').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -1422,7 +1302,6 @@ function renderModalBossList() {
     });
 }
 
-// 分頁3：王篩選下拉（選擇後顯示該王的掉落物）
 function renderModalBossFilter() {
     const sel = document.getElementById('modal-boss-filter');
     if (!sel) return;
@@ -1431,7 +1310,6 @@ function renderModalBossFilter() {
     bossList.forEach(b => { sel.innerHTML += `<option value="${b}" ${cur === b ? 'selected' : ''}>${b}</option>`; });
 }
 
-// 分頁3：掉落物清單（支援拖曳排序）
 function renderModalItemList() {
     const el   = document.getElementById('modal-item-list');
     const boss = document.getElementById('modal-boss-filter')?.value;
@@ -1447,23 +1325,12 @@ function renderModalItemList() {
         </div>
     `).join('');
 
-    // 拖曳排序
     let dragIdx = null;
     el.querySelectorAll('.modal-list-item').forEach(item => {
-        item.addEventListener('dragstart', () => {
-            dragIdx = parseInt(item.dataset.index);
-            item.style.opacity = '0.5';
-        });
-        item.addEventListener('dragend', () => {
-            item.style.opacity = '1';
-        });
-        item.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            item.style.background = '#333';
-        });
-        item.addEventListener('dragleave', () => {
-            item.style.background = '#252525';
-        });
+        item.addEventListener('dragstart', () => { dragIdx = parseInt(item.dataset.index); item.style.opacity = '0.5'; });
+        item.addEventListener('dragend',   () => { item.style.opacity = '1'; });
+        item.addEventListener('dragover',  (e) => { e.preventDefault(); item.style.background = '#333'; });
+        item.addEventListener('dragleave', () => { item.style.background = '#252525'; });
         item.addEventListener('drop', async () => {
             item.style.background = '#252525';
             const dropIdx = parseInt(item.dataset.index);
@@ -1477,7 +1344,6 @@ function renderModalItemList() {
         });
     });
 
-    // 刪除掉落物
     el.querySelectorAll('.modal-del-item').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -1496,8 +1362,6 @@ function renderModalItemList() {
 // ==========================================================================
 // ⚔️ 裝備計算
 // ==========================================================================
-
-// 楓葉祝福 checkbox 啟用/禁用對應輸入欄
 function initMapleCheckboxes() {
     [
         ['mapleCheckMain', 'maplePercentMain'],
@@ -1515,13 +1379,6 @@ function initMapleCheckboxes() {
     });
 }
 
-// 取得楓葉祝福加成後的屬性值（未使用，保留備用）
-function applyMaple(base, mapleChecked, maplePct) {
-    if (!mapleChecked || !maplePct) return base;
-    return base * (1 + maplePct / 100);
-}
-
-// 基礎攻擊力反推（從面板表攻反推基礎攻擊力）
 function calculateBaseAtk() {
     const mainStat   = parseFloat(document.getElementById('mainStat').value)   || 0;
     const subStat    = parseFloat(document.getElementById('subStat').value)    || 0;
@@ -1536,15 +1393,12 @@ function calculateBaseAtk() {
         if (Math.round(Math.floor(t * (1 + percentAtk)) * coeff * statFactor) === Math.round(maxAtk)) { matched = t; break; }
     }
     document.getElementById('resultDisplay').innerText = matched;
-
-    // 帶入表攻計算器 A/B 的攻擊相關欄位
     ['A','B'].forEach(s => {
         document.getElementById(`calcBaseAtk${s}`).value    = matched;
         document.getElementById(`calcAtkPercent${s}`).value = document.getElementById('percentAtk').value;
     });
 }
 
-// 裝備主屬性反推（從面板總主屬反推裝備提供的固定主屬）
 function calculateEquipStat() {
     const total      = parseFloat(document.getElementById('statTotal').value)    || 0;
     const base       = parseFloat(document.getElementById('statBaseOnly').value) || 0;
@@ -1558,8 +1412,6 @@ function calculateEquipStat() {
         if (Math.floor((baseAdj + t) * (1 + percent)) === total) { found = t; break; }
     }
     document.getElementById('equipStatDisplay').innerText = found;
-
-    // 帶入表攻計算器 A/B 主屬性欄位
     ['A','B'].forEach(s => {
         document.getElementById(`calcMainBase${s}`).value    = base;
         document.getElementById(`calcMainEquip${s}`).value   = found;
@@ -1567,7 +1419,6 @@ function calculateEquipStat() {
     });
 }
 
-// 裝備副屬性反推（從面板總副屬反推裝備提供的固定副屬）
 function calculateSubEquipStat() {
     const total    = parseFloat(document.getElementById('subStatTotal').value)    || 0;
     const base     = parseFloat(document.getElementById('subStatBaseOnly').value) || 0;
@@ -1581,8 +1432,6 @@ function calculateSubEquipStat() {
         if (Math.floor((baseAdj + t) * (1 + percent)) === total) { found = t; break; }
     }
     document.getElementById('subEquipStatDisplay').innerText = found;
-
-    // 帶入表攻計算器 A/B 副屬性欄位
     ['A','B'].forEach(s => {
         document.getElementById(`calcSubBase${s}`).value    = base;
         document.getElementById(`calcSubEquip${s}`).value   = found;
@@ -1590,7 +1439,6 @@ function calculateSubEquipStat() {
     });
 }
 
-// 計算單組表攻（A 或 B）
 function calcFinalAtk(suffix) {
     const base      = parseFloat(document.getElementById(`calcBaseAtk${suffix}`).value)    || 0;
     const atkPct    = (parseFloat(document.getElementById(`calcAtkPercent${suffix}`).value) || 0) / 100;
@@ -1616,84 +1464,151 @@ function calcFinalAtk(suffix) {
     document.getElementById(`finalAtkDisplay${suffix}`).innerText = result.toLocaleString();
 }
 
-// 同時計算 A 和 B（載入設定後呼叫）
 function calculateFinalAtk() { calcFinalAtk('A'); calcFinalAtk('B'); }
 
 // ==========================================================================
 // 📊 經驗計算
 // ==========================================================================
 
-// 全域狀態
+// --- 全域狀態 ---
 let selectedMinutes   = 10;    // 預設計時長度（分鐘）
 let timerInterval     = null;  // 計時 setInterval
 let timerSeconds      = 0;     // 已計時秒數
 let countdownInterval = null;  // 倒數計時 setInterval
-let captureStream     = null;  // 螢幕分享 MediaStream
-let captureRegion     = null;  // 框選座標 {x, y, w, h}
-let startCanvas       = null;  // 起始截圖 canvas
-let endCanvas         = null;  // 結束截圖 canvas
+let captureStream     = null;  // 螢幕分享 MediaStream（左右共用）
+let captureRegion     = null;  // 經驗值框選座標 {x, y, w, h}
+let startCanvas       = null;  // 起始經驗截圖 canvas
+let endCanvas         = null;  // 結束經驗截圖 canvas
+let captureRegionMeso = null;  // 楓幣框選座標 {x, y, w, h}
+let startCanvasMeso   = null;  // 起始楓幣截圖 canvas
+let endCanvasMeso     = null;  // 結束楓幣截圖 canvas
+let captureWithMeso   = false; // 是否同時截楓幣（對應勾選狀態）
+let timerAutoStop     = false; // 本次是否為時間到自動停止（決定是否自動解析）
 
-// 初始化：從 localStorage 還原上次框選座標
+// --- 初始化：從 localStorage 還原上次框選座標 ---
 (function initExpCalc() {
+    // 還原經驗值框選座標
     const saved = localStorage.getItem('maple_capture_region');
     if (saved) {
         try {
             captureRegion = JSON.parse(saved);
-            updateCaptureCoords();
+            updateCaptureCoordsEl('capture-coords', captureRegion);
             document.getElementById('capture-preview').innerText = '已有上次框選座標，請先授權';
             document.getElementById('btn-capture-select').innerText = '授權並截圖';
         } catch(e) {}
     }
+    // 還原楓幣框選座標
+    const savedMeso = localStorage.getItem('maple_capture_region_meso');
+    if (savedMeso) {
+        try {
+            captureRegionMeso = JSON.parse(savedMeso);
+            updateCaptureCoordsEl('capture-coords-meso', captureRegionMeso);
+            document.getElementById('capture-preview-meso').innerText = '已有上次框選座標，請先授權';
+            document.getElementById('btn-capture-select-meso').innerText = '授權並截圖';
+        } catch(e) {}
+    }
 })();
 
-// --- 螢幕分享與框選 ---
+// --- 勾選「同時截楓幣」：控制右欄 UI 狀態 ---
 
-// 授權螢幕分享，並根據狀態決定進框選流程或直接截圖
-async function startCaptureSelect() {
+// 勾選變動事件
+function onMesoEnabledChange(e) {
+    captureWithMeso = e.target.checked;
+    // 存到 localStorage（雲端由 triggerAutoSave 負責）
+    applyMesoEnabledUI(captureWithMeso);
+}
+
+// 套用楓幣啟用/停用 UI（勾選 checkbox 或從雲端還原時共用）
+function applyMesoEnabledUI(enabled) {
+    // 右欄框選整區
+    const panel = document.getElementById('meso-capture-panel');
+    if (panel) {
+        panel.style.opacity        = enabled ? '1'    : '0.35';
+        panel.style.pointerEvents  = enabled ? 'auto' : 'none';
+    }
+    // 四格截圖預覽中的楓幣格
+    ['ocr-meso-start-wrap','ocr-meso-end-wrap'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.opacity       = enabled ? '1'    : '0.35';
+            el.style.pointerEvents = enabled ? 'auto' : 'none';
+        }
+    });
+    // 楓幣輸入框
+    ['ocr-meso-start-input-wrap','ocr-meso-end-input-wrap'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.opacity       = enabled ? '1'    : '0.35';
+            el.style.pointerEvents = enabled ? 'auto' : 'none';
+        }
+    });
+    // 楓幣結果列
+    const mesoResult = document.getElementById('meso-result-section');
+    if (mesoResult) mesoResult.style.display = enabled ? '' : 'none';
+}
+
+// --- 框選與截圖 ---
+
+// 通用版授權並框選（target = 'exp' 或 'meso'）
+// 左右共用同一個 captureStream，授權只做一次
+async function startCaptureSelect(target = 'exp') {
     try {
-        const btnText = document.getElementById('btn-capture-select').innerText;
+        const isMeso    = target === 'meso';
+        const btnId     = isMeso ? 'btn-capture-select-meso' : 'btn-capture-select';
+        const region    = isMeso ? captureRegionMeso          : captureRegion;
+        const btnText   = document.getElementById(btnId).innerText;
         const needReselect = btnText === '重新框選';
 
-        // 如果已有 stream 且還活著，不重新授權
+        // 如果已有 stream 且還活著，不重新授權（左右共用）
         if (!captureStream || captureStream.getTracks().every(t => t.readyState === 'ended')) {
             captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
             captureStream.getTracks()[0].addEventListener('ended', () => {
                 captureStream = null;
-                document.getElementById('btn-capture-select').innerText = captureRegion ? '授權並截圖' : '授權並框選';
-                document.getElementById('capture-preview').innerText = '授權已結束';
+                // 兩欄按鈕都回到未授權狀態
+                document.getElementById('btn-capture-select').innerText =
+                    captureRegion ? '授權並截圖' : '授權並框選';
+                document.getElementById('btn-capture-select-meso').innerText =
+                    captureRegionMeso ? '授權並截圖' : '授權並框選';
+                document.getElementById('capture-preview').innerText      = '授權已結束';
+                document.getElementById('capture-preview-meso').innerText = '授權已結束';
+                document.getElementById('btn-preview-exp').disabled  = true;
+                document.getElementById('btn-preview-meso').disabled = true;
             });
         }
 
-        // 重新框選 或 沒有座標 → 進框選流程
-        if (needReselect || !captureRegion) {
-            showSelectionOverlay();
+        // 需要重新框選或尚無座標 → 進框選流程
+        if (needReselect || !region) {
+            showSelectionOverlay(target);
         } else {
             // 有上次座標且非重新框選 → 直接截圖預覽
-            await takePreviewShot();
-            document.getElementById('btn-capture-select').innerText = '重新框選';
+            await takePreviewShot(target);
+            document.getElementById(btnId).innerText = '重新框選';
+            // 截圖成功後啟用「重新截圖」按鈕
+            document.getElementById(isMeso ? 'btn-preview-meso' : 'btn-preview-exp').disabled = false;
         }
     } catch(e) {
         alert('授權失敗或已取消：' + e.message);
     }
 }
 
-// 顯示全螢幕框選 overlay（拖曳選取經驗值區域）
-function showSelectionOverlay() {
-    // vidW/vidH 在 video playing 後從 video.videoWidth/videoHeight 取得，
-    // 避免 getDisplayMedia 剛建立時 getSettings() 尺寸不穩定
+// 顯示全螢幕框選 overlay（target = 'exp' 或 'meso'）
+function showSelectionOverlay(target = 'exp') {
+    const isMeso    = target === 'meso';
+    const labelText = isMeso
+        ? '🪙 拖曳框選楓幣區域，放開滑鼠完成選取'
+        : '🖱 拖曳框選經驗值區域，放開滑鼠完成選取';
+
     let vidW = 0;
     let vidH = 0;
 
-    // 全螢幕容器
     const overlay = document.createElement('div');
     overlay.id = 'capture-overlay';
     overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:#000;display:flex;flex-direction:column;';
 
-    // 標題列（含縮放滑桿、更換視窗、取消按鈕）
     const titleBar = document.createElement('div');
     titleBar.style.cssText = 'background:rgba(0,0,0,0.85);padding:10px 16px;font-size:13px;color:#aaa;display:flex;justify-content:space-between;align-items:center;flex-shrink:0;';
     titleBar.innerHTML = `
-        <span>🖱 拖曳框選經驗值區域，放開滑鼠完成選取</span>
+        <span>${labelText}</span>
         <div style="display:flex;gap:8px;align-items:center;">
             <label style="font-size:12px;color:#aaa;">縮放</label>
             <input type="range" id="zoom-slider" min="100" max="300" value="100" style="width:80px;cursor:pointer;">
@@ -1703,24 +1618,20 @@ function showSelectionOverlay() {
     `;
     overlay.appendChild(titleBar);
 
-    // 影片容器（可捲動，crosshair 游標）
     const videoWrap = document.createElement('div');
     videoWrap.style.cssText = 'position:relative;flex:1;overflow:auto;cursor:crosshair;background:#000;';
 
     const video = document.createElement('video');
     video.srcObject = captureStream;
     video.autoplay  = true;
-    // 預設寬度 100%，高度自動（可用縮放滑桿放大後捲動）
     video.style.cssText = 'width:100%;height:auto;display:block;background:#000;';
     videoWrap.appendChild(video);
 
-    // 載入中遮罩（video playing 且 vidW/vidH 確認後才移除）
     const loadingMask = document.createElement('div');
     loadingMask.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;font-size:16px;color:#aaa;z-index:10;pointer-events:all;cursor:default;';
     loadingMask.innerText = '載入中...';
     videoWrap.appendChild(loadingMask);
 
-    // 框選綠色選取框
     const selBox = document.createElement('div');
     selBox.style.cssText = 'position:absolute;border:2px solid #4dae4c;background:rgba(77,174,76,0.15);pointer-events:none;display:none;';
     videoWrap.appendChild(selBox);
@@ -1728,20 +1639,17 @@ function showSelectionOverlay() {
     overlay.appendChild(videoWrap);
     document.body.appendChild(overlay);
 
-    // 等瀏覽器完成 reflow 再綁定事件，避免第一次框選座標偏移
     requestAnimationFrame(() => {
 
-        // 縮放滑桿（改變 video 寬度，videoWrap 可捲動）
         document.getElementById('zoom-slider').addEventListener('input', (e) => {
             video.style.width = e.target.value + '%';
         });
 
-        // 取消按鈕
         document.getElementById('btn-cancel-select').addEventListener('click', () => {
             document.body.removeChild(overlay);
         });
 
-        // 更換視窗按鈕（停止舊 stream，重新授權）
+        // 更換視窗：停止舊 stream，重新授權，再進框選
         document.getElementById('btn-change-window').addEventListener('click', async () => {
             document.body.removeChild(overlay);
             try {
@@ -1749,30 +1657,33 @@ function showSelectionOverlay() {
                 captureStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
                 captureStream.getTracks()[0].addEventListener('ended', () => {
                     captureStream = null;
-                    document.getElementById('btn-capture-select').innerText = captureRegion ? '授權並截圖' : '授權並框選';
-                    document.getElementById('capture-preview').innerText = '授權已結束';
+                    document.getElementById('btn-capture-select').innerText =
+                        captureRegion ? '授權並截圖' : '授權並框選';
+                    document.getElementById('btn-capture-select-meso').innerText =
+                        captureRegionMeso ? '授權並截圖' : '授權並框選';
+                    document.getElementById('capture-preview').innerText      = '授權已結束';
+                    document.getElementById('capture-preview-meso').innerText = '授權已結束';
+                    document.getElementById('btn-preview-exp').disabled  = true;
+                    document.getElementById('btn-preview-meso').disabled = true;
                 });
-                showSelectionOverlay();
+                showSelectionOverlay(target);
             } catch(e) {
                 alert('授權失敗或已取消：' + e.message);
             }
         });
 
-        // video playing 後取得正確解析度並移除遮罩
         video.addEventListener('playing', () => {
             vidW = video.videoWidth;
             vidH = video.videoHeight;
             loadingMask.remove();
         }, { once: true });
 
-        // 框選拖曳邏輯
         let startX, startY, isDragging = false;
 
         videoWrap.addEventListener('mousedown', (e) => {
-            if (loadingMask.parentNode) return; // 遮罩還在時不允許框選
+            if (loadingMask.parentNode) return;
             isDragging = true;
             const rect = videoWrap.getBoundingClientRect();
-            // 加上 scroll offset，確保捲動後座標正確
             startX = e.clientX - rect.left + videoWrap.scrollLeft;
             startY = e.clientY - rect.top  + videoWrap.scrollTop;
             selBox.style.cssText = `position:absolute;border:2px solid #4dae4c;background:rgba(77,174,76,0.15);pointer-events:none;display:block;left:${startX}px;top:${startY}px;width:0;height:0;`;
@@ -1796,9 +1707,8 @@ function showSelectionOverlay() {
             isDragging = false;
 
             const selRect = selBox.getBoundingClientRect();
-            if (selRect.width < 10 || selRect.height < 10) return; // 太小忽略
+            if (selRect.width < 10 || selRect.height < 10) return;
 
-            // 換算到原始影片座標（考慮縮放比例）
             const videoRect = video.getBoundingClientRect();
             const scaleX = vidW / videoRect.width;
             const scaleY = vidH / videoRect.height;
@@ -1806,43 +1716,82 @@ function showSelectionOverlay() {
             const selLeft = parseFloat(selBox.style.left);
             const selTop  = parseFloat(selBox.style.top);
 
-            captureRegion = {
+            const newRegion = {
                 x: Math.max(0, Math.round(selLeft * scaleX)),
                 y: Math.max(0, Math.round(selTop  * scaleY)),
                 w: Math.round(parseFloat(selBox.style.width)  * scaleX),
                 h: Math.round(parseFloat(selBox.style.height) * scaleY),
             };
-            captureRegion.w = Math.min(captureRegion.w, vidW - captureRegion.x);
-            captureRegion.h = Math.min(captureRegion.h, vidH - captureRegion.y);
+            newRegion.w = Math.min(newRegion.w, vidW - newRegion.x);
+            newRegion.h = Math.min(newRegion.h, vidH - newRegion.y);
 
-            localStorage.setItem('maple_capture_region', JSON.stringify(captureRegion));
+            if (isMeso) {
+                // 儲存楓幣框選座標
+                captureRegionMeso = newRegion;
+                localStorage.setItem('maple_capture_region_meso', JSON.stringify(captureRegionMeso));
+                updateCaptureCoordsEl('capture-coords-meso', captureRegionMeso);
+            } else {
+                // 儲存經驗值框選座標
+                captureRegion = newRegion;
+                localStorage.setItem('maple_capture_region', JSON.stringify(captureRegion));
+                updateCaptureCoordsEl('capture-coords', captureRegion);
+            }
+
             document.body.removeChild(overlay);
-            updateCaptureCoords();
-            takePreviewShot();
-            document.getElementById('btn-capture-select').innerText = '重新框選';
+            takePreviewShot(target);
+
+            // 框選完成後更新按鈕文字與啟用「重新截圖」
+            const btnId = isMeso ? 'btn-capture-select-meso' : 'btn-capture-select';
+            document.getElementById(btnId).innerText = '重新框選';
+            document.getElementById(isMeso ? 'btn-preview-meso' : 'btn-preview-exp').disabled = false;
         });
 
-    }); // requestAnimationFrame 結束
+    });
 }
 
-// 顯示框選座標資訊
-function updateCaptureCoords() {
-    if (!captureRegion) return;
-    const el = document.getElementById('capture-coords');
-    if (el) el.innerText = `X: ${captureRegion.x}　Y: ${captureRegion.y}　寬: ${captureRegion.w}　高: ${captureRegion.h}`;
+// 顯示框選座標資訊（通用）
+function updateCaptureCoordsEl(elId, region) {
+    if (!region) return;
+    const el = document.getElementById(elId);
+    if (el) el.innerText = `X: ${region.x}　Y: ${region.y}　寬: ${region.w}　高: ${region.h}`;
 }
 
-// 更新 OCR 解析按鈕狀態（需要：兩張截圖都有 + 兩個輸入框都空）
+// 截圖並顯示在對應的框選預覽區（target = 'exp' 或 'meso'）
+async function takePreviewShot(target = 'exp') {
+    const isMeso    = target === 'meso';
+    const region    = isMeso ? captureRegionMeso : captureRegion;
+    const previewId = isMeso ? 'capture-preview-meso' : 'capture-preview';
+    if (!region || !captureStream) return;
+
+    const canvas = await captureRegionToCanvas(region);
+    if (!canvas) return;
+
+    const el = document.getElementById(previewId);
+    el.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = canvas.toDataURL();
+    img.style.cssText = 'width:100%;height:auto;border-radius:4px;display:block;';
+    el.appendChild(img);
+}
+
+// 更新 OCR 解析按鈕狀態（需要：截圖都有 + 對應輸入框都空）
 function updateOcrBtnState() {
-    const btn            = document.getElementById('btn-ocr');
-    const startVal       = document.getElementById('ocr-start-val').value.trim();
-    const endVal         = document.getElementById('ocr-end-val').value.trim();
-    const hasScreenshots = startCanvas && endCanvas;
-    const bothEmpty      = startVal === '' && endVal === '';
-    btn.disabled = !(hasScreenshots && bothEmpty);
+    const btn      = document.getElementById('btn-ocr');
+    const startVal = document.getElementById('ocr-start-val').value.trim();
+    const endVal   = document.getElementById('ocr-end-val').value.trim();
+    // 有截圖才可解析
+    const hasExpScreenshots = startCanvas && endCanvas;
+    // 輸入框空才可解析（避免覆蓋手動輸入）
+    let allEmpty = startVal === '' && endVal === '';
+    if (captureWithMeso) {
+        const mesoStartVal = document.getElementById('ocr-start-val-meso').value.trim();
+        const mesoEndVal   = document.getElementById('ocr-end-val-meso').value.trim();
+        allEmpty = allEmpty && mesoStartVal === '' && mesoEndVal === '';
+    }
+    btn.disabled = !(hasExpScreenshots && allEmpty);
 }
 
-// 解析截圖（一次解析起始和結束兩張）
+// 解析截圖：有勾楓幣時四張 Promise.all 同時送，否則只送兩張
 let ocrCooldown = false;
 async function parseScreenshots() {
     if (ocrCooldown) return;
@@ -1853,18 +1802,31 @@ async function parseScreenshots() {
     btn.innerText = '解析中...';
 
     try {
-        const [startResult, endResult] = await Promise.all([
+        // 組合要解析的任務（有勾楓幣才加入楓幣兩張）
+        const tasks = [
             ocrCanvas(startCanvas),
             ocrCanvas(endCanvas),
-        ]);
+        ];
+        if (captureWithMeso && startCanvasMeso && endCanvasMeso) {
+            tasks.push(ocrCanvas(startCanvasMeso));
+            tasks.push(ocrCanvas(endCanvasMeso));
+        }
 
-        if (startResult) document.getElementById('ocr-start-val').value = startResult;
-        if (endResult)   document.getElementById('ocr-end-val').value   = endResult;
+        // 同時送出所有解析任務
+        const results = await Promise.all(tasks);
+
+        if (results[0]) document.getElementById('ocr-start-val').value = results[0];
+        if (results[1]) document.getElementById('ocr-end-val').value   = results[1];
+        if (captureWithMeso && results[2]) document.getElementById('ocr-start-val-meso').value = results[2];
+        if (captureWithMeso && results[3]) document.getElementById('ocr-end-val-meso').value   = results[3];
 
         btn.disabled = true;
         btn.innerText = '🔍 解析截圖';
 
-        // 5 秒冷卻（避免過於頻繁呼叫 OCR API）
+        // 解析完成後，若對應欄位都有值則自動計算
+        tryAutoCalculate();
+
+        // 5 秒冷卻
         ocrCooldown = true;
         let countdown = 5;
         const cooldownInterval = setInterval(() => {
@@ -1885,7 +1847,21 @@ async function parseScreenshots() {
     }
 }
 
-// 截圖高度不足 60px 時等比放大，確保 OCR 辨識率
+// 解析完後若欄位都有值自動計算（不跳 alert）
+function tryAutoCalculate() {
+    const startVal = document.getElementById('ocr-start-val').value.trim();
+    const endVal   = document.getElementById('ocr-end-val').value.trim();
+    if (!startVal || !endVal) return;
+    if (captureWithMeso) {
+        const mesoStart = document.getElementById('ocr-start-val-meso').value.trim();
+        const mesoEnd   = document.getElementById('ocr-end-val-meso').value.trim();
+        if (!mesoStart || !mesoEnd) return;
+    }
+    // 靜默計算（不跳 alert，直接更新結果）
+    calculateExpResult(true);
+}
+
+// 截圖高度不足 60px 時等比放大
 function resizeCanvas(src, targetHeight) {
     const scale = targetHeight / src.height;
     const dst = document.createElement('canvas');
@@ -1895,7 +1871,8 @@ function resizeCanvas(src, targetHeight) {
     return dst;
 }
 
-// 呼叫 PaddleOCR API 解析 canvas，回傳數字字串
+// 呼叫 PaddleOCR API 解析 canvas
+// 楓幣格式（1,123,456,789）和經驗值格式（:123456789[...]）共用同一解析邏輯
 async function ocrCanvas(canvas) {
     try {
         const resized = canvas.height < 60 ? resizeCanvas(canvas, 60) : canvas;
@@ -1907,6 +1884,9 @@ async function ocrCanvas(canvas) {
         });
         const data  = await res.json();
         console.log('PaddleOCR結果：', data.text);
+        // 取開頭連續數字（含逗號），去掉逗號後回傳純數字字串
+        // 經驗值：:123456789[12.34%] → match "123456789"
+        // 楓幣：1,123,456,789 → match "1,123,456,789" → "1123456789"
         const match = data.text?.match(/^[\d,]+/);
         console.log('解析數字：', match);
         return match ? match[0].replace(/,/g, '') : '';
@@ -1916,8 +1896,9 @@ async function ocrCanvas(canvas) {
     }
 }
 
-// 擷取框選區域到 canvas（優先使用 ImageCapture API）
-async function captureRegionToCanvas() {
+// 擷取指定 region 到 canvas（通用，支援多組 region）
+async function captureRegionToCanvas(region) {
+    if (!region) return null;
     try {
         const track = captureStream.getVideoTracks()[0];
 
@@ -1926,9 +1907,9 @@ async function captureRegionToCanvas() {
             await new Promise(r => setTimeout(r, 300));
             const bitmap = await imageCapture.grabFrame();
             const canvas = document.createElement('canvas');
-            canvas.width  = captureRegion.w;
-            canvas.height = captureRegion.h;
-            canvas.getContext('2d').drawImage(bitmap, captureRegion.x, captureRegion.y, captureRegion.w, captureRegion.h, 0, 0, captureRegion.w, captureRegion.h);
+            canvas.width  = region.w;
+            canvas.height = region.h;
+            canvas.getContext('2d').drawImage(bitmap, region.x, region.y, region.w, region.h, 0, 0, region.w, region.h);
             return canvas;
         }
 
@@ -1939,9 +1920,9 @@ async function captureRegionToCanvas() {
             video.autoplay  = true;
             video.onplaying = () => {
                 const canvas = document.createElement('canvas');
-                canvas.width  = captureRegion.w;
-                canvas.height = captureRegion.h;
-                canvas.getContext('2d').drawImage(video, captureRegion.x, captureRegion.y, captureRegion.w, captureRegion.h, 0, 0, captureRegion.w, captureRegion.h);
+                canvas.width  = region.w;
+                canvas.height = region.h;
+                canvas.getContext('2d').drawImage(video, region.x, region.y, region.w, region.h, 0, 0, region.w, region.h);
                 video.pause();
                 resolve(canvas);
             };
@@ -1952,18 +1933,6 @@ async function captureRegionToCanvas() {
         showToast('⚠️ 截圖失敗，請重試');
         return null;
     }
-}
-
-// 截圖並顯示在框選預覽區
-async function takePreviewShot() {
-    const canvas = await captureRegionToCanvas();
-    if (!canvas) return;
-    const el = document.getElementById('capture-preview');
-    el.innerHTML = '';
-    const img = document.createElement('img');
-    img.src = canvas.toDataURL();
-    img.style.cssText = 'width:100%;height:auto;border-radius:4px;display:block;';
-    el.appendChild(img);
 }
 
 // 將 canvas 顯示在指定元素內
@@ -1979,33 +1948,51 @@ function showCanvasInEl(canvas, elId) {
 
 // --- 計時器 ---
 
-// 格式化秒數為 MM:SS
 function formatTime(seconds) {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
 }
 
-// 開始計時（5 秒倒數後截起始截圖，再開始計時）
+// 開始計時：5 秒倒數後截起始截圖，再開始計時
 async function startExpTimer() {
     if (!captureStream || !captureRegion) { alert('請先授權並框選區域！'); return; }
 
+    // 有勾楓幣時，檢查楓幣右欄是否有預覽截圖（確保框選座標有效）
+    if (captureWithMeso) {
+        const mesoPreview = document.getElementById('capture-preview-meso');
+        const hasPreview  = mesoPreview && mesoPreview.querySelector('img');
+        if (!hasPreview) {
+            alert('請先對楓幣區域進行截圖測試（點右欄「📷 重新截圖」）');
+            return;
+        }
+    }
+
     // 清空上次的截圖、解析值、結果
     startCanvas = null; endCanvas = null;
-    document.getElementById('ocr-start-img').innerHTML = '';
-    document.getElementById('ocr-end-img').innerHTML   = '';
-    document.getElementById('ocr-start-val').value     = '';
-    document.getElementById('ocr-end-val').value       = '';
-    document.getElementById('exp-total').innerText     = '—';
-    document.getElementById('exp-per10').innerText     = '—';
-    document.getElementById('exp-per30').innerText     = '—';
-    document.getElementById('exp-total-label').innerText = '總獲得經驗';
+    startCanvasMeso = null; endCanvasMeso = null;
+    document.getElementById('ocr-start-img').innerHTML      = '';
+    document.getElementById('ocr-end-img').innerHTML        = '';
+    document.getElementById('ocr-start-img-meso').innerHTML = '';
+    document.getElementById('ocr-end-img-meso').innerHTML   = '';
+    document.getElementById('ocr-start-val').value          = '';
+    document.getElementById('ocr-end-val').value            = '';
+    document.getElementById('ocr-start-val-meso').value     = '';
+    document.getElementById('ocr-end-val-meso').value       = '';
+    document.getElementById('exp-total').innerText          = '—';
+    document.getElementById('exp-per10').innerText          = '—';
+    document.getElementById('exp-per30').innerText          = '—';
+    document.getElementById('exp-total-label').innerText    = '總獲得經驗';
+    document.getElementById('meso-total').innerText         = '—';
+    document.getElementById('meso-per10').innerText         = '—';
+    document.getElementById('meso-per30').innerText         = '—';
+    timerAutoStop = false;
     updateOcrBtnState();
 
     document.getElementById('btn-start-timer').disabled = true;
     document.getElementById('btn-stop-timer').disabled  = false;
 
-    // 5 秒倒數（讓使用者切換到遊戲視窗）
+    // 5 秒倒數
     let countdown = 5;
     document.getElementById('timer-status').innerText = '準備中，請切換到遊戲視窗...';
     document.getElementById('timer-display').style.color = '#ff9f43';
@@ -2015,9 +2002,17 @@ async function startExpTimer() {
         countdown--;
         if (countdown < 0) {
             clearInterval(countdownInterval);
-            // 截起始截圖
-            startCanvas = await captureRegionToCanvas();
+
+            // 截起始截圖（經驗）
+            startCanvas = await captureRegionToCanvas(captureRegion);
             showCanvasInEl(startCanvas, 'ocr-start-img');
+
+            // 有勾楓幣時同時截楓幣起始截圖
+            if (captureWithMeso && captureRegionMeso) {
+                startCanvasMeso = await captureRegionToCanvas(captureRegionMeso);
+                showCanvasInEl(startCanvasMeso, 'ocr-start-img-meso');
+            }
+
             updateOcrBtnState();
             document.getElementById('timer-display').style.color = '#64b5f6';
             document.getElementById('timer-status').innerText = '計時中...';
@@ -2025,9 +2020,10 @@ async function startExpTimer() {
             timerInterval = setInterval(() => {
                 timerSeconds++;
                 document.getElementById('timer-display').innerText = formatTime(timerSeconds);
-                // 時間到自動停止
+                // 時間到自動停止（標記為自動，才會自動解析）
                 if (selectedMinutes > 0 && timerSeconds >= selectedMinutes * 60) {
-                    stopExpTimer();
+                    timerAutoStop = true;
+                    stopExpTimer(true);
                 }
             }, 1000);
         }
@@ -2035,26 +2031,40 @@ async function startExpTimer() {
 }
 
 // 停止計時並截結束截圖
-async function stopExpTimer() {
+// isAuto = true：時間到自動停止（自動解析）；false：手動停止（不自動解析）
+async function stopExpTimer(isAuto = false) {
     clearInterval(timerInterval);
     clearInterval(countdownInterval);
 
-    endCanvas = await captureRegionToCanvas();
+    // 截結束截圖（經驗）
+    endCanvas = await captureRegionToCanvas(captureRegion);
     showCanvasInEl(endCanvas, 'ocr-end-img');
-    updateOcrBtnState();
 
-    document.getElementById('timer-status').innerText = `已計時 ${formatTime(timerSeconds)}`;
-    document.getElementById('btn-start-timer').disabled = false;
-    document.getElementById('btn-stop-timer').disabled  = true;
+    // 有勾楓幣時同時截楓幣結束截圖
+    if (captureWithMeso && captureRegionMeso) {
+        endCanvasMeso = await captureRegionToCanvas(captureRegionMeso);
+        showCanvasInEl(endCanvasMeso, 'ocr-end-img-meso');
+    }
+
+    updateOcrBtnState();
+    document.getElementById('timer-status').innerText    = `已計時 ${formatTime(timerSeconds)}`;
+    document.getElementById('btn-start-timer').disabled  = false;
+    document.getElementById('btn-stop-timer').disabled   = true;
     document.getElementById('exp-total-label').innerText = `總獲得經驗（${formatTime(timerSeconds)}）`;
+
+    // 時間到自動停止才自動解析；手動停止不自動解析
+    if (isAuto) {
+        await parseScreenshots();
+    }
 }
 
 // 根據起始/結束經驗值和計時時間計算獲得經驗
-function calculateExpResult() {
+// silent = true：靜默模式（自動計算，遇到問題就 return，不跳 alert）
+function calculateExpResult(silent = false) {
     const startVal = parseFloat(document.getElementById('ocr-start-val').value) || 0;
     const endVal   = parseFloat(document.getElementById('ocr-end-val').value)   || 0;
-    if (endVal <= startVal) { alert('結束數值必須大於起始數值！'); return; }
-    if (timerSeconds === 0) { alert('請先完成計時！'); return; }
+    if (endVal <= startVal) { if (!silent) alert('結束數值必須大於起始數值！'); return; }
+    if (timerSeconds === 0) { if (!silent) alert('請先完成計時！'); return; }
 
     const totalExp = endVal - startVal;
     const per10    = Math.round(totalExp / timerSeconds * 600);
@@ -2064,30 +2074,9 @@ function calculateExpResult() {
     document.getElementById('exp-per10').innerText  = per10.toLocaleString();
     document.getElementById('exp-per30').innerText  = per30.toLocaleString();
 
-    // 計算加成係數（勾選的加成加總：基礎固定為 1，祈禱加 pct/100，加倍卷加 (倍數-1)，休息加 1）
-    const prayerOn  = document.getElementById('bonus-prayer')?.checked;
-    const twoxOn    = document.getElementById('bonus-2x')?.checked;
-    const restOn    = document.getElementById('bonus-rest')?.checked;
-    const prayerPct = parseFloat(document.getElementById('bonus-prayer-val')?.value) || 0;
-    const twoxMult  = parseFloat(document.getElementById('bonus-2x-val')?.value)     || 1;
-    const bonus     = (prayerOn ? prayerPct / 100 : 0) + (twoxOn ? (twoxMult - 1) : 0) + (restOn ? 1 : 0);
-    const hasBonus  = bonus > 0;
-    const coeff     = 1 + bonus;
-
-    // 基礎值（除掉加成係數回推底層數值），沒有勾選任何加成時隱藏
-    ['total', 'per10', 'per30'].forEach(key => {
-        const row = document.getElementById(`exp-${key}-base-row`);
-        if (row) row.style.display = hasBonus ? 'block' : 'none';
-    });
-    if (hasBonus) {
-        document.getElementById('exp-total-base').innerText  = Math.round(totalExp / coeff).toLocaleString();
-        document.getElementById('exp-per10-base').innerText  = Math.round(per10    / coeff).toLocaleString();
-        document.getElementById('exp-per30-base').innerText  = Math.round(per30    / coeff).toLocaleString();
-    }
-
-    // 選 1 分時額外計算桑拿經驗（8/16/20 小時），其他維持 —
+    // 選 1 分時額外計算桑拿經驗（8/16/20 小時）
     if (selectedMinutes === 1) {
-        const perMinute = totalExp; // 計時 1 分鐘，差值即為每分鐘獲得經驗
+        const perMinute = totalExp;
         document.getElementById('exp-per8h').innerText  = Math.round(perMinute * 60 * 8).toLocaleString();
         document.getElementById('exp-per16h').innerText = Math.round(perMinute * 60 * 16).toLocaleString();
         document.getElementById('exp-per20h').innerText = Math.round(perMinute * 60 * 20).toLocaleString();
@@ -2096,20 +2085,33 @@ function calculateExpResult() {
         document.getElementById('exp-per16h').innerText = '—';
         document.getElementById('exp-per20h').innerText = '—';
     }
+
+    // 有勾楓幣時計算楓幣結果（不需加成換算，直接顯示原始差值）
+    if (captureWithMeso) {
+        const mesoStart = parseFloat(document.getElementById('ocr-start-val-meso').value) || 0;
+        const mesoEnd   = parseFloat(document.getElementById('ocr-end-val-meso').value)   || 0;
+        if (mesoEnd > mesoStart) {
+            const totalMeso = mesoEnd - mesoStart;
+            const mesoPer10 = Math.round(totalMeso / timerSeconds * 600);
+            const mesoPer30 = Math.round(totalMeso / timerSeconds * 1800);
+            document.getElementById('meso-total').innerText  = totalMeso.toLocaleString();
+            document.getElementById('meso-per10').innerText  = mesoPer10.toLocaleString();
+            document.getElementById('meso-per30').innerText  = mesoPer30.toLocaleString();
+        }
+    }
 }
 
 // --- 休息經驗計算 ---
 
-// 根據當前休息經驗和獲得一次後的數值，計算已累積時間和距離上限時間
 function calculateRestExp() {
     const current = parseFloat(document.getElementById('restCurrent').value) || 0;
     const after   = parseFloat(document.getElementById('restAfter').value)   || 0;
     if (after <= current) { alert('獲得後的數值必須大於當前數值！'); return; }
 
-    const perMinute   = after - current;                     // 每分鐘休息經驗
-    const accumulated = current / perMinute;                  // 已累積分鐘數
-    const maxExp      = Math.round(perMinute * 60 * 24);    // 24 小時上限
-    const remainMin   = Math.max(0, 60 * 24 - accumulated); // 距離上限分鐘數
+    const perMinute   = after - current;
+    const accumulated = current / perMinute;
+    const maxExp      = Math.round(perMinute * 60 * 24);
+    const remainMin   = Math.max(0, 60 * 24 - accumulated);
 
     const accumHours   = Math.floor(accumulated / 60);
     const accumMinutes = Math.floor(accumulated % 60);
