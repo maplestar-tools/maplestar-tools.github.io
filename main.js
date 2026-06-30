@@ -1940,10 +1940,32 @@ function showCanvasInEl(canvas, elId) {
     const el = document.getElementById(elId);
     if (!el || !canvas) return;
     el.innerHTML = '';
+    // 圖片置中顯示，點擊可放大
+    el.style.cssText += 'display:flex;align-items:center;justify-content:center;';
     const img = document.createElement('img');
     img.src = canvas.toDataURL();
-    img.style.cssText = 'width:100%;height:100%;object-fit:contain;border-radius:4px;';
+    img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;cursor:zoom-in;';
+    // 點擊圖片開啟 lightbox 放大
+    img.addEventListener('click', () => showLightbox(canvas.toDataURL()));
     el.appendChild(img);
+}
+
+// Lightbox：全螢幕顯示截圖，點任意處關閉
+function showLightbox(src) {
+    const existing = document.getElementById('capture-lightbox');
+    if (existing) existing.remove();
+
+    const lb = document.createElement('div');
+    lb.id = 'capture-lightbox';
+    lb.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+
+    const img = document.createElement('img');
+    img.src = src;
+    img.style.cssText = 'max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.8);';
+
+    lb.appendChild(img);
+    lb.addEventListener('click', () => lb.remove());
+    document.body.appendChild(lb);
 }
 
 // --- 計時器 ---
