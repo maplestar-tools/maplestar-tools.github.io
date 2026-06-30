@@ -1957,13 +1957,27 @@ function showLightbox(src) {
 
     const lb = document.createElement('div');
     lb.id = 'capture-lightbox';
-    lb.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;cursor:zoom-out;';
+    lb.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:99999;background:rgba(0,0,0,0.88);display:flex;align-items:center;justify-content:center;overflow:hidden;';
 
     const img = document.createElement('img');
     img.src = src;
-    img.style.cssText = 'max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.8);';
+    // transition 讓放大/還原有平滑過渡效果
+    img.style.cssText = 'max-width:90vw;max-height:90vh;object-fit:contain;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.8);cursor:zoom-in;transition:transform 0.2s ease;transform:scale(1);';
+
+    // 用 dataset 記錄目前是否已放大
+    img.dataset.zoomed = 'false';
+
+    // 點圖片：切換放大兩倍 / 還原正常大小
+    img.addEventListener('click', (e) => {
+        e.stopPropagation(); // 避免事件冒泡到背景觸發關閉
+        const zoomed = img.dataset.zoomed === 'true';
+        img.style.transform = zoomed ? 'scale(1)' : 'scale(2)';
+        img.style.cursor    = zoomed ? 'zoom-in' : 'zoom-out';
+        img.dataset.zoomed  = zoomed ? 'false' : 'true';
+    });
 
     lb.appendChild(img);
+    // 點背景（圖片以外的地方）才關閉
     lb.addEventListener('click', () => lb.remove());
     document.body.appendChild(lb);
 }
