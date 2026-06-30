@@ -190,6 +190,18 @@ function bindEvents() {
         document.getElementById(id).addEventListener('input', updateOcrBtnState);
     });
 
+    // 加成設定 checkbox：勾選時啟用對應輸入框
+    document.getElementById('bonus-prayer').addEventListener('change', (e) => {
+        const inp = document.getElementById('bonus-prayer-val');
+        inp.disabled = !e.target.checked;
+        inp.style.opacity = e.target.checked ? '1' : '0.4';
+    });
+    document.getElementById('bonus-2x').addEventListener('change', (e) => {
+        const inp = document.getElementById('bonus-2x-val');
+        inp.disabled = !e.target.checked;
+        inp.style.opacity = e.target.checked ? '1' : '0.4';
+    });
+
     // 計時選項按鈕
     document.querySelectorAll('.timer-opt').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -407,6 +419,7 @@ function getFormValues() {
         'maplePercentMain','maplePercentSub',
         'calcBaseAtkA','calcAtkPercentA','calcMainBaseA','calcMainEquipA','calcMainPercentA','calcSubBaseA','calcSubEquipA','calcSubPercentA','maplePercentA',
         'calcBaseAtkB','calcAtkPercentB','calcMainBaseB','calcMainEquipB','calcMainPercentB','calcSubBaseB','calcSubEquipB','calcSubPercentB','maplePercentB',
+        'bonus-prayer-val','bonus-2x-val',
     ];
     const data = {};
     ids.forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
@@ -414,8 +427,8 @@ function getFormValues() {
     const checkedFee = document.querySelector('input[name="defaultFee"]:checked');
     if (checkedFee) data.defaultFee = checkedFee.value;
 
-    // checkbox 狀態：含楓幣勾選
-    ['mapleCheckMain','mapleCheckSub','mapleCheckA','mapleCheckB','meso-enabled'].forEach(id => {
+    // checkbox 狀態：含楓幣勾選、祈禱/加倍卷/休息獎勵加成勾選
+    ['mapleCheckMain','mapleCheckSub','mapleCheckA','mapleCheckB','meso-enabled','bonus-prayer','bonus-2x','bonus-rest'].forEach(id => {
         const el = document.getElementById(id);
         if (el) data[id] = el.checked;
     });
@@ -434,6 +447,8 @@ function fillValues(obj) {
                 mapleCheckSub:   'maplePercentSub',
                 mapleCheckA:     'maplePercentA',
                 mapleCheckB:     'maplePercentB',
+                'bonus-prayer':  'bonus-prayer-val',
+                'bonus-2x':      'bonus-2x-val',
             };
             const inputId = inputMap[key];
             if (inputId) {
@@ -2109,6 +2124,27 @@ function calculateExpResult(silent = false) {
     document.getElementById('exp-total').innerText  = totalExp.toLocaleString();
     document.getElementById('exp-per10').innerText  = per10.toLocaleString();
     document.getElementById('exp-per30').innerText  = per30.toLocaleString();
+
+    // 計算加成係數（勾選的加成加總：基礎固定為 1，祈禱加 pct/100，加倍卷加 (倍數-1)，休息加 1）
+    const prayerOn  = document.getElementById('bonus-prayer')?.checked;
+    const twoxOn    = document.getElementById('bonus-2x')?.checked;
+    const restOn    = document.getElementById('bonus-rest')?.checked;
+    const prayerPct = parseFloat(document.getElementById('bonus-prayer-val')?.value) || 0;
+    const twoxMult  = parseFloat(document.getElementById('bonus-2x-val')?.value)     || 1;
+    const bonus     = (prayerOn ? prayerPct / 100 : 0) + (twoxOn ? (twoxMult - 1) : 0) + (restOn ? 1 : 0);
+    const hasBonus  = bonus > 0;
+    const coeff     = 1 + bonus;
+
+    // 基礎值（除掉加成係數回推底層數值），沒有勾選任何加成時隱藏
+    ['total', 'per10', 'per30'].forEach(key => {
+        const row = document.getElementById(`exp-${key}-base-row`);
+        if (row) row.style.display = hasBonus ? 'block' : 'none';
+    });
+    if (hasBonus) {
+        document.getElementById('exp-total-base').innerText  = Math.round(totalExp / coeff).toLocaleString();
+        document.getElementById('exp-per10-base').innerText  = Math.round(per10    / coeff).toLocaleString();
+        document.getElementById('exp-per30-base').innerText  = Math.round(per30    / coeff).toLocaleString();
+    }
 
     // 選 1 分時額外計算桑拿經驗（8/16/20 小時）
     if (selectedMinutes === 1) {
