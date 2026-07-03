@@ -184,6 +184,7 @@ function bindEvents() {
     document.getElementById('btn-stop-timer').addEventListener('click',  () => stopExpTimer(false)); // 手動停止
     document.getElementById('btn-calc-exp').addEventListener('click',    calculateExpResult);
     document.getElementById('btn-ocr').addEventListener('click', parseScreenshots);
+    document.getElementById('btn-recapture-end').addEventListener('click', recaptureEnd);
 
     // 監聽解析數值輸入框，有值時不讓重新解析（避免覆蓋手動修改）
     ['ocr-start-val','ocr-end-val','ocr-start-val-meso','ocr-end-val-meso'].forEach(id => {
@@ -1804,6 +1805,36 @@ function updateOcrBtnState() {
         allEmpty = allEmpty && mesoStartVal === '' && mesoEndVal === '';
     }
     btn.disabled = !(hasExpScreenshots && allEmpty);
+    // 重新截圖按鈕：有起始截圖且有結束截圖才可用
+    const recapBtn = document.getElementById('btn-recapture-end');
+    if (recapBtn) recapBtn.disabled = !(startCanvas && endCanvas);
+}
+
+// 重新截結束截圖：清空所有輸入欄位後重截結束截圖，再自動解析計算
+// 時間與起始截圖不變
+async function recaptureEnd() {
+    if (!captureStream || !captureRegion) { showToast('⚠️ 請先授權並框選區域！'); return; }
+
+    // 清空所有輸入欄位（截圖圖片保留）
+    document.getElementById('ocr-start-val').value      = '';
+    document.getElementById('ocr-end-val').value        = '';
+    document.getElementById('ocr-start-val-meso').value = '';
+    document.getElementById('ocr-end-val-meso').value   = '';
+
+    // 截新的結束截圖（經驗）
+    endCanvas = await captureRegionToCanvas(captureRegion);
+    showCanvasInEl(endCanvas, 'ocr-end-img');
+
+    // 有勾楓幣時同時重截楓幣結束截圖
+    if (captureWithMeso && captureRegionMeso) {
+        endCanvasMeso = await captureRegionToCanvas(captureRegionMeso);
+        showCanvasInEl(endCanvasMeso, 'ocr-end-img-meso');
+    }
+
+    updateOcrBtnState();
+
+    // 自動解析（與計時結束時相同流程）
+    await parseScreenshots();
 }
 
 // 解析截圖：有勾楓幣時四張 Promise.all 同時送，否則只送兩張
