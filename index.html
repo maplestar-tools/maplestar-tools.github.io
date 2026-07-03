@@ -576,23 +576,24 @@
                         </div>
                     </div>
 
-                    <!-- 加成設定（勾選代表本次計算包含這些加成，用於回推基礎經驗） -->
-                    <div style="background:#252525;border-radius:8px;padding:10px 12px;margin-bottom:10px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                        <input type="checkbox" id="bonus-prayer" style="width:15px;height:15px;cursor:pointer;">
-                        <label for="bonus-prayer" style="font-size:14px;color:#e0e0e0;cursor:pointer;white-space:nowrap;">祈禱</label>
-                        <input type="number" id="bonus-prayer-val" value="20" disabled class="cloud-input" style="width:52px;padding:5px 6px;font-size:13px;text-align:center;opacity:0.4;margin:0;">
-                        <span style="font-size:13px;color:#aaa;">%</span>
-                        <div style="width:1px;height:20px;background:#444;margin:0 6px;flex-shrink:0;"></div>
-                        <input type="checkbox" id="bonus-2x" style="width:15px;height:15px;cursor:pointer;">
-                        <label for="bonus-2x" style="font-size:14px;color:#e0e0e0;cursor:pointer;white-space:nowrap;">加倍卷</label>
-                        <input type="number" id="bonus-2x-val" value="2" disabled class="cloud-input" style="width:52px;padding:5px 6px;font-size:13px;text-align:center;opacity:0.4;margin:0;">
-                        <span style="font-size:13px;color:#aaa;">倍</span>
-                        <div style="width:1px;height:20px;background:#444;margin:0 6px;flex-shrink:0;"></div>
-                        <input type="checkbox" id="bonus-rest" style="width:15px;height:15px;cursor:pointer;">
-                        <label for="bonus-rest" style="font-size:14px;color:#e0e0e0;cursor:pointer;white-space:nowrap;">休息獎勵</label>
-                        <div style="flex:1;"></div>
+                    <!-- 加成設定 + 重新截圖按鈕：外層 flex 並排 -->
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+                        <div style="flex:1;background:#252525;border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
+                            <input type="checkbox" id="bonus-prayer" style="width:15px;height:15px;cursor:pointer;">
+                            <label for="bonus-prayer" style="font-size:14px;color:#e0e0e0;cursor:pointer;white-space:nowrap;">祈禱</label>
+                            <input type="number" id="bonus-prayer-val" value="20" disabled class="cloud-input" style="width:52px;padding:5px 6px;font-size:13px;text-align:center;opacity:0.4;margin:0;">
+                            <span style="font-size:13px;color:#aaa;">%</span>
+                            <div style="width:1px;height:20px;background:#444;margin:0 6px;flex-shrink:0;"></div>
+                            <input type="checkbox" id="bonus-2x" style="width:15px;height:15px;cursor:pointer;">
+                            <label for="bonus-2x" style="font-size:14px;color:#e0e0e0;cursor:pointer;white-space:nowrap;">加倍卷</label>
+                            <input type="number" id="bonus-2x-val" value="2" disabled class="cloud-input" style="width:52px;padding:5px 6px;font-size:13px;text-align:center;opacity:0.4;margin:0;">
+                            <span style="font-size:13px;color:#aaa;">倍</span>
+                            <div style="width:1px;height:20px;background:#444;margin:0 6px;flex-shrink:0;"></div>
+                            <input type="checkbox" id="bonus-rest" style="width:15px;height:15px;cursor:pointer;">
+                            <label for="bonus-rest" style="font-size:14px;color:#e0e0e0;cursor:pointer;white-space:nowrap;">休息獎勵</label>
+                        </div>
                         <!-- 重新截結束截圖：清空所有輸入欄位後重截，再自動解析計算 -->
-                        <button id="btn-recapture-end" class="calc-btn btn-green" style="margin:0;padding:6px 12px;font-size:12px;white-space:nowrap;" disabled>📷 重新截圖</button>
+                        <button id="btn-recapture-end" class="calc-btn btn-green" style="margin:0;padding:8px 10px;font-size:12px;white-space:nowrap;flex-shrink:0;" disabled>📷 重截</button>
                     </div>
                     <button id="btn-ocr" class="calc-btn btn-green" style="margin-bottom:10px;" disabled>🔍 解析截圖</button>
                     <button id="btn-calc-exp" class="calc-btn btn-blue">確認並計算</button>
