@@ -1276,7 +1276,8 @@ function renderModalBossList() {
     el.innerHTML = bossList.map((boss, i) => `
         <div class="modal-list-item" draggable="true" data-index="${i}" style="cursor:grab;">
             <span style="color:#aaa;margin-right:8px;">☰</span>
-            <span>${boss}</span>
+            <span style="flex:1;">${boss}</span>
+            <button class="edit-btn modal-edit-boss" data-index="${i}" style="margin:0;margin-right:4px;">✏️</button>
             <button class="del-btn modal-del-boss" data-index="${i}" style="margin:0;">✕</button>
         </div>
     `).join('');
@@ -1297,6 +1298,32 @@ function renderModalBossList() {
             renderModalBossList();
             renderBossSelect();
             showToast('✅ 排序已儲存');
+        });
+    });
+
+    // 編輯王名稱：同步更新 bossList 和 bossItemMap 的 key
+    el.querySelectorAll('.modal-edit-boss').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const idx     = parseInt(btn.dataset.index);
+            const oldName = bossList[idx];
+            const newName = prompt(`請輸入新的王名稱：`, oldName);
+            if (!newName || !newName.trim() || newName.trim() === oldName) return;
+            const trimmed = newName.trim();
+            if (bossList.includes(trimmed)) { alert(`「${trimmed}」已存在！`); return; }
+            // 更新 bossList
+            bossList[idx] = trimmed;
+            // 把舊 key 的物品搬到新 key，刪掉舊 key
+            if (bossItemMap[oldName]) {
+                bossItemMap[trimmed] = bossItemMap[oldName];
+                delete bossItemMap[oldName];
+            }
+            await saveSharedLists();
+            renderBossSelect();
+            renderModalBossList();
+            renderModalBossFilter();
+            renderModalItemList();
+            showToast(`✅ 已將「${oldName}」改為「${trimmed}」`);
         });
     });
 
