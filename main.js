@@ -79,6 +79,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     updateDynamicPrices();
     await loadSharedData();
     bindEvents();
+    await initExpRecords();
 
     // 還原自動載入 checkbox 狀態
     const autoLoadEl = document.getElementById('autoLoad');
@@ -2234,8 +2235,172 @@ function calculateExpResult(silent = false) {
     }
 }
 
-// --- 休息經驗計算 ---
+// ==========================================================================
+// 📋 效率紀錄
+// ==========================================================================
 
+let expRecords      = [];   // 從雲端載入的所有紀錄
+let expRecordSortKey = 'date'; // 目前排序欄位
+let expRecordSortAsc = false;  // true = 升序，false = 降序
+
+// 初始化：載入效率紀錄並綁定事件
+async function initExpRecords() {
+    await loadExpRecords();
+    document.getElementById('btn-save-exp-record').addEventListener('click', saveExpRecord);
+    document.querySelectorAll('.exp-record-th').forEach(th => {
+        th.addEventListener('click', () => {
+            const key = th.dataset.key;
+            if (expRecordSortKey === key) {
+                expRecordSortAsc = !expRecordSortAsc;
+            } else {
+                expRecordSortKey = key;
+                expRecordSortAsc = false;
+            }
+            renderExpRecords();
+        });
+    });
+}
+
+// 從共用雲端載入效率紀錄
+async function loadExpRecords() {
+    try {
+        const snap = await getDoc(doc(db, 'shared_data', 'exp_records'));
+        expRecords = snap.exists() ? (snap.data().records || []) : [];
+    } catch(e) {
+        console.error('效率紀錄載入失敗：', e);
+        expRecords = [];
+    }
+    renderExpRecords();
+}
+
+// 儲存一筆效率紀錄到共用雲端
+async function saveExpRecord() {
+    const kc    = document.getElementById('userKeyCode')?.value.trim();
+    if (!kc) { showToast('⚠️ 請先輸入代碼才能儲存！'); return; }
+
+    const level = document.getElementById('record-level').value.trim();
+    const job   = document.getElementById('record-job').value.trim();
+    const map   = document.getElementById('record-map').value.trim();
+    if (!level || !job || !map) { showToast('⚠️ 請填寫等級、職業、地圖！'); return; }
+
+    // 取得計算結果（基礎值）
+    const expPer10El = document.getElementById('exp-per10-base');
+    const expPer10Base = expPer10El?.innerText?.replace(/,/g, '');
+    // 如果沒有勾選加成，直接用 exp-per10 的值
+    const expPer10Raw  = document.getElementById('exp-per10')?.innerText?.replace(/,/g, '');
+    const expPer10Val  = (expPer10Base && expPer10Base !== '—' && expPer10Base !== '') ? parseInt(expPer10Base) : parseInt(expPer10Raw);
+
+    if (!expPer10Val || isNaN(expPer10Val) || expPer10Val <= 0) { showToast('⚠️ 請先完成計算再儲存！'); return; }
+
+    // 楓幣/10分（有勾才帶值，否則 null）
+    const mesoPer10El  = document.getElementById('meso-per10');
+    const mesoPer10Raw = mesoPer10El?.innerText?.replace(/,/g, '');
+    const mesoPer10Val = (captureWithMeso && mesoPer10Raw && mesoPer10Raw !== '—') ? parseInt(mesoPer10Raw) : null;
+
+    const record = {
+        id:        `${kc}_${Date.now()}`,  // 唯一 id，包含 keycode 用於判斷刪除權限
+        keycode:   kc,
+        date:      new Date().toISOString().split('T')[0],
+        level:     parseInt(level),
+        job,
+        map,
+        minutes:   selectedMinutes === 0 ? '無限' : `${selectedMinutes}分`,
+        expPer10:  expPer10Val,
+        mesoPer10: mesoPer10Val,
+    };
+
+    expRecords.unshift(record);
+    try {
+        await setDoc(doc(db, 'shared_data', 'exp_records'), { records: expRecords }, { merge: false });
+        renderExpRecords();
+        showToast('💾 紀錄已儲存！');
+        // 清空輸入框
+        document.getElementById('record-level').value = '';
+        document.getElementById('record-job').value   = '';
+        document.getElementById('record-map').value   = '';
+    } catch(e) {
+        expRecords.shift();
+        showToast('❌ 儲存失敗：' + e.message);
+    }
+}
+
+// 刪除一筆效率紀錄
+async function deleteExpRecord(id) {
+    if (!confirm('確定要刪除此筆紀錄嗎？')) return;
+    const idx = expRecords.findIndex(r => r.id === id);
+    if (idx === -1) return;
+    const removed = expRecords.splice(idx, 1)[0];
+    try {
+        await setDoc(doc(db, 'shared_data', 'exp_records'), { records: expRecords }, { merge: false });
+        renderExpRecords();
+        showToast('🗑 紀錄已刪除');
+    } catch(e) {
+        expRecords.splice(idx, 0, removed);
+        showToast('❌ 刪除失敗：' + e.message);
+    }
+}
+
+// 渲染效率紀錄表格
+function renderExpRecords() {
+    const tbody   = document.getElementById('exp-record-tbody');
+    const emptyEl = document.getElementById('exp-record-empty');
+    if (!tbody) return;
+
+    const kc = document.getElementById('userKeyCode')?.value.trim();
+
+    // 排序
+    const sorted = [...expRecords].sort((a, b) => {
+        let va = a[expRecordSortKey], vb = b[expRecordSortKey];
+        // 數字欄位
+        if (['level','expPer10','mesoPer10'].includes(expRecordSortKey)) {
+            va = va ?? -Infinity;
+            vb = vb ?? -Infinity;
+            return expRecordSortAsc ? va - vb : vb - va;
+        }
+        // 文字欄位
+        va = va ?? '';
+        vb = vb ?? '';
+        return expRecordSortAsc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va));
+    });
+
+    // 更新排序箭頭
+    document.querySelectorAll('.sort-icon').forEach(el => {
+        const key = el.dataset.key;
+        el.innerText = key === expRecordSortKey ? (expRecordSortAsc ? ' ▲' : ' ▼') : '';
+    });
+
+    if (sorted.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyEl) emptyEl.style.display = 'block';
+        return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    tbody.innerHTML = sorted.map(r => {
+        const canDelete = kc && r.keycode === kc;
+        const mesoStr   = r.mesoPer10 != null ? r.mesoPer10.toLocaleString() : '—';
+        return `
+            <tr style="border-bottom:1px solid #2a2a2a;">
+                <td style="padding:7px 6px;font-size:12px;color:#aaa;white-space:nowrap;">${r.date}</td>
+                <td style="padding:7px 6px;font-size:12px;color:#e0e0e0;text-align:center;">${r.level}</td>
+                <td style="padding:7px 6px;font-size:12px;color:#e0e0e0;">${r.job}</td>
+                <td style="padding:7px 6px;font-size:12px;color:#e0e0e0;">${r.map}</td>
+                <td style="padding:7px 6px;font-size:12px;color:#aaa;text-align:center;">${r.minutes}</td>
+                <td style="padding:7px 6px;font-size:12px;color:#64b5f6;text-align:right;white-space:nowrap;">${r.expPer10.toLocaleString()}</td>
+                <td style="padding:7px 6px;font-size:12px;color:#4dae4c;text-align:right;white-space:nowrap;">${mesoStr}</td>
+                <td style="padding:7px 6px;text-align:center;">
+                    ${canDelete ? `<button class="del-btn exp-record-del" data-id="${r.id}" style="margin:0;">✕</button>` : ''}
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    tbody.querySelectorAll('.exp-record-del').forEach(btn => {
+        btn.addEventListener('click', () => deleteExpRecord(btn.dataset.id));
+    });
+}
+
+// --- 休息經驗計算 ---
 function calculateRestExp() {
     const current = parseFloat(document.getElementById('restCurrent').value) || 0;
     const after   = parseFloat(document.getElementById('restAfter').value)   || 0;

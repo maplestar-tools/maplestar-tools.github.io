@@ -661,6 +661,38 @@
                         </div>
                     </div>
 
+                    <!-- 效率紀錄：儲存輸入列 + 表格 -->
+                    <hr style="border:none;border-top:1px dashed #444;margin:16px 0;">
+
+                    <!-- 儲存輸入列：等級、職業、地圖、儲存按鈕 -->
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+                        <input type="number" id="record-level" class="cloud-input" placeholder="等級" style="width:70px;padding:8px;margin:0;text-align:center;">
+                        <input type="text"   id="record-job"   class="cloud-input" placeholder="職業" style="flex:1;padding:8px;margin:0;">
+                        <input type="text"   id="record-map"   class="cloud-input" placeholder="地圖名稱" style="flex:2;padding:8px;margin:0;">
+                        <button id="btn-save-exp-record" class="calc-btn btn-green" style="margin:0;padding:8px 12px;width:auto;white-space:nowrap;">💾 儲存紀錄</button>
+                    </div>
+
+                    <!-- 效率紀錄表格 -->
+                    <div style="font-size:13px;color:#aaa;font-weight:bold;margin-bottom:8px;">📋 效率紀錄</div>
+                    <div style="overflow-y:scroll;max-height:400px;border-radius:8px;border:1px solid #333;">
+                        <table id="exp-record-table" style="width:100%;border-collapse:collapse;min-width:600px;">
+                            <thead style="position:sticky;top:0;background:#1e1e1e;z-index:1;">
+                                <tr style="border-bottom:1px solid #444;">
+                                    <th class="exp-record-th" data-key="date"    style="padding:8px 6px;text-align:left;font-size:12px;color:#aaa;cursor:pointer;white-space:nowrap;">日期 <span class="sort-icon" data-key="date"></span></th>
+                                    <th class="exp-record-th" data-key="level"   style="padding:8px 6px;text-align:center;font-size:12px;color:#aaa;cursor:pointer;white-space:nowrap;">等級 <span class="sort-icon" data-key="level"></span></th>
+                                    <th class="exp-record-th" data-key="job"     style="padding:8px 6px;text-align:left;font-size:12px;color:#aaa;cursor:pointer;white-space:nowrap;">職業 <span class="sort-icon" data-key="job"></span></th>
+                                    <th class="exp-record-th" data-key="map"     style="padding:8px 6px;text-align:left;font-size:12px;color:#aaa;cursor:pointer;white-space:nowrap;">地圖 <span class="sort-icon" data-key="map"></span></th>
+                                    <th class="exp-record-th" data-key="minutes" style="padding:8px 6px;text-align:center;font-size:12px;color:#aaa;cursor:pointer;white-space:nowrap;">計時 <span class="sort-icon" data-key="minutes"></span></th>
+                                    <th class="exp-record-th" data-key="expPer10" style="padding:8px 6px;text-align:right;font-size:12px;color:#aaa;cursor:pointer;white-space:nowrap;">經驗/10分 <span class="sort-icon" data-key="expPer10"></span></th>
+                                    <th class="exp-record-th" data-key="mesoPer10" style="padding:8px 6px;text-align:right;font-size:12px;color:#aaa;cursor:pointer;white-space:nowrap;">楓幣/10分 <span class="sort-icon" data-key="mesoPer10"></span></th>
+                                    <th style="padding:8px 6px;width:32px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="exp-record-tbody"></tbody>
+                        </table>
+                    </div>
+                    <div id="exp-record-empty" style="text-align:center;color:#555;font-size:13px;padding:20px;display:none;">尚無紀錄</div>
+
                 </div>
             </div>
         </div>
