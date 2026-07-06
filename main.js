@@ -422,6 +422,7 @@ function getFormValues() {
         'calcBaseAtkA','calcAtkPercentA','calcMainBaseA','calcMainEquipA','calcMainPercentA','calcSubBaseA','calcSubEquipA','calcSubPercentA','maplePercentA',
         'calcBaseAtkB','calcAtkPercentB','calcMainBaseB','calcMainEquipB','calcMainPercentB','calcSubBaseB','calcSubEquipB','calcSubPercentB','maplePercentB',
         'bonus-prayer-val','bonus-2x-val',
+        'record-level','record-job',
     ];
     const data = {};
     ids.forEach(id => { const el = document.getElementById(id); if (el) data[id] = el.value; });
@@ -2304,7 +2305,7 @@ async function saveExpRecord() {
         level:     parseInt(level),
         job,
         map,
-        minutes:   selectedMinutes === 0 ? '無限' : `${selectedMinutes}分`,
+        minutes:   formatTime(timerSeconds), // 實際計時秒數格式（mm:ss）
         expPer10:  expPer10Val,
         mesoPer10: mesoPer10Val,
     };
@@ -2314,10 +2315,8 @@ async function saveExpRecord() {
         await setDoc(doc(db, 'shared_data', 'exp_records'), { records: expRecords }, { merge: false });
         renderExpRecords();
         showToast('💾 紀錄已儲存！');
-        // 清空輸入框
-        document.getElementById('record-level').value = '';
-        document.getElementById('record-job').value   = '';
-        document.getElementById('record-map').value   = '';
+        // 只清空地圖欄位，等級和職業保留
+        document.getElementById('record-map').value = '';
     } catch(e) {
         expRecords.shift();
         showToast('❌ 儲存失敗：' + e.message);
