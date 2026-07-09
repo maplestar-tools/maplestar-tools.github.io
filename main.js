@@ -203,6 +203,11 @@ function bindEvents() {
         inp.disabled = !e.target.checked;
         inp.style.opacity = e.target.checked ? '1' : '0.4';
     });
+    document.getElementById('bonus-teach').addEventListener('change', (e) => {
+        const inp = document.getElementById('bonus-teach-val');
+        inp.disabled = !e.target.checked;
+        inp.style.opacity = e.target.checked ? '1' : '0.4';
+    });
 
     // 計時選項按鈕
     document.querySelectorAll('.timer-opt').forEach(btn => {
@@ -421,7 +426,7 @@ function getFormValues() {
         'maplePercentMain','maplePercentSub',
         'calcBaseAtkA','calcAtkPercentA','calcMainBaseA','calcMainEquipA','calcMainPercentA','calcSubBaseA','calcSubEquipA','calcSubPercentA','maplePercentA',
         'calcBaseAtkB','calcAtkPercentB','calcMainBaseB','calcMainEquipB','calcMainPercentB','calcSubBaseB','calcSubEquipB','calcSubPercentB','maplePercentB',
-        'bonus-prayer-val','bonus-2x-val',
+        'bonus-prayer-val','bonus-2x-val','bonus-teach-val',
         'record-level','record-job',
     ];
     const data = {};
@@ -431,7 +436,7 @@ function getFormValues() {
     if (checkedFee) data.defaultFee = checkedFee.value;
 
     // checkbox 狀態：含楓幣勾選、祈禱/加倍卷/休息獎勵加成勾選
-    ['mapleCheckMain','mapleCheckSub','mapleCheckA','mapleCheckB','meso-enabled','bonus-prayer','bonus-2x','bonus-rest'].forEach(id => {
+    ['mapleCheckMain','mapleCheckSub','mapleCheckA','mapleCheckB','meso-enabled','bonus-prayer','bonus-2x','bonus-rest','bonus-teach'].forEach(id => {
         const el = document.getElementById(id);
         if (el) data[id] = el.checked;
     });
@@ -452,6 +457,7 @@ function fillValues(obj) {
                 mapleCheckB:     'maplePercentB',
                 'bonus-prayer':  'bonus-prayer-val',
                 'bonus-2x':      'bonus-2x-val',
+                'bonus-teach':   'bonus-teach-val',
             };
             const inputId = inputMap[key];
             if (inputId) {
@@ -2189,9 +2195,11 @@ function calculateExpResult(silent = false) {
     const prayerOn  = document.getElementById('bonus-prayer')?.checked;
     const twoxOn    = document.getElementById('bonus-2x')?.checked;
     const restOn    = document.getElementById('bonus-rest')?.checked;
+    const teachOn   = document.getElementById('bonus-teach')?.checked;
     const prayerPct = parseFloat(document.getElementById('bonus-prayer-val')?.value) || 0;
     const twoxMult  = parseFloat(document.getElementById('bonus-2x-val')?.value)     || 1;
-    const bonus     = (prayerOn ? prayerPct / 100 : 0) + (twoxOn ? (twoxMult - 1) : 0) + (restOn ? 1 : 0);
+    const teachPct  = parseFloat(document.getElementById('bonus-teach-val')?.value)  || 0;
+    const bonus     = (prayerOn ? prayerPct / 100 : 0) + (twoxOn ? (twoxMult - 1) : 0) + (restOn ? 1 : 0) + (teachOn ? teachPct / 100 : 0);
     const hasBonus  = bonus > 0;
     const coeff     = 1 + bonus;
 
