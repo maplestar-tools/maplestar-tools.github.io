@@ -137,6 +137,10 @@ function bindEvents() {
         }
     });
 
+    // ES module 內的函式掛到 window，讓 HTML onclick 可以呼叫
+    window.toggleBossDropdown = toggleBossDropdown;
+    window.handleAddNewBoss   = handleAddNewBoss;
+
     // 掉落物表格
     document.getElementById('btn-add-drop-sell').addEventListener('click', () => addDropRow('sell'));
     document.getElementById('btn-add-drop-self').addEventListener('click', () => addDropRow('self'));
