@@ -45,6 +45,8 @@ let bossList             = [];     // 王名稱陣列
 let bossItemMap          = {};     // { 王名稱: [物品名稱, ...] }
 let dropRows             = [];     // 掉落物表格資料
 let snowRows             = [];     // 雪花消耗表格資料
+let extraCostRows        = [];     // 額外花費表格資料
+let extraCostItems       = [];     // 自訂額外花費項目清單（共用雲端）
 let settlementHistory    = [];     // 歷史結算紀錄
 let lastSettlementResult = null;   // 最後一次結算結果（用於儲存）
 let currentHistoryIndex  = -1;     // 目前查看的歷史紀錄索引（-1 = 新紀錄）
@@ -80,6 +82,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     await loadSharedData();
     bindEvents();
     await initExpRecords();
+
+    // 同步里程匯率到掉落物標題旁的輸入框
+    const mileageVal = document.getElementById('moneyToMileage')?.value;
+    if (mileageVal) document.getElementById('moneyToMileage2').value = mileageVal;
 
     // 還原自動載入 checkbox 狀態
     const autoLoadEl = document.getElementById('autoLoad');
@@ -152,6 +158,21 @@ function bindEvents() {
     document.getElementById('btn-add-snow').addEventListener('click', addSnowRow);
     document.getElementById('snow-table-body').addEventListener('change', onSnowTableChange);
     document.getElementById('snow-table-body').addEventListener('click',  onSnowTableClick);
+
+    // 額外花費
+    document.getElementById('btn-add-extra-cost').addEventListener('click', addExtraCostRow);
+    document.getElementById('extra-cost-table-body').addEventListener('change', onExtraCostTableChange);
+    document.getElementById('extra-cost-table-body').addEventListener('click',  onExtraCostTableClick);
+
+    // 里程匯率同步（掉落物標題旁的輸入框 ↔ 基礎設定）
+    document.getElementById('moneyToMileage2').addEventListener('input', (e) => {
+        document.getElementById('moneyToMileage').value = e.target.value;
+        updateDynamicPrices();
+    });
+    document.getElementById('moneyToMileage').addEventListener('input', (e) => {
+        document.getElementById('moneyToMileage2').value = e.target.value;
+        updateDynamicPrices();
+    });
 
     // 結算
     document.getElementById('btn-settle').addEventListener('click', executeSettlement);
@@ -531,9 +552,10 @@ async function loadSharedData() {
         if (snap.exists()) {
             const d = snap.data();
             const rawMembers = d.members || d.memberNames || [];
-            bossList      = d.bossList      || [];
-            bossItemMap   = d.bossItemMap   || {};
-            adminKeycodes = d.adminKeycodes || [];
+            bossList        = d.bossList        || [];
+            bossItemMap     = d.bossItemMap     || {};
+            adminKeycodes   = d.adminKeycodes   || [];
+            extraCostItems  = d.extraCostItems  || [];
             const localData = localStorage.getItem('maple_tool_data');
             const memberSettings = localData ? (JSON.parse(localData).memberSettings || {}) : {};
             members = rawMembers.map(m => {
@@ -581,7 +603,7 @@ function updateMemberData(i, field, val) { if (members[i]) members[i][field] = v
 
 function onMemberTableChange(e) {
     const i = e.target.dataset.index;
-    if (e.target.classList.contains('mem-check'))  { members[i].checked = e.target.checked; refreshSellerOptions(); refreshSnowUserOptions(); }
+    if (e.target.classList.contains('mem-check'))  { members[i].checked = e.target.checked; refreshSellerOptions(); refreshSnowUserOptions(); refreshExtraCostUserOptions(); }
     if (e.target.classList.contains('mem-name'))   updateMemberData(i, 'name',  e.target.value);
     if (e.target.classList.contains('mem-ratio'))  updateMemberData(i, 'ratio', parseFloat(e.target.value));
 }
@@ -605,6 +627,7 @@ function renderMembers() {
     });
     refreshSellerOptions();
     refreshSnowUserOptions();
+    refreshExtraCostUserOptions();
 }
 
 function getActiveMembers() {
@@ -676,7 +699,7 @@ function onBossCheckChange(bossName, checked) {
 
 function updateDropButtons() {
     const hasBoss = selectedBosses.length > 0;
-    ['btn-add-drop-sell','btn-add-drop-self','btn-add-snow'].forEach(id => {
+    ['btn-add-drop-sell','btn-add-drop-self','btn-add-snow','btn-add-extra-cost'].forEach(id => {
         const btn = document.getElementById(id);
         if (btn) btn.disabled = !hasBoss;
     });
@@ -782,7 +805,7 @@ async function saveSharedLists() {
     const kc = document.getElementById('userKeyCode')?.value.trim();
     if (!kc) return;
     const memberList = members.filter(m => m.name.trim() !== '').map(m => ({ id: m.id, name: m.name }));
-    try { await setDoc(doc(db, "shared_data", "team_data"), { members: memberList, bossList, bossItemMap, adminKeycodes }, { merge: false }); }
+    try { await setDoc(doc(db, "shared_data", "team_data"), { members: memberList, bossList, bossItemMap, adminKeycodes, extraCostItems }, { merge: false }); }
     catch (e) { console.error("名單儲存失敗：", e); }
 }
 
@@ -963,7 +986,146 @@ function refreshSnowUserOptions() {
 }
 
 // ==========================================================================
-// 🗑️ 清空掉落物
+// 💸 額外花費表格
+// ==========================================================================
+function onExtraCostTableChange(e) {
+    const i = parseInt(e.target.dataset.index);
+    if (isNaN(i) || !extraCostRows[i]) return;
+    if (e.target.classList.contains('extra-user'))   {
+        const selectedId = e.target.value;
+        const member = members.find(m => m.id === selectedId);
+        extraCostRows[i].user = member ? { id: member.id, name: member.name } : null;
+    }
+    if (e.target.classList.contains('extra-item'))   {
+        const val = e.target.value;
+        if (val === '__add_new__') { handleAddNewExtraItem(e.target, i); return; }
+        extraCostRows[i].item = val;
+        // 剪刀自動帶入價格（鎖死）
+        recalcExtraCostRow(i);
+        toggleExtraCostAmount(i);
+    }
+    if (e.target.classList.contains('extra-amount')) { extraCostRows[i].amount = parseFloat(e.target.value) || 0; }
+}
+
+function onExtraCostTableClick(e) {
+    if (e.target.classList.contains('extra-del')) removeExtraCostRow(parseInt(e.target.dataset.index));
+}
+
+function addExtraCostRow() {
+    const i = extraCostRows.length;
+    extraCostRows.push({ user: null, item: '', amount: 0 });
+    appendExtraCostRow(i);
+}
+
+// 取得額外花費項目下拉選項
+function buildExtraItemOptions(selected = '') {
+    const kc = document.getElementById('userKeyCode')?.value.trim();
+    let html = '<option value="">— 選擇項目 —</option>';
+    html += `<option value="__fancy__"   ${selected === '__fancy__'   ? 'selected' : ''}>神奇剪刀</option>`;
+    html += `<option value="__platinum__"${selected === '__platinum__'? 'selected' : ''}>白金神奇剪刀</option>`;
+    if (extraCostItems.length > 0) {
+        html += '<option disabled>──────────</option>';
+        extraCostItems.forEach(item => {
+            html += `<option value="${item}" ${selected === item ? 'selected' : ''}>${item}</option>`;
+        });
+    }
+    if (kc) html += `<option value="__add_new__">＋ 新增項目...</option>`;
+    return html;
+}
+
+// 新增自訂額外花費項目
+async function handleAddNewExtraItem(selectEl, rowIdx) {
+    const name = prompt('請輸入新的項目名稱：');
+    if (!name || !name.trim()) { selectEl.value = extraCostRows[rowIdx]?.item || ''; return; }
+    const trimmed = name.trim();
+    if (!extraCostItems.includes(trimmed)) {
+        extraCostItems.push(trimmed);
+        await saveSharedLists();
+    }
+    // 更新所有 extra-item 下拉
+    document.querySelectorAll('.extra-item').forEach(sel => {
+        const cur = sel.value;
+        sel.innerHTML = buildExtraItemOptions(cur);
+    });
+    selectEl.value = trimmed;
+    const i = parseInt(selectEl.dataset.index);
+    if (!isNaN(i) && extraCostRows[i]) { extraCostRows[i].item = trimmed; toggleExtraCostAmount(i); }
+}
+
+// 根據項目決定金額欄位是否鎖死
+function toggleExtraCostAmount(i) {
+    const row     = extraCostRows[i];
+    const amountEl = document.getElementById(`extra-amount-${i}`);
+    if (!amountEl) return;
+    const isScissor = row.item === '__fancy__' || row.item === '__platinum__';
+    amountEl.disabled    = isScissor;
+    amountEl.style.opacity = isScissor ? '0.6' : '1';
+    recalcExtraCostRow(i);
+}
+
+// 計算剪刀價格或保留自訂金額
+function recalcExtraCostRow(i) {
+    const row     = extraCostRows[i];
+    const p       = getPrices();
+    const amountEl = document.getElementById(`extra-amount-${i}`);
+    if (!amountEl) return;
+    if (row.item === '__fancy__') {
+        const val = Math.round(p.fancy * 10) / 10;
+        extraCostRows[i].amount = val;
+        amountEl.value = val;
+    } else if (row.item === '__platinum__') {
+        const val = Math.round(p.platinum * 10) / 10;
+        extraCostRows[i].amount = val;
+        amountEl.value = val;
+    }
+}
+
+function appendExtraCostRow(i) {
+    const row    = extraCostRows[i];
+    const userId = row.user?.id || '';
+    const tr     = document.createElement('tr');
+    tr.id = `extra-cost-row-${i}`;
+    tr.style.borderBottom = '1px solid #2a2a2a';
+    tr.innerHTML = `
+        <td style="padding:6px 4px;vertical-align:middle;">
+            <select class="cloud-input extra-user" data-index="${i}" style="font-size:13px;padding:6px 8px;">
+                ${buildSellerOptions(userId)}
+            </select>
+        </td>
+        <td style="padding:6px 4px;vertical-align:middle;">
+            <select class="cloud-input extra-item" data-index="${i}" style="font-size:13px;padding:6px 8px;">
+                ${buildExtraItemOptions(row.item)}
+            </select>
+        </td>
+        <td style="padding:6px 4px;vertical-align:middle;" id="extra-custom-name-cell-${i}">
+            <!-- 自訂名稱由下拉選單選擇，不需額外輸入框 -->
+        </td>
+        <td style="padding:6px 4px;vertical-align:middle;">
+            <input type="number" id="extra-amount-${i}" class="cloud-input extra-amount" data-index="${i}"
+                value="${row.amount || ''}" placeholder="0" style="font-size:13px;padding:6px 8px;">
+        </td>
+        <td style="padding:6px 4px;text-align:center;vertical-align:middle;">
+            <button class="del-btn extra-del" data-index="${i}">✕</button>
+        </td>
+    `;
+    document.getElementById('extra-cost-table-body').appendChild(tr);
+    // 初始化金額鎖定狀態
+    toggleExtraCostAmount(i);
+}
+
+function removeExtraCostRow(i) { extraCostRows.splice(i, 1); rerenderExtraCostTable(); }
+
+function rerenderExtraCostTable() {
+    document.getElementById('extra-cost-table-body').innerHTML = '';
+    const temp = [...extraCostRows]; extraCostRows = [];
+    temp.forEach((row, i) => { extraCostRows.push(row); appendExtraCostRow(i); });
+}
+
+function refreshExtraCostUserOptions() {
+    document.querySelectorAll('.extra-user').forEach(sel => { const cur = sel.value; sel.innerHTML = buildSellerOptions(cur); });
+}
+
+
 // ==========================================================================
 function resetSettlementUI() {
     document.getElementById('settlement-detail').style.display = 'none';
@@ -976,11 +1138,12 @@ function resetSettlementUI() {
 }
 
 function clearDrops() {
-    if (dropRows.length === 0 && snowRows.length === 0) return;
-    if (!confirm("確定要清空本次所有掉落物和雪花資料嗎？")) return;
-    dropRows = []; snowRows = [];
-    document.getElementById('drops-table-body').innerHTML = '';
-    document.getElementById('snow-table-body').innerHTML  = '';
+    if (dropRows.length === 0 && snowRows.length === 0 && extraCostRows.length === 0) return;
+    if (!confirm("確定要清空本次所有掉落物、雪花和額外花費資料嗎？")) return;
+    dropRows = []; snowRows = []; extraCostRows = [];
+    document.getElementById('drops-table-body').innerHTML      = '';
+    document.getElementById('snow-table-body').innerHTML       = '';
+    document.getElementById('extra-cost-table-body').innerHTML = '';
     resetSettlementUI();
     showToast("🗑 已清空本次資料");
 }
@@ -1019,27 +1182,34 @@ function executeSettlement() {
     let totalPool = 0;
     dropRows.forEach(row => { totalPool += row.net; });
 
-    const snowCostPerMember = {};
-    active.forEach(m => { snowCostPerMember[m.id] = 0; });
-    let totalSnowCost = 0;
+    const snowCostPerMember  = {};
+    const extraCostPerMember = {};
+    active.forEach(m => { snowCostPerMember[m.id] = 0; extraCostPerMember[m.id] = 0; });
+    let totalSnowCost  = 0;
+    let totalExtraCost = 0;
     snowRows.forEach(row => {
         totalPool -= row.cost; totalSnowCost += row.cost;
         const uid = row.user?.id;
         if (uid && snowCostPerMember.hasOwnProperty(uid)) snowCostPerMember[uid] += row.cost;
+    });
+    extraCostRows.forEach(row => {
+        totalPool -= row.amount; totalExtraCost += row.amount;
+        const uid = row.user?.id;
+        if (uid && extraCostPerMember.hasOwnProperty(uid)) extraCostPerMember[uid] += row.amount;
     });
 
     const totalRatio = active.reduce((s, m) => s + (m.ratio || 1), 0);
     const shouldGet  = {};
     active.forEach(m => {
         const base = Math.round((totalPool * (m.ratio || 1) / totalRatio) * 10) / 10;
-        shouldGet[m.id] = Math.round((base + (snowCostPerMember[m.id] || 0)) * 10) / 10;
+        shouldGet[m.id] = Math.round((base + (snowCostPerMember[m.id] || 0) + (extraCostPerMember[m.id] || 0)) * 10) / 10;
     });
 
     const diff = {};
     active.forEach(m => { diff[m.id] = Math.round((actualIncome[m.id] - shouldGet[m.id]) * 10) / 10; });
 
     const payments = calcPayments(diff, active, prices);
-    const result   = { totalPool, totalSnowCost, shouldGet, actualIncome, diff, payments };
+    const result   = { totalPool, totalSnowCost, totalExtraCost, shouldGet, actualIncome, diff, payments };
     renderSettlementResult(result, active);
     lastSettlementResult = result;
     document.getElementById('btn-save-record').disabled = false;
@@ -1072,10 +1242,11 @@ function suggestBlocks(amount, prices) {
 // ==========================================================================
 // 🖼️ 結算結果渲染
 // ==========================================================================
-function renderSettlementResult(result, active, dropsSnapshot, snowsSnapshot) {
+function renderSettlementResult(result, active, dropsSnapshot, snowsSnapshot, extraCostsSnapshot) {
     const { totalPool, shouldGet, actualIncome, diff, payments } = result;
-    const displayDrops = dropsSnapshot || dropRows;
-    const displaySnows = snowsSnapshot || snowRows;
+    const displayDrops      = dropsSnapshot      || dropRows;
+    const displaySnows      = snowsSnapshot      || snowRows;
+    const displayExtraCosts = extraCostsSnapshot || extraCostRows;
     document.getElementById('settlement-detail').style.display = 'block';
 
     let dropsHtml = '<div class="detail-section-title">📦 掉落物收入</div>';
@@ -1107,6 +1278,24 @@ function renderSettlementResult(result, active, dropsSnapshot, snowsSnapshot) {
         });
     }
     document.getElementById('detail-snow').innerHTML = snowHtml;
+
+    // 額外花費明細
+    let extraHtml = '<div class="detail-section-title">💸 額外花費</div>';
+    if (displayExtraCosts.length === 0) {
+        extraHtml += '<div class="detail-row" style="color:#666;">（無）</div>';
+    } else {
+        displayExtraCosts.forEach(ec => {
+            const userName = ec.user?.id
+                ? getMemberNameById(ec.user.id, ec.user.name)
+                : (ec.user?.name || ec.user || '');
+            const itemName = ec.item === '__fancy__' ? '神奇剪刀' : ec.item === '__platinum__' ? '白金神奇剪刀' : ec.item;
+            extraHtml += `<div class="detail-row"><span>${userName}（${itemName}）</span><span style="color:#ff6b6b;">-${(ec.amount||0).toFixed(1)}萬</span></div>`;
+        });
+    }
+    // 額外花費明細插入 detail-snow 後面（需要在 HTML 加 detail-extra）
+    const detailExtraEl = document.getElementById('detail-extra');
+    if (detailExtraEl) detailExtraEl.innerHTML = extraHtml;
+
     document.getElementById('detail-total').innerText = totalPool.toFixed(1) + '萬';
 
     const tbody = document.getElementById('settlement-member-body');
@@ -1162,8 +1351,9 @@ function saveSettlementRecord() {
         date:    document.getElementById('settlement-date')?.value || new Date().toISOString().split('T')[0],
         boss:    selectedBosses.length > 0 ? selectedBosses.join('、') : '未知',
         result:  lastSettlementResult,
-        drops:   JSON.parse(JSON.stringify(dropRows)),
-        snows:   JSON.parse(JSON.stringify(snowRows)),
+        drops:      JSON.parse(JSON.stringify(dropRows)),
+        snows:      JSON.parse(JSON.stringify(snowRows)),
+        extraCosts: JSON.parse(JSON.stringify(extraCostRows)),
         members: JSON.parse(JSON.stringify(getActiveMembers()))
     };
 
@@ -1259,8 +1449,11 @@ function loadHistoryRecord() {
     snowRows = record.snows || [];
     rerenderSnowTable();
 
+    extraCostRows = record.extraCosts || [];
+    rerenderExtraCostTable();
+
     lastSettlementResult = record.result;
-    renderSettlementResult(record.result, record.members || getActiveMembers(), record.drops, record.snows);
+    renderSettlementResult(record.result, record.members || getActiveMembers(), record.drops, record.snows, record.extraCosts);
     document.getElementById('btn-save-record').disabled   = false;
     document.getElementById('btn-delete-record').disabled = false;
     showToast("📂 已讀取歷史紀錄");

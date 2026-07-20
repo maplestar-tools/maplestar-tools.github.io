@@ -136,8 +136,14 @@
 
         <!-- ===== 掉落物登記（可折疊） ===== -->
         <div class="calc-card settings-card" style="margin-top:20px;">
-            <h4 class="title-orange" id="btn-toggle-drops" style="cursor:pointer;display:flex;justify-content:space-between;margin:0;">
-                👑 掉落物登記 <span>▼</span>
+            <h4 class="title-orange" id="btn-toggle-drops" style="cursor:pointer;display:flex;justify-content:space-between;margin:0;align-items:center;">
+                <span>👑 掉落物登記</span>
+                <div style="display:flex;align-items:center;gap:8px;" onclick="event.stopPropagation()">
+                    <span style="font-size:12px;color:#aaa;font-weight:normal;white-space:nowrap;">里程匯率</span>
+                    <input type="number" id="moneyToMileage2" class="cloud-input" style="width:80px;padding:5px 8px;font-size:13px;margin:0;" placeholder="10000">
+                    <span style="font-size:12px;color:#666;font-weight:normal;white-space:nowrap;">里程/1000萬</span>
+                    <span>▼</span>
+                </div>
             </h4>
             <div id="drops-section" style="overflow:hidden;transition:max-height 0.5s ease-out;max-height:3000px;">
                 <p class="card-desc" style="margin-top:12px;">選擇王後登記本次掉落物，自動計算每筆淨收入。</p>
@@ -207,6 +213,27 @@
                 <div style="margin-top:10px;">
                     <button id="btn-add-snow" class="calc-btn btn-blue" style="max-width:200px;" disabled>+ 新增雪花紀錄</button>
                 </div>
+
+                <!-- 額外花費登記 -->
+                <div style="border-top:1px dashed #444;margin:20px 0 12px;"></div>
+                <div style="font-size:13px;color:#aaa;margin-bottom:8px;font-weight:bold;">💸 額外花費登記</div>
+                <div style="overflow-x:auto;">
+                    <table style="width:100%;border-collapse:collapse;min-width:420px;">
+                        <thead>
+                            <tr style="border-bottom:1px solid #444;font-size:12px;color:#aaa;">
+                                <th style="padding:8px 4px;text-align:left;">使用者</th>
+                                <th style="padding:8px 4px;width:140px;">項目</th>
+                                <th style="padding:8px 4px;width:80px;">自訂名稱</th>
+                                <th style="padding:8px 4px;width:90px;text-align:right;">金額(萬)</th>
+                                <th style="padding:8px 4px;width:36px;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="extra-cost-table-body"></tbody>
+                    </table>
+                </div>
+                <div style="margin-top:10px;">
+                    <button id="btn-add-extra-cost" class="calc-btn btn-purple" style="max-width:200px;" disabled>+ 新增額外花費</button>
+                </div>
             </div>
         </div>
 
@@ -241,6 +268,7 @@
                             <div style="font-size:13px;font-weight:bold;color:#aaa;margin-bottom:10px;">📊 收支明細</div>
                             <div id="detail-drops"></div>
                             <div id="detail-snow"></div>
+                            <div id="detail-extra"></div>
                             <div style="border-top:1px solid #444;margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;font-weight:bold;">
                                 <span>可分配淨額</span>
                                 <span id="detail-total" style="color:#64b5f6;font-size:16px;">0萬</span>
