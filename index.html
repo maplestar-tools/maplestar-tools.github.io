@@ -142,11 +142,22 @@
             <div id="drops-section" style="overflow:hidden;transition:max-height 0.5s ease-out;max-height:3000px;">
                 <p class="card-desc" style="margin-top:12px;">選擇王後登記本次掉落物，自動計算每筆淨收入。</p>
 
-                <!-- 選王下拉 -->
+                <!-- 選王下拉（多選） -->
                 <div style="margin-bottom:20px;">
                     <label style="display:block;margin-bottom:6px;font-size:14px;">選擇王</label>
-                    <div style="display:flex;gap:10px;align-items:center;">
-                        <select id="boss-select" class="cloud-input" style="flex:1;"></select>
+                    <!-- 多選下拉觸發按鈕 -->
+                    <div style="position:relative;">
+                        <div id="boss-select-display" class="cloud-input" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;user-select:none;" onclick="toggleBossDropdown()">
+                            <span id="boss-select-label" style="color:#666;">— 選擇王 —</span>
+                            <span style="color:#aaa;">▼</span>
+                        </div>
+                        <!-- 多選下拉清單 -->
+                        <div id="boss-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:#252525;border:1px solid #555;border-radius:8px;z-index:100;max-height:200px;overflow-y:auto;margin-top:4px;">
+                            <div id="boss-checkbox-list"></div>
+                            <div style="border-top:1px solid #444;padding:6px 10px;">
+                                <div id="boss-add-new" style="font-size:13px;color:#64b5f6;cursor:pointer;padding:4px 0;display:none;" onclick="handleAddNewBoss()">＋ 新增王...</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

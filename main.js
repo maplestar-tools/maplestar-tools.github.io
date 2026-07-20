@@ -127,8 +127,15 @@ function bindEvents() {
     document.getElementById('member-grid').addEventListener('change', onMemberTableChange);
     document.getElementById('member-grid').addEventListener('click',  onMemberTableClick);
 
-    // 王選擇
-    document.getElementById('boss-select').addEventListener('change', onBossSelectChange);
+    // 王選擇（多選下拉，事件由 renderBossSelect 內部綁定）
+    // 點擊外部關閉多選下拉
+    document.addEventListener('click', (e) => {
+        const dropdown = document.getElementById('boss-dropdown');
+        const display  = document.getElementById('boss-select-display');
+        if (dropdown && !dropdown.contains(e.target) && !display?.contains(e.target)) {
+            dropdown.style.display = 'none';
+        }
+    });
 
     // 掉落物表格
     document.getElementById('btn-add-drop-sell').addEventListener('click', () => addDropRow('sell'));
@@ -606,57 +613,130 @@ function getMemberNameById(id, fallbackName = '') {
 }
 
 // ==========================================================================
-// 👑 王選擇
+// 👑 王選擇（多選）
 // ==========================================================================
-function getCurrentBoss() {
-    const val = document.getElementById('boss-select')?.value;
-    return (val && val !== '__add_new__') ? val : '';
+let selectedBosses = []; // 目前已勾選的王名稱陣列
+
+// 取得目前已選擇的王（陣列）
+function getSelectedBosses() {
+    return selectedBosses;
 }
 
-function onBossSelectChange(e) {
-    const val = e.target.value;
-    if (val === '__add_new__') { handleAddNew('boss', e.target); return; }
+// 切換多選下拉顯示/隱藏
+function toggleBossDropdown() {
+    const dd = document.getElementById('boss-dropdown');
+    if (dd) dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+// 更新多選下拉的顯示文字
+function updateBossSelectLabel() {
+    const label = document.getElementById('boss-select-label');
+    if (!label) return;
+    if (selectedBosses.length === 0) {
+        label.style.color = '#666';
+        label.innerText   = '— 選擇王 —';
+    } else {
+        label.style.color = '#e0e0e0';
+        const text = selectedBosses.join('、');
+        label.innerText = text.length > 30 ? text.substring(0, 30) + '...' : text;
+    }
+}
+
+// 勾選/取消王時的處理
+function onBossCheckChange(bossName, checked) {
+    const prevSelected = [...selectedBosses];
+    if (checked) {
+        if (!selectedBosses.includes(bossName)) selectedBosses.push(bossName);
+    } else {
+        selectedBosses = selectedBosses.filter(b => b !== bossName);
+    }
+    // 有掉落物時確認是否清空
     if (dropRows.length > 0 || snowRows.length > 0) {
-        if (confirm("切換王將清空掉落物與雪花清單，是否繼續？")) {
+        if (confirm("變更王選擇將清空掉落物與雪花清單，是否繼續？")) {
             dropRows = []; snowRows = [];
             document.getElementById('drops-table-body').innerHTML = '';
             document.getElementById('snow-table-body').innerHTML  = '';
             resetSettlementUI();
         } else {
-            e.target.value = e.target.dataset.prev || '';
+            // 還原選擇
+            selectedBosses = prevSelected;
+            const cb = document.querySelector(`#boss-checkbox-list input[data-boss="${bossName}"]`);
+            if (cb) cb.checked = !checked;
             return;
         }
     }
-    e.target.dataset.prev = val;
+    updateBossSelectLabel();
     updateDropButtons();
     renderAllDropItemSelects();
 }
 
 function updateDropButtons() {
-    const hasBoss = !!getCurrentBoss();
+    const hasBoss = selectedBosses.length > 0;
     ['btn-add-drop-sell','btn-add-drop-self','btn-add-snow'].forEach(id => {
         const btn = document.getElementById(id);
         if (btn) btn.disabled = !hasBoss;
     });
 }
 
+// 渲染多選下拉的 checkbox 清單
 function renderBossSelect() {
-    const sel = document.getElementById('boss-select');
-    if (!sel) return;
-    const cur = getCurrentBoss();
-    sel.innerHTML = '<option value="">— 選擇王 —</option>';
-    bossList.forEach(b => { sel.innerHTML += `<option value="${b}" ${cur === b ? 'selected' : ''}>${b}</option>`; });
+    const list = document.getElementById('boss-checkbox-list');
+    const addNew = document.getElementById('boss-add-new');
+    if (!list) return;
+
     const kc = document.getElementById('userKeyCode')?.value.trim();
-    if (kc) sel.innerHTML += `<option value="__add_new__">＋ 新增王...</option>`;
+    if (addNew) addNew.style.display = kc ? 'block' : 'none';
+
+    if (bossList.length === 0) {
+        list.innerHTML = '<div style="padding:10px;font-size:13px;color:#666;">尚無王名單</div>';
+        updateDropButtons();
+        return;
+    }
+
+    list.innerHTML = bossList.map(boss => `
+        <label style="display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px;color:#e0e0e0;" onmouseover="this.style.background='#333'" onmouseout="this.style.background=''">
+            <input type="checkbox" data-boss="${boss}" ${selectedBosses.includes(boss) ? 'checked' : ''} style="width:14px;height:14px;cursor:pointer;">
+            ${boss}
+        </label>
+    `).join('');
+
+    list.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', () => onBossCheckChange(cb.dataset.boss, cb.checked));
+    });
+
+    updateBossSelectLabel();
+    updateDropButtons();
+}
+
+// 新增王（從多選下拉的「＋ 新增王...」觸發）
+async function handleAddNewBoss() {
+    const name = prompt('請輸入新的王名稱：');
+    if (!name || !name.trim()) return;
+    const trimmed = name.trim();
+    if (bossList.includes(trimmed)) { alert(`「${trimmed}」已存在！`); return; }
+    bossList.push(trimmed);
+    await saveSharedLists();
+    renderBossSelect();
+    // 自動勾選新增的王
+    onBossCheckChange(trimmed, true);
+    const cb = document.querySelector(`#boss-checkbox-list input[data-boss="${trimmed}"]`);
+    if (cb) cb.checked = true;
     updateDropButtons();
 }
 
 // ==========================================================================
 // 📦 掉落物名稱下拉
 // ==========================================================================
+
+// 取得所有已勾選王的掉落物（合併去重）
 function getCurrentBossItems() {
-    const boss = getCurrentBoss();
-    return boss ? (bossItemMap[boss] || []) : [];
+    const allItems = [];
+    selectedBosses.forEach(boss => {
+        (bossItemMap[boss] || []).forEach(item => {
+            if (!allItems.includes(item)) allItems.push(item);
+        });
+    });
+    return allItems;
 }
 
 function buildItemOptions(selected = '') {
@@ -676,27 +756,21 @@ function renderAllDropItemSelects() {
 }
 
 async function handleAddNew(type, selectEl) {
-    const label = type === 'boss' ? '王名稱' : '物品名稱';
-    const name  = prompt(`請輸入新的${label}：`);
-    if (!name || !name.trim()) { selectEl.value = selectEl.dataset.prev || ''; return; }
+    if (type === 'boss') { handleAddNewBoss(); selectEl.value = ''; return; }
+    // 物品
+    const name = prompt('請輸入新的物品名稱：');
+    if (!name || !name.trim()) { selectEl.value = ''; return; }
     const trimmed = name.trim();
-    if (type === 'boss') {
-        if (!bossList.includes(trimmed)) bossList.push(trimmed);
-        await saveSharedLists();
-        renderBossSelect();
-        document.getElementById('boss-select').value        = trimmed;
-        document.getElementById('boss-select').dataset.prev = trimmed;
-    } else {
-        const boss = getCurrentBoss();
-        if (!boss) { selectEl.value = ''; return; }
+    // 新物品加到所有已勾選的王
+    selectedBosses.forEach(boss => {
         if (!bossItemMap[boss]) bossItemMap[boss] = [];
         if (!bossItemMap[boss].includes(trimmed)) bossItemMap[boss].push(trimmed);
-        await saveSharedLists();
-        renderAllDropItemSelects();
-        selectEl.value = trimmed;
-        const idx = parseInt(selectEl.dataset.index);
-        if (!isNaN(idx) && dropRows[idx]) dropRows[idx].item = trimmed;
-    }
+    });
+    await saveSharedLists();
+    renderAllDropItemSelects();
+    selectEl.value = trimmed;
+    const idx = parseInt(selectEl.dataset.index);
+    if (!isNaN(idx) && dropRows[idx]) dropRows[idx].item = trimmed;
     updateDropButtons();
 }
 
@@ -1082,7 +1156,7 @@ function saveSettlementRecord() {
     if (!lastSettlementResult) { alert("請先執行結算！"); return; }
     const record = {
         date:    document.getElementById('settlement-date')?.value || new Date().toISOString().split('T')[0],
-        boss:    document.getElementById('boss-select')?.value || '未知',
+        boss:    selectedBosses.length > 0 ? selectedBosses.join('、') : '未知',
         result:  lastSettlementResult,
         drops:   JSON.parse(JSON.stringify(dropRows)),
         snows:   JSON.parse(JSON.stringify(snowRows)),
@@ -1167,8 +1241,9 @@ function loadHistoryRecord() {
     }
 
     if (record.boss) {
-        const bossEl = document.getElementById('boss-select');
-        if (bossEl) { bossEl.value = record.boss; bossEl.dataset.prev = record.boss; }
+        // 還原多選王狀態（舊紀錄可能是單一字串，新紀錄是頓號分隔）
+        selectedBosses = record.boss.split('、').filter(b => bossList.includes(b));
+        renderBossSelect();
         updateDropButtons();
     }
 
