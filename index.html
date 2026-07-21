@@ -137,12 +137,11 @@
         <!-- ===== 掉落物登記（可折疊） ===== -->
         <div class="calc-card settings-card" style="margin-top:20px;">
             <h4 class="title-orange" id="btn-toggle-drops" style="cursor:pointer;display:flex;justify-content:space-between;margin:0;align-items:center;">
-                <span>👑 掉落物登記</span>
+                <span>👑 掉落物登記 <span id="drops-toggle-arrow">▼</span></span>
                 <div style="display:flex;align-items:center;gap:8px;" onclick="event.stopPropagation()">
                     <span style="font-size:12px;color:#aaa;font-weight:normal;white-space:nowrap;">里程匯率</span>
                     <input type="number" id="moneyToMileage2" class="cloud-input" style="width:80px;padding:5px 8px;font-size:13px;margin:0;" placeholder="10000">
                     <span style="font-size:12px;color:#666;font-weight:normal;white-space:nowrap;">里程/1000萬</span>
-                    <span>▼</span>
                 </div>
             </h4>
             <div id="drops-section" style="overflow:hidden;transition:max-height 0.5s ease-out;max-height:3000px;">
@@ -218,12 +217,11 @@
                 <div style="border-top:1px dashed #444;margin:20px 0 12px;"></div>
                 <div style="font-size:13px;color:#aaa;margin-bottom:8px;font-weight:bold;">💸 額外花費登記</div>
                 <div style="overflow-x:auto;">
-                    <table style="width:100%;border-collapse:collapse;min-width:420px;">
+                    <table style="width:100%;border-collapse:collapse;min-width:380px;">
                         <thead>
                             <tr style="border-bottom:1px solid #444;font-size:12px;color:#aaa;">
                                 <th style="padding:8px 4px;text-align:left;">使用者</th>
-                                <th style="padding:8px 4px;width:140px;">項目</th>
-                                <th style="padding:8px 4px;width:80px;">自訂名稱</th>
+                                <th style="padding:8px 4px;">項目</th>
                                 <th style="padding:8px 4px;width:90px;text-align:right;">金額(萬)</th>
                                 <th style="padding:8px 4px;width:36px;"></th>
                             </tr>
@@ -768,6 +766,7 @@
             <button class="admin-tab-btn calc-btn btn-blue" data-tab="admin" style="flex:1;margin:0;padding:8px 0;font-size:13px;">🔑 管理員</button>
             <button class="admin-tab-btn calc-btn btn-gray" data-tab="member" style="flex:1;margin:0;padding:8px 0;font-size:13px;">👥 隊員</button>
             <button class="admin-tab-btn calc-btn btn-gray" data-tab="boss" style="flex:1;margin:0;padding:8px 0;font-size:13px;">👑 王與掉落物</button>
+            <button class="admin-tab-btn calc-btn btn-gray" data-tab="extra" style="flex:1;margin:0;padding:8px 0;font-size:13px;">💸 額外花費項目</button>
         </div>
 
         <!-- 分頁1：管理員 keycode 名單 -->
@@ -801,6 +800,12 @@
                 </div>
                 <div id="modal-item-list"></div>
             </div>
+        </div>
+
+        <!-- 分頁4：額外花費項目清單 -->
+        <div id="admin-tab-extra" class="admin-tab-content" style="display:none;">
+            <div style="font-size:13px;color:#aaa;margin-bottom:10px;">管理額外花費的自訂項目清單，可排序和刪除。</div>
+            <div id="modal-extra-item-list"></div>
         </div>
 
         <div style="margin-top:20px;">

@@ -299,7 +299,9 @@ function switchTab(tabId) {
 function toggleSection(headerEl, sectionId) {
     const content = document.getElementById(sectionId);
     if (!content) return;
-    const span = headerEl.querySelector('span');
+    // 優先找有 id 的箭頭 span（避免標題列有多個 span 時找錯）
+    const arrowId = sectionId.replace('-section', '-toggle-arrow');
+    const span = document.getElementById(arrowId) || headerEl.querySelector('span');
     if (content.style.maxHeight === '0px') {
         content.style.maxHeight = content.scrollHeight + 1000 + "px";
         if (span) span.innerText = '▲';
@@ -1097,9 +1099,6 @@ function appendExtraCostRow(i) {
                 ${buildExtraItemOptions(row.item)}
             </select>
         </td>
-        <td style="padding:6px 4px;vertical-align:middle;" id="extra-custom-name-cell-${i}">
-            <!-- 自訂名稱由下拉選單選擇，不需額外輸入框 -->
-        </td>
         <td style="padding:6px 4px;vertical-align:middle;">
             <input type="number" id="extra-amount-${i}" class="cloud-input extra-amount" data-index="${i}"
                 value="${row.amount || ''}" placeholder="0" style="font-size:13px;padding:6px 8px;">
@@ -1468,6 +1467,7 @@ function openAdminPanel() {
     renderModalBossList();
     renderModalBossFilter();
     renderModalItemList();
+    renderModalExtraItemList();
     switchAdminTab('admin');
     document.getElementById('modal-admin-panel').classList.add('active');
 }
@@ -1678,6 +1678,51 @@ function renderModalItemList() {
             renderAllDropItemSelects();
             renderModalItemList();
             showToast("🗑 已刪除物品");
+        });
+    });
+}
+
+// 額外花費項目管理（排序、刪除）
+function renderModalExtraItemList() {
+    const el = document.getElementById('modal-extra-item-list');
+    if (!el) return;
+    if (extraCostItems.length === 0) { el.innerHTML = '<div style="color:#666;font-size:13px;">尚無自訂項目</div>'; return; }
+    el.innerHTML = extraCostItems.map((item, i) => `
+        <div class="modal-list-item" draggable="true" data-index="${i}" style="cursor:grab;">
+            <span style="color:#aaa;margin-right:8px;">☰</span>
+            <span style="flex:1;">${item}</span>
+            <button class="del-btn modal-del-extra-item" data-index="${i}" style="margin:0;">✕</button>
+        </div>
+    `).join('');
+
+    let dragIdx = null;
+    el.querySelectorAll('.modal-list-item').forEach(item => {
+        item.addEventListener('dragstart', () => { dragIdx = parseInt(item.dataset.index); item.style.opacity = '0.5'; });
+        item.addEventListener('dragend',   () => { item.style.opacity = '1'; });
+        item.addEventListener('dragover',  (e) => { e.preventDefault(); item.style.background = '#333'; });
+        item.addEventListener('dragleave', () => { item.style.background = '#252525'; });
+        item.addEventListener('drop', async () => {
+            item.style.background = '#252525';
+            const dropIdx = parseInt(item.dataset.index);
+            if (dragIdx === null || dragIdx === dropIdx) return;
+            const moved = extraCostItems.splice(dragIdx, 1)[0];
+            extraCostItems.splice(dropIdx, 0, moved);
+            await saveSharedLists();
+            renderModalExtraItemList();
+            showToast('✅ 排序已儲存');
+        });
+    });
+
+    el.querySelectorAll('.modal-del-extra-item').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+            const idx  = parseInt(btn.dataset.index);
+            const name = extraCostItems[idx];
+            if (!confirm(`確定要刪除項目「${name}」嗎？`)) return;
+            extraCostItems.splice(idx, 1);
+            await saveSharedLists();
+            renderModalExtraItemList();
+            showToast(`🗑 已刪除「${name}」`);
         });
     });
 }
