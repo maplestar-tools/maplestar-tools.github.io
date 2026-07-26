@@ -307,6 +307,31 @@
             </div>
         </div>
 
+        <!-- ===== 共用結算紀錄（僅管理員可見） ===== -->
+        <div id="shared-history-section" class="calc-card settings-card" style="margin-top:20px;display:none;">
+            <h4 class="title-blue" id="btn-toggle-shared-history" style="cursor:pointer;display:flex;justify-content:space-between;margin:0;">
+                📋 共用結算紀錄 <span>▼</span>
+            </h4>
+            <div id="shared-history-content" style="overflow:hidden;transition:max-height 0.5s ease-out;max-height:3000px;">
+                <p class="card-desc" style="margin-top:12px;">勾選多筆紀錄後按「合併付款指示」，確認後按「已結清」刪除已勾選的紀錄。</p>
+
+                <!-- 共用紀錄勾選清單 -->
+                <div id="shared-history-list" style="margin-bottom:12px;max-height:300px;overflow-y:auto;border:1px solid #333;border-radius:8px;"></div>
+
+                <!-- 操作按鈕 -->
+                <div style="display:flex;gap:10px;margin-bottom:16px;">
+                    <button id="btn-merge-payments" class="calc-btn btn-blue" style="flex:1;">🔀 合併付款指示</button>
+                    <button id="btn-settle-clear" class="calc-btn btn-green" style="flex:1;" disabled>✅ 已結清</button>
+                </div>
+
+                <!-- 合併結果顯示區 -->
+                <div id="merged-payment-result" style="display:none;">
+                    <div style="font-size:13px;font-weight:bold;color:#aaa;margin-bottom:10px;">💸 合併付款指示</div>
+                    <div id="merged-payment-detail" style="background:#252525;border-radius:8px;padding:15px;"></div>
+                </div>
+            </div>
+        </div>
+
     </div><!-- end money-split -->
 
     <!-- ===== 裝備計算 ===== -->

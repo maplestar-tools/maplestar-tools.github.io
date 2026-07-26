@@ -33,6 +33,12 @@ function checkIsAdmin() {
     isAdmin = adminKeycodes.includes(kc);
     const btn = document.getElementById('btn-admin-panel');
     if (btn) btn.style.display = isAdmin ? 'inline-flex' : 'none';
+    // 管理員才顯示共用結算紀錄區塊
+    const sharedSection = document.getElementById('shared-history-section');
+    if (sharedSection) {
+        sharedSection.style.display = isAdmin ? 'block' : 'none';
+        if (isAdmin) loadSharedHistory();
+    }
 }
 
 // ==========================================================================
@@ -178,6 +184,9 @@ function bindEvents() {
     document.getElementById('btn-settle').addEventListener('click', executeSettlement);
     document.getElementById('btn-save-record').addEventListener('click', saveSettlementRecord);
     document.getElementById('btn-delete-record').addEventListener('click', deleteHistoryRecord);
+    document.getElementById('btn-toggle-shared-history').addEventListener('click', (e) => toggleSection(e.currentTarget, 'shared-history-content'));
+    document.getElementById('btn-merge-payments').addEventListener('click', mergePayments);
+    document.getElementById('btn-settle-clear').addEventListener('click', settleAndClear);
     document.getElementById('history-select').addEventListener('change', loadHistoryRecord);
 
     // 裝備計算
@@ -1370,6 +1379,20 @@ function saveSettlementRecord() {
     if (kc) {
         setDoc(doc(db, "player_history", kc), { history: settlementHistory }, { merge: false })
             .catch(e => console.error("歷史雲端儲存失敗：", e));
+
+        // 同時存一份到共用雲端（供管理員合併付款指示使用）
+        // 只存新增紀錄，不存更新的（currentHistoryIndex === -1 代表新增）
+        if (currentHistoryIndex === -1 || currentHistoryIndex === 0) {
+            const sharedRecord = {
+                id:      `${kc}_${Date.now()}`,
+                keycode: kc,
+                date:    record.date,
+                boss:    record.boss,
+                result:  record.result,
+                members: record.members,
+            };
+            saveToSharedHistory(sharedRecord);
+        }
     }
     renderHistorySelect();
     const sel = document.getElementById('history-select');
@@ -1381,6 +1404,154 @@ function saveSettlementRecord() {
     document.getElementById('btn-delete-record').disabled = false;
     document.getElementById('btn-save-record').disabled = true;
     showToast("💾 紀錄已儲存！");
+}
+
+// ==========================================================================
+// 📋 共用結算紀錄（管理員功能）
+// ==========================================================================
+let sharedHistory        = [];   // 從共用雲端載入的結算紀錄
+let selectedSharedIds    = [];   // 目前勾選的紀錄 id 陣列
+let lastMergedDiff       = null; // 最後一次合併計算的差額結果（用於已結清）
+
+// 儲存一筆紀錄到共用雲端
+async function saveToSharedHistory(record) {
+    try {
+        const snap = await getDoc(doc(db, 'shared_data', 'shared_history'));
+        const existing = snap.exists() ? (snap.data().records || []) : [];
+        existing.unshift(record);
+        await setDoc(doc(db, 'shared_data', 'shared_history'), { records: existing }, { merge: false });
+        // 如果管理員區塊已經顯示，重新載入
+        if (isAdmin) loadSharedHistory();
+    } catch(e) {
+        console.error('共用紀錄儲存失敗：', e);
+    }
+}
+
+// 從共用雲端載入所有結算紀錄
+async function loadSharedHistory() {
+    try {
+        const snap = await getDoc(doc(db, 'shared_data', 'shared_history'));
+        sharedHistory = snap.exists() ? (snap.data().records || []) : [];
+    } catch(e) {
+        sharedHistory = [];
+    }
+    renderSharedHistoryList();
+}
+
+// 渲染共用紀錄勾選清單
+function renderSharedHistoryList() {
+    const el = document.getElementById('shared-history-list');
+    if (!el) return;
+    if (sharedHistory.length === 0) {
+        el.innerHTML = '<div style="padding:16px;text-align:center;color:#555;font-size:13px;">尚無共用紀錄</div>';
+        return;
+    }
+    el.innerHTML = sharedHistory.map(r => `
+        <label style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #2a2a2a;cursor:pointer;font-size:13px;color:#e0e0e0;" onmouseover="this.style.background='#252525'" onmouseout="this.style.background=''">
+            <input type="checkbox" data-id="${r.id}" style="width:15px;height:15px;cursor:pointer;" ${selectedSharedIds.includes(r.id) ? 'checked' : ''}>
+            <span style="color:#aaa;white-space:nowrap;">${r.date}</span>
+            <span style="flex:1;">${r.boss}</span>
+        </label>
+    `).join('');
+
+    el.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const id = cb.dataset.id;
+            if (cb.checked) {
+                if (!selectedSharedIds.includes(id)) selectedSharedIds.push(id);
+            } else {
+                selectedSharedIds = selectedSharedIds.filter(i => i !== id);
+            }
+            // 有勾選才啟用合併按鈕
+            document.getElementById('btn-merge-payments').disabled = selectedSharedIds.length === 0;
+            // 清空已結清按鈕和合併結果
+            document.getElementById('btn-settle-clear').disabled = true;
+            document.getElementById('merged-payment-result').style.display = 'none';
+            lastMergedDiff = null;
+        });
+    });
+
+    document.getElementById('btn-merge-payments').disabled = selectedSharedIds.length === 0;
+}
+
+// 合併付款指示：把勾選的紀錄差額加總重新計算
+function mergePayments() {
+    const selected = sharedHistory.filter(r => selectedSharedIds.includes(r.id));
+    if (selected.length === 0) { showToast('⚠️ 請先勾選紀錄！'); return; }
+
+    // 收集所有成員（以 id 為主，name 為輔）
+    const memberMap = {}; // { id: name }
+    selected.forEach(r => {
+        (r.members || []).forEach(m => { memberMap[m.id] = m.name; });
+    });
+
+    // 加總每人差額
+    const totalDiff = {};
+    selected.forEach(r => {
+        const { diff, actualIncome, shouldGet } = r.result;
+        // diff 可能用 id 或 name 當 key，統一用 id
+        (r.members || []).forEach(m => {
+            const d = diff?.[m.id] ?? diff?.[m.name] ?? 0;
+            totalDiff[m.id] = (totalDiff[m.id] || 0) + d;
+        });
+    });
+
+    // 四捨五入
+    Object.keys(totalDiff).forEach(id => {
+        totalDiff[id] = Math.round(totalDiff[id] * 10) / 10;
+    });
+
+    // 計算最少付款路徑
+    const prices  = getPrices();
+    const members = Object.keys(totalDiff).map(id => ({ id, name: memberMap[id] || id }));
+    const payments = calcPayments(totalDiff, members, prices);
+
+    lastMergedDiff = { totalDiff, memberMap, payments };
+
+    // 渲染合併結果
+    const detailEl = document.getElementById('merged-payment-detail');
+    if (payments.length === 0) {
+        detailEl.innerHTML = '<div style="color:#666;font-size:13px;">無需付款，大家收支平衡！</div>';
+    } else {
+        detailEl.innerHTML = payments.map(p => `
+            <div class="payment-row">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <span style="color:#ff6b6b;font-weight:bold;">${getMemberNameById(p.fromId, p.from)}</span>
+                    <span style="color:#666;">→</span>
+                    <span style="color:#4dae4c;font-weight:bold;">${getMemberNameById(p.toId, p.to)}</span>
+                    <span style="margin-left:auto;color:#fff;font-weight:bold;">${p.amount.toFixed(1)}萬</span>
+                </div>
+                <div style="font-size:12px;color:#aaa;padding-left:4px;">
+                    奇幻方塊 <b style="color:#fff;">${p.fancyCount}</b> 個
+                    ＋ 可疑方塊 <b style="color:#fff;">${p.suspCount}</b> 個
+                    ＋ 餘額 <b style="color:#fff;">${p.remainder.toFixed(1)}</b> 萬楓幣
+                </div>
+            </div>
+        `).join('');
+    }
+
+    document.getElementById('merged-payment-result').style.display = 'block';
+    document.getElementById('btn-settle-clear').disabled = false;
+    showToast('✅ 合併計算完成');
+}
+
+// 已結清：刪除勾選的共用紀錄
+async function settleAndClear() {
+    if (!lastMergedDiff) { showToast('⚠️ 請先執行合併付款指示！'); return; }
+    if (!confirm(`確定要刪除這 ${selectedSharedIds.length} 筆紀錄嗎？（個人紀錄不受影響）`)) return;
+
+    sharedHistory = sharedHistory.filter(r => !selectedSharedIds.includes(r.id));
+    try {
+        await setDoc(doc(db, 'shared_data', 'shared_history'), { records: sharedHistory }, { merge: false });
+        selectedSharedIds = [];
+        lastMergedDiff    = null;
+        document.getElementById('btn-settle-clear').disabled        = true;
+        document.getElementById('merged-payment-result').style.display = 'none';
+        renderSharedHistoryList();
+        showToast('✅ 已結清，紀錄已刪除');
+    } catch(e) {
+        showToast('❌ 刪除失敗：' + e.message);
+    }
 }
 
 function deleteHistoryRecord() {
