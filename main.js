@@ -1495,6 +1495,7 @@ function renderSharedHistoryList() {
             <input type="checkbox" data-id="${r.id}" style="width:15px;height:15px;cursor:pointer;" ${selectedSharedIds.includes(r.id) ? 'checked' : ''}>
             <span style="color:#aaa;white-space:nowrap;">${r.date}</span>
             <span style="flex:1;">${r.boss}</span>
+            <span style="color:#666;font-size:12px;white-space:nowrap;">[${r.keycode || '—'}]</span>
         </label>
     `).join('');
 
