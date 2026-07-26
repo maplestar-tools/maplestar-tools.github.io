@@ -1355,36 +1355,44 @@ function renderSettlementResult(result, active, dropsSnapshot, snowsSnapshot, ex
 // ==========================================================================
 function saveSettlementRecord() {
     if (!lastSettlementResult) { alert("請先執行結算！"); return; }
+    const kc = document.getElementById('userKeyCode')?.value.trim();
+
     const record = {
-        date:    document.getElementById('settlement-date')?.value || new Date().toISOString().split('T')[0],
-        boss:    selectedBosses.length > 0 ? selectedBosses.join('、') : '未知',
-        result:  lastSettlementResult,
+        date:       document.getElementById('settlement-date')?.value || new Date().toISOString().split('T')[0],
+        boss:       selectedBosses.length > 0 ? selectedBosses.join('、') : '未知',
+        result:     lastSettlementResult,
         drops:      JSON.parse(JSON.stringify(dropRows)),
         snows:      JSON.parse(JSON.stringify(snowRows)),
         extraCosts: JSON.parse(JSON.stringify(extraCostRows)),
-        members: JSON.parse(JSON.stringify(getActiveMembers()))
+        members:    JSON.parse(JSON.stringify(getActiveMembers()))
     };
 
     if (currentHistoryIndex >= 0) {
+        // 更新現有紀錄：保留原本的 sharedId
+        record.sharedId = settlementHistory[currentHistoryIndex]?.sharedId || null;
         settlementHistory[currentHistoryIndex] = record;
+
+        // 同步更新共用雲端對應的那筆
+        if (kc && record.sharedId) {
+            updateSharedHistory(record.sharedId, {
+                date:    record.date,
+                boss:    record.boss,
+                result:  record.result,
+                members: record.members,
+            });
+        }
     } else {
+        // 新增紀錄：產生新的 sharedId 並存入共用雲端
+        const sharedId = `${kc}_${Date.now()}`;
+        record.sharedId = sharedId;
         settlementHistory.unshift(record);
         if (settlementHistory.length > 100) settlementHistory.pop();
         settlementHistory.sort((a, b) => new Date(b.date) - new Date(a.date));
         currentHistoryIndex = 0;
-    }
 
-    localStorage.setItem('maple_settlement_history', JSON.stringify(settlementHistory));
-    const kc = document.getElementById('userKeyCode')?.value.trim();
-    if (kc) {
-        setDoc(doc(db, "player_history", kc), { history: settlementHistory }, { merge: false })
-            .catch(e => console.error("歷史雲端儲存失敗：", e));
-
-        // 同時存一份到共用雲端（供管理員合併付款指示使用）
-        // 只存新增紀錄，不存更新的（currentHistoryIndex === -1 代表新增）
-        if (currentHistoryIndex === -1 || currentHistoryIndex === 0) {
+        if (kc) {
             const sharedRecord = {
-                id:      `${kc}_${Date.now()}`,
+                id:      sharedId,
                 keycode: kc,
                 date:    record.date,
                 boss:    record.boss,
@@ -1393,6 +1401,12 @@ function saveSettlementRecord() {
             };
             saveToSharedHistory(sharedRecord);
         }
+    }
+
+    localStorage.setItem('maple_settlement_history', JSON.stringify(settlementHistory));
+    if (kc) {
+        setDoc(doc(db, "player_history", kc), { history: settlementHistory }, { merge: false })
+            .catch(e => console.error("歷史雲端儲存失敗：", e));
     }
     renderHistorySelect();
     const sel = document.getElementById('history-select');
@@ -1424,6 +1438,36 @@ async function saveToSharedHistory(record) {
         if (isAdmin) loadSharedHistory();
     } catch(e) {
         console.error('共用紀錄儲存失敗：', e);
+    }
+}
+
+// 更新共用雲端對應的那筆紀錄
+async function updateSharedHistory(sharedId, updates) {
+    try {
+        const snap = await getDoc(doc(db, 'shared_data', 'shared_history'));
+        if (!snap.exists()) return;
+        const records = snap.data().records || [];
+        const idx = records.findIndex(r => r.id === sharedId);
+        if (idx === -1) return;
+        records[idx] = { ...records[idx], ...updates };
+        await setDoc(doc(db, 'shared_data', 'shared_history'), { records }, { merge: false });
+        if (isAdmin) loadSharedHistory();
+    } catch(e) {
+        console.error('共用紀錄更新失敗：', e);
+    }
+}
+
+// 刪除共用雲端對應的那筆紀錄
+async function deleteFromSharedHistory(sharedId) {
+    if (!sharedId) return;
+    try {
+        const snap = await getDoc(doc(db, 'shared_data', 'shared_history'));
+        if (!snap.exists()) return;
+        const records = snap.data().records.filter(r => r.id !== sharedId);
+        await setDoc(doc(db, 'shared_data', 'shared_history'), { records }, { merge: false });
+        if (isAdmin) loadSharedHistory();
+    } catch(e) {
+        console.error('共用紀錄刪除失敗：', e);
     }
 }
 
@@ -1557,12 +1601,15 @@ async function settleAndClear() {
 function deleteHistoryRecord() {
     if (!confirm("確定要刪除此筆紀錄嗎？")) return;
     const idx = currentHistoryIndex >= 0 ? currentHistoryIndex : 0;
+    const deletedRecord = settlementHistory[idx];
     settlementHistory.splice(idx, 1);
     localStorage.setItem('maple_settlement_history', JSON.stringify(settlementHistory));
     const kc = document.getElementById('userKeyCode')?.value.trim();
     if (kc) {
         setDoc(doc(db, "player_history", kc), { history: settlementHistory }, { merge: false })
             .catch(e => console.error("歷史雲端刪除失敗：", e));
+        // 同時刪除共用雲端對應的那筆
+        if (deletedRecord?.sharedId) deleteFromSharedHistory(deletedRecord.sharedId);
     }
     currentHistoryIndex = -1;
     renderHistorySelect();
