@@ -2061,6 +2061,8 @@ function calculateFinalAtk() { calcFinalAtk('A'); calcFinalAtk('B'); }
 let selectedMinutes   = 10;    // 預設計時長度（分鐘）
 let timerInterval     = null;  // 計時 setInterval
 let timerSeconds      = 0;     // 已計時秒數
+let timerStartTime    = null;  // 計時開始的時間戳記（用於背景節流時仍能正確計時）
+let timerWorker       = null;  // Web Worker 計時器
 let countdownInterval = null;  // 倒數計時 setInterval
 let captureStream     = null;  // 螢幕分享 MediaStream（左右共用）
 let captureRegion     = null;  // 經驗值框選座標 {x, y, w, h}
@@ -2670,15 +2672,24 @@ async function startExpTimer() {
             document.getElementById('timer-display').style.color = '#64b5f6';
             document.getElementById('timer-status').innerText = '計時中...';
             timerSeconds = 0;
-            timerInterval = setInterval(() => {
-                timerSeconds++;
-                document.getElementById('timer-display').innerText = formatTime(timerSeconds);
-                // 時間到自動停止（標記為自動，才會自動解析）
-                if (selectedMinutes > 0 && timerSeconds >= selectedMinutes * 60) {
-                    timerAutoStop = true;
-                    stopExpTimer(true);
+
+            // 使用 Web Worker 計時，不受瀏覽器背景節流影響
+            if (timerWorker) timerWorker.terminate();
+            timerWorker = new Worker('timer-worker.js');
+            timerWorker.postMessage({ type: 'start', targetMinutes: selectedMinutes });
+            timerWorker.onmessage = async (e) => {
+                const { type, seconds } = e.data;
+                if (type === 'tick') {
+                    timerSeconds = seconds;
+                    document.getElementById('timer-display').innerText = formatTime(timerSeconds);
                 }
-            }, 1000);
+                if (type === 'done') {
+                    // 時間到自動停止並截圖
+                    timerSeconds  = seconds;
+                    timerAutoStop = true;
+                    await stopExpTimer(true);
+                }
+            };
         }
     }, 1000);
 }
@@ -2686,8 +2697,12 @@ async function startExpTimer() {
 // 停止計時並截結束截圖
 // isAuto = true：時間到自動停止（自動解析）；false：手動停止（不自動解析）
 async function stopExpTimer(isAuto = false) {
-    clearInterval(timerInterval);
     clearInterval(countdownInterval);
+    // 停止 Web Worker 計時器
+    if (timerWorker) {
+        timerWorker.terminate();
+        timerWorker = null;
+    }
 
     // 截結束截圖（經驗）
     endCanvas = await captureRegionToCanvas(captureRegion);
