@@ -56,6 +56,8 @@ let extraCostItems       = [];     // 自訂額外花費項目清單（共用雲
 let settlementHistory    = [];     // 歷史結算紀錄
 let lastSettlementResult = null;   // 最後一次結算結果（用於儲存）
 let currentHistoryIndex  = -1;     // 目前查看的歷史紀錄索引（-1 = 新紀錄）
+let lastPreciseMainStat  = null;   // 裝備屬性反推算出的精確主屬總值（未捨去小數），僅記憶體暫存，供基礎攻擊力反推使用
+let lastPreciseSubStat   = null;   // 裝備屬性反推算出的精確副屬總值（未捨去小數），僅記憶體暫存，供基礎攻擊力反推使用
 
 // ==========================================================================
 // 🚀 初始化
@@ -1972,12 +1974,19 @@ function calculateBaseAtk() {
     const maxAtk     = parseFloat(document.getElementById('maxAtk').value)     || 0;
     const percentAtk = (parseFloat(document.getElementById('percentAtk').value) || 0) / 100;
     const coeff      = parseFloat(document.getElementById('coeff').value);
-    const statFactor = (mainStat * 4 + subStat) / 100;
+
+    // 優先使用「裝備屬性反推」算出的精確值（未捨去小數，僅本次瀏覽期間記憶體暫存）；
+    // 沒跑過、或跑完後面板整數已被改動（與精確值捨去後對不上），視為過期，自動退回面板整數（極小機率的 ±1 內誤差）
+    const mainVal = (lastPreciseMainStat !== null && Math.floor(lastPreciseMainStat) === mainStat) ? lastPreciseMainStat : mainStat;
+    const subVal  = (lastPreciseSubStat  !== null && Math.floor(lastPreciseSubStat)  === subStat)  ? lastPreciseSubStat  : subStat;
+    const statFactor = (mainVal * 4 + subVal) / 100;
+
     if (statFactor === 0 || coeff === 0 || maxAtk === 0) { alert("請輸入正確的能力值！"); return; }
     const est = Math.round((maxAtk / coeff / statFactor) / (1 + percentAtk));
     let matched = est;
     for (let t = Math.max(1, est - 1000); t <= est + 1000; t++) {
-        if (Math.round(Math.floor(t * (1 + percentAtk)) * coeff * statFactor) === Math.round(maxAtk)) { matched = t; break; }
+        // 新公式：AP 不捨去小數，直接帶入比對，只在最終表攻結果四捨五入
+        if (Math.round(t * (1 + percentAtk) * coeff * statFactor) === Math.round(maxAtk)) { matched = t; break; }
     }
     document.getElementById('resultDisplay').innerText = matched;
     ['A','B'].forEach(s => {
@@ -1999,6 +2008,8 @@ function calculateEquipStat() {
         if (Math.floor((baseAdj + t) * (1 + percent)) === total) { found = t; break; }
     }
     document.getElementById('equipStatDisplay').innerText = found;
+    // 記錄未捨去的精確主屬總值，供「基礎攻擊力反推」使用（提高精確度，僅記憶體暫存）
+    lastPreciseMainStat = (baseAdj + found) * (1 + percent);
     ['A','B'].forEach(s => {
         document.getElementById(`calcMainBase${s}`).value    = base;
         document.getElementById(`calcMainEquip${s}`).value   = found;
@@ -2019,6 +2030,8 @@ function calculateSubEquipStat() {
         if (Math.floor((baseAdj + t) * (1 + percent)) === total) { found = t; break; }
     }
     document.getElementById('subEquipStatDisplay').innerText = found;
+    // 記錄未捨去的精確副屬總值，供「基礎攻擊力反推」使用（提高精確度，僅記憶體暫存）
+    lastPreciseSubStat = (baseAdj + found) * (1 + percent);
     ['A','B'].forEach(s => {
         document.getElementById(`calcSubBase${s}`).value    = base;
         document.getElementById(`calcSubEquip${s}`).value   = found;
@@ -2042,10 +2055,11 @@ function calcFinalAtk(suffix) {
     const mainBaseAdj = mapleOn ? mainBase * (1 + maplePct / 100) : mainBase;
     const subBaseAdj  = mapleOn ? subBase  * (1 + maplePct / 100) : subBase;
 
-    const totalMain  = Math.floor((mainBaseAdj + mainEquip) * (1 + mainPct));
-    const totalSub   = Math.floor((subBaseAdj  + subEquip)  * (1 + subPct));
+    // 新公式：主屬、副屬、AP 皆不捨去小數，直接帶入公式運算，只在最終表攻結果四捨五入
+    const totalMain  = (mainBaseAdj + mainEquip) * (1 + mainPct);
+    const totalSub   = (subBaseAdj  + subEquip)  * (1 + subPct);
     const statFactor = (totalMain * 4 + totalSub) / 100;
-    const totalAtk   = Math.floor(base * (1 + atkPct));
+    const totalAtk   = base * (1 + atkPct);
     const result     = Math.round(totalAtk * coeff * statFactor);
 
     document.getElementById(`finalAtkDisplay${suffix}`).innerText = result.toLocaleString();
