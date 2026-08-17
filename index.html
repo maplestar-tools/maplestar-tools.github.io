@@ -17,6 +17,7 @@
     <button class="tab-btn" id="btn-tab-money">💰 團隊分紅</button>
     <button class="tab-btn" id="btn-tab-equip">⚔️ 裝備計算</button>
     <button class="tab-btn" id="btn-tab-exp">📊 經驗計算</button>
+    <button class="tab-btn" id="btn-tab-party">🛡️ 分隊出團</button>
 </div>
 
 <div class="content">
@@ -766,6 +767,25 @@
 
     </div><!-- end exp-calc -->
 
+    <!-- ===== 分隊出團 ===== -->
+    <div id="party-plan" class="tab-content">
+        <h3>🛡️ 分隊出團</h3>
+        <p>安排出團分隊與順序，全隊皆可查看，僅管理員可編輯。</p>
+
+        <div style="max-width:900px;margin:0 auto 16px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+            <button id="btn-copy-party-image" class="calc-btn btn-blue" style="width:auto;padding:10px 18px;margin:0;">🖼️ 複製圖片</button>
+            <button id="btn-add-party-plan" class="calc-btn btn-green" style="width:auto;padding:10px 18px;margin:0;display:none;">+ 新增出團</button>
+        </div>
+
+        <!-- 複製圖片時連同總覽一起擷取，用同一個容器包起來 -->
+        <div id="party-plan-capture-area" style="max-width:900px;margin:0 auto;">
+            <!-- 總覽清單：自動彙整所有卡片的日期/星期/時間/摘要，不可直接編輯 -->
+            <div id="party-plan-summary" class="party-summary-box"></div>
+            <div id="party-plan-list" style="display:flex;flex-direction:column;gap:16px;"></div>
+        </div>
+        <div id="party-plan-empty" style="text-align:center;color:#555;font-size:13px;padding:30px;display:none;">尚無出團紀錄</div>
+    </div><!-- end party-plan -->
+
 </div><!-- end content -->
 
 <!-- Toast 提示訊息（右下角） -->
@@ -839,6 +859,7 @@
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script type="module" src="main.js"></script>
 </body>
 </html>

@@ -39,6 +39,8 @@ function checkIsAdmin() {
         sharedSection.style.display = isAdmin ? 'block' : 'none';
         if (isAdmin) loadSharedHistory();
     }
+    // 分隊出團：管理員權限變動時重新渲染（切換編輯/唯讀狀態）
+    renderPartyPlans();
 }
 
 // ==========================================================================
@@ -90,6 +92,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     await loadSharedData();
     bindEvents();
     await initExpRecords();
+    await loadPartyPlans();
 
     // 同步里程匯率到掉落物標題旁的輸入框
     const mileageVal = document.getElementById('moneyToMileage')?.value;
@@ -124,6 +127,7 @@ function bindEvents() {
     document.getElementById('btn-tab-money').addEventListener('click', () => switchTab('money-split'));
     document.getElementById('btn-tab-equip').addEventListener('click', () => switchTab('equip-calc'));
     document.getElementById('btn-tab-exp').addEventListener('click',   () => switchTab('exp-calc'));
+    document.getElementById('btn-tab-party').addEventListener('click', () => switchTab('party-plan'));
 
     // 雲端同步
     document.getElementById('btn-load-cloud').addEventListener('click', () => loadFromCloud(false));
@@ -291,6 +295,29 @@ function bindEvents() {
     document.querySelectorAll('.admin-tab-btn').forEach(btn => {
         btn.addEventListener('click', () => switchAdminTab(btn.dataset.tab));
     });
+
+    // 分隊出團
+    document.getElementById('btn-add-party-plan').addEventListener('click', addPartyPlan);
+    document.getElementById('btn-copy-party-image').addEventListener('click', copyPartyPlanImage);
+    const partyList = document.getElementById('party-plan-list');
+    partyList.addEventListener('input', onPartyPlanListInput);
+    partyList.addEventListener('click', onPartyPlanListClick);
+    partyList.addEventListener('dragstart', (e) => {
+        if (e.target.closest('.party-boss')) onPartyBossDragStart(e);
+        else if (e.target.closest('.party-card')) onPartyCardDragStart(e);
+    });
+    partyList.addEventListener('dragend', (e) => {
+        if (e.target.closest('.party-boss')) onPartyBossDragEnd(e);
+        else if (e.target.closest('.party-card')) onPartyCardDragEnd(e);
+    });
+    partyList.addEventListener('dragover', (e) => {
+        if (e.target.closest('.party-boss')) onPartyBossDragOver(e);
+        else if (e.target.closest('.party-card')) onPartyCardDragOver(e);
+    });
+    partyList.addEventListener('drop', (e) => {
+        if (e.target.closest('.party-boss')) onPartyBossDrop(e);
+        else if (e.target.closest('.party-card')) onPartyCardDrop(e);
+    });
 }
 
 // ==========================================================================
@@ -300,7 +327,7 @@ function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-    const map = { home: 'btn-tab-home', 'money-split': 'btn-tab-money', 'equip-calc': 'btn-tab-equip', 'exp-calc': 'btn-tab-exp' };
+    const map = { home: 'btn-tab-home', 'money-split': 'btn-tab-money', 'equip-calc': 'btn-tab-equip', 'exp-calc': 'btn-tab-exp', 'party-plan': 'btn-tab-party' };
     if (map[tabId]) document.getElementById(map[tabId]).classList.add('active');
 }
 
@@ -2970,6 +2997,449 @@ function renderExpRecords() {
     tbody.querySelectorAll('.exp-record-del').forEach(btn => {
         btn.addEventListener('click', () => deleteExpRecord(btn.dataset.id));
     });
+}
+
+
+// ==========================================================================
+// 🛡️ 分隊出團
+// ==========================================================================
+let partyPlans = [];
+let partySaveTimer = null;
+
+// 從共用雲端載入出團分隊表
+async function loadPartyPlans() {
+    try {
+        const snap = await getDoc(doc(db, 'shared_data', 'party_plans'));
+        partyPlans = snap.exists() ? (snap.data().plans || []) : [];
+    } catch(e) {
+        console.error('分隊出團載入失敗：', e);
+        partyPlans = [];
+    }
+    renderPartyPlans();
+}
+
+// 立即儲存到共用雲端
+async function savePartyPlansNow() {
+    try {
+        await setDoc(doc(db, 'shared_data', 'party_plans'), { plans: partyPlans }, { merge: false });
+    } catch(e) {
+        console.error('分隊出團儲存失敗：', e);
+        showToast('❌ 儲存失敗：' + e.message);
+    }
+}
+
+// 輸入框變動後 800ms 自動存雲端（避免每個按鍵都打一次）
+function triggerPartySave() {
+    clearTimeout(partySaveTimer);
+    partySaveTimer = setTimeout(savePartyPlansNow, 800);
+}
+
+// 把 YYYY-MM-DD 轉成 M/D，留空顯示「自定」
+function formatPartyDate(dateStr) {
+    if (!dateStr) return '自定';
+    const parts = dateStr.split('-');
+    if (parts.length !== 3) return dateStr;
+    return `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)}`;
+}
+
+// 根據 YYYY-MM-DD 算出星期幾標籤，例如 "(二)"
+function getWeekdayLabel(dateStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr + 'T00:00:00');
+    if (isNaN(d.getTime())) return '';
+    const days = ['日', '一', '二', '三', '四', '五', '六'];
+    return `(${days[d.getDay()]})`;
+}
+
+// ----- 新增出團 / 刪除出團 / 卡片欄位更新 -----
+
+function addPartyPlan() {
+    if (!isAdmin) return;
+    partyPlans.unshift({
+        id: generateId(),
+        date: '',
+        time: '',
+        summary: '',
+        note: '',
+        dayMembers: [],
+        bosses: [{ id: generateId(), name: '', teams: [] }],
+    });
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
+function deletePartyPlan(planId) {
+    if (!isAdmin) return;
+    if (!confirm('確定要刪除這筆出團紀錄嗎？')) return;
+    partyPlans = partyPlans.filter(p => p.id !== planId);
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
+function updatePartyPlanField(planId, field, value) {
+    if (!isAdmin) return;
+    const plan = partyPlans.find(p => p.id === planId);
+    if (!plan) return;
+    plan[field] = value;
+    triggerPartySave();
+}
+
+// ----- 當天隊員 -----
+
+function addDayMember(planId) {
+    if (!isAdmin) return;
+    const plan = partyPlans.find(p => p.id === planId);
+    if (!plan) return;
+    plan.dayMembers.push({ id: generateId(), name: '', job: '' });
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
+function deleteDayMember(planId, memberId) {
+    if (!isAdmin) return;
+    const plan = partyPlans.find(p => p.id === planId);
+    if (!plan) return;
+    plan.dayMembers = plan.dayMembers.filter(m => m.id !== memberId);
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
+function updateDayMemberField(planId, memberId, field, value) {
+    if (!isAdmin) return;
+    const plan = partyPlans.find(p => p.id === planId);
+    const m = plan?.dayMembers.find(x => x.id === memberId);
+    if (!m) return;
+    m[field] = value;
+    triggerPartySave();
+}
+
+// ----- 王段落 -----
+
+function addBoss(planId) {
+    if (!isAdmin) return;
+    const plan = partyPlans.find(p => p.id === planId);
+    if (!plan) return;
+    plan.bosses.push({ id: generateId(), name: '', teams: [] });
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
+function deleteBoss(planId, bossId) {
+    if (!isAdmin) return;
+    const plan = partyPlans.find(p => p.id === planId);
+    if (!plan) return;
+    plan.bosses = plan.bosses.filter(b => b.id !== bossId);
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
+function updateBossName(planId, bossId, value) {
+    if (!isAdmin) return;
+    const plan = partyPlans.find(p => p.id === planId);
+    const boss = plan?.bosses.find(b => b.id === bossId);
+    if (!boss) return;
+    boss.name = value;
+    triggerPartySave();
+}
+
+// ----- 王段落底下的隊伍（沒有隊伍＝沿用當天隊員） -----
+
+function addBossTeam(planId, bossId) {
+    if (!isAdmin) return;
+    const plan = partyPlans.find(p => p.id === planId);
+    const boss = plan?.bosses.find(b => b.id === bossId);
+    if (!boss) return;
+    boss.teams.push({ id: generateId(), members: [] });
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
+function deleteBossTeam(planId, bossId, teamId) {
+    if (!isAdmin) return;
+    const plan = partyPlans.find(p => p.id === planId);
+    const boss = plan?.bosses.find(b => b.id === bossId);
+    if (!boss) return;
+    boss.teams = boss.teams.filter(t => t.id !== teamId);
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
+function addBossTeamMember(planId, bossId, teamId) {
+    if (!isAdmin) return;
+    const plan = partyPlans.find(p => p.id === planId);
+    const boss = plan?.bosses.find(b => b.id === bossId);
+    const team = boss?.teams.find(t => t.id === teamId);
+    if (!team) return;
+    team.members.push({ id: generateId(), name: '', job: '' });
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
+function deleteBossTeamMember(planId, bossId, teamId, memberId) {
+    if (!isAdmin) return;
+    const plan = partyPlans.find(p => p.id === planId);
+    const boss = plan?.bosses.find(b => b.id === bossId);
+    const team = boss?.teams.find(t => t.id === teamId);
+    if (!team) return;
+    team.members = team.members.filter(m => m.id !== memberId);
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
+function updateBossTeamMemberField(planId, bossId, teamId, memberId, field, value) {
+    if (!isAdmin) return;
+    const plan = partyPlans.find(p => p.id === planId);
+    const boss = plan?.bosses.find(b => b.id === bossId);
+    const team = boss?.teams.find(t => t.id === teamId);
+    const m = team?.members.find(x => x.id === memberId);
+    if (!m) return;
+    m[field] = value;
+    triggerPartySave();
+}
+
+// ----- 渲染 -----
+
+// 頁面最上方的總覽清單（自動彙整，不可直接編輯）
+function renderPartySummary() {
+    const el = document.getElementById('party-plan-summary');
+    if (!el) return;
+    if (partyPlans.length === 0) { el.innerHTML = ''; return; }
+    el.innerHTML = partyPlans.map(plan => {
+        const dateLabel = formatPartyDate(plan.date);
+        const weekday    = getWeekdayLabel(plan.date);
+        const timeLabel  = plan.time || '自定';
+        const summary    = plan.summary || '';
+        return `<div class="party-summary-row">📅 ${dateLabel} ${weekday} ${timeLabel}　${summary}</div>`;
+    }).join('');
+}
+
+// 一列隊員（名稱+職業+刪除），day = 當天隊員，team = 王段落底下的隊伍隊員
+function dayMemberRowHtml(planId, m) {
+    return `
+        <div class="party-member-row">
+            <input type="text" class="cloud-input party-daymember-name" data-plan-id="${planId}" data-member-id="${m.id}" value="${m.name || ''}" placeholder="名稱">
+            <input type="text" class="cloud-input party-daymember-job" data-plan-id="${planId}" data-member-id="${m.id}" value="${m.job || ''}" placeholder="職業">
+            <button class="del-btn party-del-daymember" data-plan-id="${planId}" data-member-id="${m.id}">✕</button>
+        </div>`;
+}
+
+function teamMemberRowHtml(planId, bossId, teamId, m) {
+    return `
+        <div class="party-member-row">
+            <input type="text" class="cloud-input party-team-member-name" data-plan-id="${planId}" data-boss-id="${bossId}" data-team-id="${teamId}" data-member-id="${m.id}" value="${m.name || ''}" placeholder="名稱">
+            <input type="text" class="cloud-input party-team-member-job" data-plan-id="${planId}" data-boss-id="${bossId}" data-team-id="${teamId}" data-member-id="${m.id}" value="${m.job || ''}" placeholder="職業">
+            <button class="del-btn party-del-team-member" data-plan-id="${planId}" data-boss-id="${bossId}" data-team-id="${teamId}" data-member-id="${m.id}">✕</button>
+        </div>`;
+}
+
+// 一個王段落：沒有自訂隊伍時顯示「（沿用當天隊員）」，有的話顯示隊伍1/2...
+function bossSegmentHtml(plan, boss) {
+    const teams = boss.teams || [];
+    let bodyHtml;
+    if (teams.length === 0) {
+        bodyHtml = `<div class="party-boss-inherit">（沿用當天隊員）</div>`;
+    } else {
+        bodyHtml = teams.map((team, tIdx) => {
+            const membersHtml = (team.members || []).map(m => teamMemberRowHtml(plan.id, boss.id, team.id, m)).join('');
+            return `
+                <div class="party-team" data-team-id="${team.id}">
+                    <div class="party-team-header">
+                        <span>隊伍 ${tIdx + 1}</span>
+                        <button class="del-btn party-del-team" data-plan-id="${plan.id}" data-boss-id="${boss.id}" data-team-id="${team.id}">✕</button>
+                    </div>
+                    <div class="party-member-rows">${membersHtml}</div>
+                    <button class="calc-btn btn-green party-add-team-member" data-plan-id="${plan.id}" data-boss-id="${boss.id}" data-team-id="${team.id}" style="width:auto;padding:5px 12px;margin:8px 0 0;font-size:12px;">+ 新增隊員</button>
+                </div>`;
+        }).join('');
+    }
+    return `
+        <div class="party-boss" draggable="${isAdmin}" data-plan-id="${plan.id}" data-boss-id="${boss.id}">
+            <div class="party-boss-header">
+                <span class="party-drag-handle">☰</span>
+                <input type="text" class="cloud-input party-boss-name" data-plan-id="${plan.id}" data-boss-id="${boss.id}" value="${boss.name || ''}" placeholder="王名稱">
+                <button class="del-btn party-del-boss" data-plan-id="${plan.id}" data-boss-id="${boss.id}">✕</button>
+            </div>
+            <div class="party-boss-body">
+                ${bodyHtml}
+                <button class="calc-btn btn-blue party-add-team" data-plan-id="${plan.id}" data-boss-id="${boss.id}" style="width:auto;padding:5px 12px;margin:8px 0 0;font-size:12px;">+ 新增隊伍</button>
+            </div>
+        </div>`;
+}
+
+// 渲染整個分隊出團清單（總覽 + 卡片）
+function renderPartyPlans() {
+    renderPartySummary();
+
+    const listEl  = document.getElementById('party-plan-list');
+    const emptyEl = document.getElementById('party-plan-empty');
+    const addBtn  = document.getElementById('btn-add-party-plan');
+    if (!listEl) return;
+
+    if (addBtn) addBtn.style.display = isAdmin ? 'inline-flex' : 'none';
+
+    if (partyPlans.length === 0) {
+        listEl.innerHTML = '';
+        if (emptyEl) emptyEl.style.display = 'block';
+        return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+
+    listEl.innerHTML = partyPlans.map(plan => {
+        const dayMembersHtml = (plan.dayMembers || []).map(m => dayMemberRowHtml(plan.id, m)).join('');
+        const bossesHtml     = (plan.bosses || []).map(boss => bossSegmentHtml(plan, boss)).join('');
+
+        return `
+            <div class="party-card ${isAdmin ? '' : 'party-readonly'}" draggable="${isAdmin}" data-plan-id="${plan.id}">
+                <div class="party-card-header">
+                    <span class="party-drag-handle">☰</span>
+                    <input type="date" class="cloud-input party-date" data-plan-id="${plan.id}" value="${plan.date || ''}">
+                    <input type="time" class="cloud-input party-time" data-plan-id="${plan.id}" value="${plan.time || ''}">
+                    <input type="text" class="cloud-input party-summary" data-plan-id="${plan.id}" value="${plan.summary || ''}" placeholder="摘要...">
+                    <button class="del-btn party-del-plan" data-plan-id="${plan.id}">✕</button>
+                </div>
+                <input type="text" class="cloud-input party-note" data-plan-id="${plan.id}" value="${plan.note || ''}" placeholder="備註（選填）...">
+                <div class="party-daymembers">
+                    <div class="party-section-label">👥 當天隊員</div>
+                    <div class="party-member-rows">${dayMembersHtml}</div>
+                    <button class="calc-btn btn-green party-add-daymember" data-plan-id="${plan.id}" style="width:auto;padding:5px 12px;margin:8px 0 0;font-size:12px;">+ 新增隊員</button>
+                </div>
+                <div class="party-bosses" data-plan-id="${plan.id}">${bossesHtml}</div>
+                <button class="calc-btn btn-purple party-add-boss" data-plan-id="${plan.id}" style="width:auto;padding:6px 14px;margin:10px 0 0;font-size:13px;">+ 新增王</button>
+            </div>`;
+    }).join('');
+}
+
+// 事件代理：input（文字變動）
+function onPartyPlanListInput(e) {
+    if (!isAdmin) return;
+    const t = e.target;
+    if (t.classList.contains('party-date'))    updatePartyPlanField(t.dataset.planId, 'date', t.value);
+    if (t.classList.contains('party-time'))    updatePartyPlanField(t.dataset.planId, 'time', t.value);
+    if (t.classList.contains('party-summary')) updatePartyPlanField(t.dataset.planId, 'summary', t.value);
+    if (t.classList.contains('party-note'))    updatePartyPlanField(t.dataset.planId, 'note', t.value);
+    if (t.classList.contains('party-daymember-name')) updateDayMemberField(t.dataset.planId, t.dataset.memberId, 'name', t.value);
+    if (t.classList.contains('party-daymember-job'))  updateDayMemberField(t.dataset.planId, t.dataset.memberId, 'job', t.value);
+    if (t.classList.contains('party-boss-name'))      updateBossName(t.dataset.planId, t.dataset.bossId, t.value);
+    if (t.classList.contains('party-team-member-name')) updateBossTeamMemberField(t.dataset.planId, t.dataset.bossId, t.dataset.teamId, t.dataset.memberId, 'name', t.value);
+    if (t.classList.contains('party-team-member-job'))  updateBossTeamMemberField(t.dataset.planId, t.dataset.bossId, t.dataset.teamId, t.dataset.memberId, 'job', t.value);
+}
+
+// 事件代理：click（新增/刪除按鈕）
+function onPartyPlanListClick(e) {
+    const t = e.target;
+    if (t.classList.contains('party-del-plan'))        deletePartyPlan(t.dataset.planId);
+    if (t.classList.contains('party-add-daymember'))    addDayMember(t.dataset.planId);
+    if (t.classList.contains('party-del-daymember'))    deleteDayMember(t.dataset.planId, t.dataset.memberId);
+    if (t.classList.contains('party-add-boss'))         addBoss(t.dataset.planId);
+    if (t.classList.contains('party-del-boss'))         deleteBoss(t.dataset.planId, t.dataset.bossId);
+    if (t.classList.contains('party-add-team'))         addBossTeam(t.dataset.planId, t.dataset.bossId);
+    if (t.classList.contains('party-del-team'))         deleteBossTeam(t.dataset.planId, t.dataset.bossId, t.dataset.teamId);
+    if (t.classList.contains('party-add-team-member'))  addBossTeamMember(t.dataset.planId, t.dataset.bossId, t.dataset.teamId);
+    if (t.classList.contains('party-del-team-member'))  deleteBossTeamMember(t.dataset.planId, t.dataset.bossId, t.dataset.teamId, t.dataset.memberId);
+}
+
+// 拖曳排序：出團卡片彼此之間（調整 partyPlans 陣列順序）
+let partyDragPlanId = null;
+function onPartyCardDragStart(e) {
+    const card = e.target.closest('.party-card');
+    if (!card || !isAdmin) return;
+    partyDragPlanId = card.dataset.planId;
+    card.classList.add('dragging');
+}
+function onPartyCardDragEnd(e) {
+    const card = e.target.closest('.party-card');
+    if (card) card.classList.remove('dragging');
+}
+function onPartyCardDragOver(e) {
+    if (!isAdmin) return;
+    const card = e.target.closest('.party-card');
+    if (!card) return;
+    e.preventDefault();
+}
+function onPartyCardDrop(e) {
+    if (!isAdmin) return;
+    const card = e.target.closest('.party-card');
+    if (!card || !partyDragPlanId) return;
+    e.preventDefault();
+    const dropPlanId = card.dataset.planId;
+    if (dropPlanId === partyDragPlanId) return;
+    const fromIdx = partyPlans.findIndex(p => p.id === partyDragPlanId);
+    const toIdx   = partyPlans.findIndex(p => p.id === dropPlanId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const moved = partyPlans.splice(fromIdx, 1)[0];
+    partyPlans.splice(toIdx, 0, moved);
+    partyDragPlanId = null;
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
+// 拖曳排序：同一張卡片內的「王段落」順序
+let partyDragBossInfo = null; // { planId, bossId }
+function onPartyBossDragStart(e) {
+    const seg = e.target.closest('.party-boss');
+    if (!seg || !isAdmin) return;
+    partyDragBossInfo = { planId: seg.dataset.planId, bossId: seg.dataset.bossId };
+    seg.classList.add('dragging');
+    e.stopPropagation();
+}
+function onPartyBossDragEnd(e) {
+    const seg = e.target.closest('.party-boss');
+    if (seg) seg.classList.remove('dragging');
+}
+function onPartyBossDragOver(e) {
+    if (!isAdmin) return;
+    const seg = e.target.closest('.party-boss');
+    if (!seg) return;
+    e.preventDefault();
+    e.stopPropagation();
+}
+function onPartyBossDrop(e) {
+    if (!isAdmin || !partyDragBossInfo) return;
+    const seg = e.target.closest('.party-boss');
+    if (!seg) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const dropPlanId = seg.dataset.planId;
+    const dropBossId = seg.dataset.bossId;
+    if (dropPlanId !== partyDragBossInfo.planId || dropBossId === partyDragBossInfo.bossId) { partyDragBossInfo = null; return; }
+    const plan = partyPlans.find(p => p.id === dropPlanId);
+    if (!plan) { partyDragBossInfo = null; return; }
+    const fromIdx = plan.bosses.findIndex(b => b.id === partyDragBossInfo.bossId);
+    const toIdx   = plan.bosses.findIndex(b => b.id === dropBossId);
+    if (fromIdx === -1 || toIdx === -1) { partyDragBossInfo = null; return; }
+    const moved = plan.bosses.splice(fromIdx, 1)[0];
+    plan.bosses.splice(toIdx, 0, moved);
+    partyDragBossInfo = null;
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
+// 把總覽清單 + 所有出團卡片合成一張圖片，複製到剪貼簿
+async function copyPartyPlanImage() {
+    const captureEl = document.getElementById('party-plan-capture-area');
+    if (!captureEl || partyPlans.length === 0) { showToast('⚠️ 尚無出團紀錄可複製！'); return; }
+    if (typeof html2canvas === 'undefined') { showToast('❌ 圖片功能載入失敗，請重新整理頁面'); return; }
+
+    const btn = document.getElementById('btn-copy-party-image');
+    const originalText = btn ? btn.innerText : '';
+    if (btn) { btn.disabled = true; btn.innerText = '產生中...'; }
+
+    try {
+        const canvas = await html2canvas(captureEl, { backgroundColor: '#121212', scale: 2 });
+        canvas.toBlob(async (blob) => {
+            try {
+                await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+                showToast('✅ 圖片已複製到剪貼簿！');
+            } catch(e) {
+                showToast('⚠️ 複製失敗，你的瀏覽器可能不支援此功能');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerText = originalText; }
+            }
+        }, 'image/png');
+    } catch(e) {
+        showToast('❌ 圖片產生失敗：' + e.message);
+        if (btn) { btn.disabled = false; btn.innerText = originalText; }
+    }
 }
 
 // --- 休息經驗計算 ---

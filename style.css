@@ -342,3 +342,167 @@ h1 {
     .member-header-right { display: none; }
     #member-grid { grid-template-columns: 1fr; }
 }
+
+/* ==========================================================================
+   🛡️ 13. 分隊出團
+   ========================================================================== */
+/* 總覽清單（頁面常駐，自動彙整，不可編輯） */
+.party-summary-box {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+}
+
+.party-summary-row {
+    font-size: 14px;
+    color: #e0e0e0;
+    padding: 4px 0;
+}
+
+/* 出團卡片 */
+.party-card {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 14px;
+    padding: 16px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+}
+
+.party-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.party-card-header .party-date    { width: 150px; flex-shrink: 0; }
+.party-card-header .party-time    { width: 110px; flex-shrink: 0; }
+.party-card-header .party-summary { flex: 1; min-width: 140px; }
+
+.party-note {
+    margin-bottom: 14px;
+}
+
+/* 拖曳把手 */
+.party-drag-handle {
+    color: #888;
+    cursor: grab;
+    flex-shrink: 0;
+    font-size: 15px;
+    padding: 0 2px;
+}
+
+/* 當天隊員區塊 */
+.party-daymembers {
+    background: #252525;
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 14px;
+}
+
+.party-section-label {
+    font-size: 13px;
+    color: #64b5f6;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.party-member-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.party-member-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.party-member-row .party-daymember-name,
+.party-member-row .party-team-member-name,
+.party-member-row .party-daymember-job,
+.party-member-row .party-team-member-job { flex: 1; }
+
+/* 王段落清單 */
+.party-bosses {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.party-boss {
+    background: #202020;
+    border: 1px solid #333;
+    border-radius: 10px;
+    padding: 10px 12px;
+}
+
+.party-boss-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.party-boss-header .party-boss-name { flex: 1; }
+
+/* 沿用當天隊員提示文字 */
+.party-boss-inherit {
+    font-size: 13px;
+    color: #888;
+    font-style: italic;
+    padding: 4px 2px 8px;
+}
+
+/* 王段落底下的隊伍 */
+.party-team {
+    background: #262626;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 8px;
+}
+
+.party-team-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    color: #ff9f43;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+/* 唯讀模式（非管理員）：隱藏所有編輯用元件，欄位不可互動 */
+.party-readonly input {
+    pointer-events: none;
+    background: #2a2a2a !important;
+}
+
+.party-readonly .party-drag-handle,
+.party-readonly .party-del-plan,
+.party-readonly .party-del-boss,
+.party-readonly .party-del-team,
+.party-readonly .party-del-daymember,
+.party-readonly .party-del-team-member,
+.party-readonly .party-add-daymember,
+.party-readonly .party-add-boss,
+.party-readonly .party-add-team,
+.party-readonly .party-add-team-member {
+    display: none !important;
+}
+
+/* 拖曳中視覺回饋 */
+.party-card.dragging,
+.party-boss.dragging {
+    opacity: 0.4;
+}
+
+@media (max-width: 600px) {
+    .party-card-header .party-date,
+    .party-card-header .party-time { width: 100%; }
+    .party-member-row { flex-wrap: wrap; }
+}
