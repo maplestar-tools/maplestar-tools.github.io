@@ -3055,7 +3055,8 @@ function getWeekdayLabel(dateStr) {
 
 function addPartyPlan() {
     if (!isAdmin) return;
-    partyPlans.unshift({
+    // 新卡片加到最後面（顯示在最下方）
+    partyPlans.push({
         id: generateId(),
         date: '',
         time: '',
@@ -3081,6 +3082,7 @@ function updatePartyPlanField(planId, field, value) {
     const plan = partyPlans.find(p => p.id === planId);
     if (!plan) return;
     plan[field] = value;
+    renderPartySummary(); // 即時更新總覽（不重繪整份卡片，避免打字打到一半游標跳掉）
     triggerPartySave();
 }
 
@@ -3110,6 +3112,7 @@ function updateDayMemberField(planId, memberId, field, value) {
     const m = plan?.dayMembers.find(x => x.id === memberId);
     if (!m) return;
     m[field] = value;
+    renderPartySummary(); // 當天隊員也會出現在總覽，同步即時更新
     triggerPartySave();
 }
 
@@ -3199,40 +3202,66 @@ function updateBossTeamMemberField(planId, bossId, teamId, memberId, field, valu
 
 // ----- 渲染 -----
 
-// 頁面最上方的總覽清單（自動彙整，不可直接編輯）
+// HTML escape（圖片輸出/總覽都會用到，避免特殊字元破版）
+function escapePartyText(str) {
+    return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// 把隊員陣列轉成「名稱（職業）、名稱（職業）」的逗號串接文字
+function formatPartyMemberList(members) {
+    return (members || [])
+        .filter(m => m.name)
+        .map(m => m.job ? `${escapePartyText(m.name)}（${escapePartyText(m.job)}）` : escapePartyText(m.name))
+        .join('、');
+}
+
+// 頁面最上方的總覽清單（自動彙整，不可直接編輯）；沒有任何出團時整塊隱藏
 function renderPartySummary() {
     const el = document.getElementById('party-plan-summary');
     if (!el) return;
-    if (partyPlans.length === 0) { el.innerHTML = ''; return; }
+    if (partyPlans.length === 0) { el.innerHTML = ''; el.style.display = 'none'; return; }
+    el.style.display = 'block';
     el.innerHTML = partyPlans.map(plan => {
-        const dateLabel = formatPartyDate(plan.date);
-        const weekday    = getWeekdayLabel(plan.date);
-        const timeLabel  = plan.time || '自定';
-        const summary    = plan.summary || '';
-        return `<div class="party-summary-row">📅 ${dateLabel} ${weekday} ${timeLabel}　${summary}</div>`;
+        const dateLabel   = formatPartyDate(plan.date);
+        const weekday     = getWeekdayLabel(plan.date);
+        const timeLabel   = plan.time || '自定';
+        const summary     = escapePartyText(plan.summary || '');
+        const memberList  = formatPartyMemberList(plan.dayMembers);
+        const memberLine  = memberList ? `<div class="party-summary-members">👥 當天隊員：${memberList}</div>` : '';
+        return `<div class="party-summary-item"><div class="party-summary-row">📅 ${dateLabel} ${weekday} ${timeLabel}　${summary}</div>${memberLine}</div>`;
     }).join('');
 }
 
 // 一列隊員（名稱+職業+刪除），day = 當天隊員，team = 王段落底下的隊伍隊員
+// 隊員表格上方的「名稱／職業」標題列（跟團隊分紅隊員表格同樣的兩欄並排樣式）
+function partyMemberHeaderRowHtml() {
+    return `
+        <div class="party-member-header-row">
+            <div class="party-member-header-col"><span class="lbl-name">名稱</span><span class="lbl-job">職業</span></div>
+            <div class="party-member-header-col party-member-header-col-2"><span class="lbl-name">名稱</span><span class="lbl-job">職業</span></div>
+        </div>`;
+}
+
 function dayMemberRowHtml(planId, m) {
     return `
-        <div class="party-member-row">
-            <input type="text" class="cloud-input party-daymember-name" data-plan-id="${planId}" data-member-id="${m.id}" value="${m.name || ''}" placeholder="名稱">
-            <input type="text" class="cloud-input party-daymember-job" data-plan-id="${planId}" data-member-id="${m.id}" value="${m.job || ''}" placeholder="職業">
+        <div class="party-member-cell">
+            <input type="text" class="cloud-input party-daymember-name" data-plan-id="${planId}" data-member-id="${m.id}" value="${m.name || ''}">
+            <input type="text" class="cloud-input party-daymember-job" data-plan-id="${planId}" data-member-id="${m.id}" value="${m.job || ''}">
             <button class="del-btn party-del-daymember" data-plan-id="${planId}" data-member-id="${m.id}">✕</button>
         </div>`;
 }
 
 function teamMemberRowHtml(planId, bossId, teamId, m) {
     return `
-        <div class="party-member-row">
-            <input type="text" class="cloud-input party-team-member-name" data-plan-id="${planId}" data-boss-id="${bossId}" data-team-id="${teamId}" data-member-id="${m.id}" value="${m.name || ''}" placeholder="名稱">
-            <input type="text" class="cloud-input party-team-member-job" data-plan-id="${planId}" data-boss-id="${bossId}" data-team-id="${teamId}" data-member-id="${m.id}" value="${m.job || ''}" placeholder="職業">
+        <div class="party-member-cell">
+            <input type="text" class="cloud-input party-team-member-name" data-plan-id="${planId}" data-boss-id="${bossId}" data-team-id="${teamId}" data-member-id="${m.id}" value="${m.name || ''}">
+            <input type="text" class="cloud-input party-team-member-job" data-plan-id="${planId}" data-boss-id="${bossId}" data-team-id="${teamId}" data-member-id="${m.id}" value="${m.job || ''}">
             <button class="del-btn party-del-team-member" data-plan-id="${planId}" data-boss-id="${bossId}" data-team-id="${teamId}" data-member-id="${m.id}">✕</button>
         </div>`;
 }
 
-// 一個王段落：沒有自訂隊伍時顯示「（沿用當天隊員）」，有的話顯示隊伍1/2...
+// 一個項目段落（原本叫「王段落」，因為不一定是打王，改稱「項目」）：
+// 沒有自訂隊伍時顯示「（沿用當天隊員）」，有的話顯示隊伍1/2...
 function bossSegmentHtml(plan, boss) {
     const teams = boss.teams || [];
     let bodyHtml;
@@ -3247,16 +3276,20 @@ function bossSegmentHtml(plan, boss) {
                         <span>隊伍 ${tIdx + 1}</span>
                         <button class="del-btn party-del-team" data-plan-id="${plan.id}" data-boss-id="${boss.id}" data-team-id="${team.id}">✕</button>
                     </div>
-                    <div class="party-member-rows">${membersHtml}</div>
+                    ${partyMemberHeaderRowHtml()}
+                    <div class="party-member-grid">${membersHtml}</div>
                     <button class="calc-btn btn-green party-add-team-member" data-plan-id="${plan.id}" data-boss-id="${boss.id}" data-team-id="${team.id}" style="width:auto;padding:5px 12px;margin:8px 0 0;font-size:12px;">+ 新增隊員</button>
                 </div>`;
         }).join('');
     }
     return `
-        <div class="party-boss" draggable="${isAdmin}" data-plan-id="${plan.id}" data-boss-id="${boss.id}">
+        <div class="party-boss" data-plan-id="${plan.id}" data-boss-id="${boss.id}">
             <div class="party-boss-header">
-                <span class="party-drag-handle">☰</span>
-                <input type="text" class="cloud-input party-boss-name" data-plan-id="${plan.id}" data-boss-id="${boss.id}" value="${boss.name || ''}" placeholder="王名稱">
+                <span class="party-drag-handle" draggable="${isAdmin}">☰</span>
+                <div class="party-boss-name-wrap">
+                    <div class="party-field-label">項目名稱</div>
+                    <input type="text" class="cloud-input party-boss-name" data-plan-id="${plan.id}" data-boss-id="${boss.id}" value="${boss.name || ''}" placeholder="輸入項目名稱...">
+                </div>
                 <button class="del-btn party-del-boss" data-plan-id="${plan.id}" data-boss-id="${boss.id}">✕</button>
             </div>
             <div class="party-boss-body">
@@ -3289,9 +3322,9 @@ function renderPartyPlans() {
         const bossesHtml     = (plan.bosses || []).map(boss => bossSegmentHtml(plan, boss)).join('');
 
         return `
-            <div class="party-card ${isAdmin ? '' : 'party-readonly'}" draggable="${isAdmin}" data-plan-id="${plan.id}">
+            <div class="party-card ${isAdmin ? '' : 'party-readonly'}" data-plan-id="${plan.id}">
                 <div class="party-card-header">
-                    <span class="party-drag-handle">☰</span>
+                    <span class="party-drag-handle" draggable="${isAdmin}">☰</span>
                     <input type="date" class="cloud-input party-date" data-plan-id="${plan.id}" value="${plan.date || ''}">
                     <input type="time" class="cloud-input party-time" data-plan-id="${plan.id}" value="${plan.time || ''}">
                     <input type="text" class="cloud-input party-summary" data-plan-id="${plan.id}" value="${plan.summary || ''}" placeholder="摘要...">
@@ -3300,11 +3333,12 @@ function renderPartyPlans() {
                 <input type="text" class="cloud-input party-note" data-plan-id="${plan.id}" value="${plan.note || ''}" placeholder="備註（選填）...">
                 <div class="party-daymembers">
                     <div class="party-section-label">👥 當天隊員</div>
-                    <div class="party-member-rows">${dayMembersHtml}</div>
+                    ${partyMemberHeaderRowHtml()}
+                    <div class="party-member-grid">${dayMembersHtml}</div>
                     <button class="calc-btn btn-green party-add-daymember" data-plan-id="${plan.id}" style="width:auto;padding:5px 12px;margin:8px 0 0;font-size:12px;">+ 新增隊員</button>
                 </div>
                 <div class="party-bosses" data-plan-id="${plan.id}">${bossesHtml}</div>
-                <button class="calc-btn btn-purple party-add-boss" data-plan-id="${plan.id}" style="width:auto;padding:6px 14px;margin:10px 0 0;font-size:13px;">+ 新增王</button>
+                <button class="calc-btn btn-purple party-add-boss" data-plan-id="${plan.id}" style="width:auto;padding:6px 14px;margin:10px 0 0;font-size:13px;">+ 新增項目</button>
             </div>`;
     }).join('');
 }
@@ -3415,17 +3449,71 @@ function onPartyBossDrop(e) {
 }
 
 // 把總覽清單 + 所有出團卡片合成一張圖片，複製到剪貼簿
+// 建立「圖片輸出專用」的乾淨排版 HTML（不含輸入框外觀、不含任何按鈕）
+// 沿用當天隊員的項目不重複列印隊員名單，只印提示文字；有自訂隊伍的項目才印隊伍+完整名單
+// 文字全部自然換行，不做省略號截斷
+function buildPartyImageHtml() {
+    const summaryRows = partyPlans.map(plan => {
+        const dateLabel  = formatPartyDate(plan.date);
+        const weekday    = getWeekdayLabel(plan.date);
+        const timeLabel  = plan.time || '自定';
+        const summary    = escapePartyText(plan.summary || '');
+        const memberList = formatPartyMemberList(plan.dayMembers);
+        const memberLine = memberList ? `<div class="party-img-summary-members">👥 當天隊員：${memberList}</div>` : '';
+        return `<div class="party-img-summary-item"><div>📅 ${dateLabel} ${weekday} ${timeLabel}　${summary}</div>${memberLine}</div>`;
+    }).join('');
+
+    const cardsHtml = partyPlans.map(plan => {
+        const dateLabel  = formatPartyDate(plan.date);
+        const weekday    = getWeekdayLabel(plan.date);
+        const timeLabel  = plan.time || '自定';
+        const summary    = escapePartyText(plan.summary || '');
+        const note       = plan.note ? `<div class="party-img-note">📋 ${escapePartyText(plan.note)}</div>` : '';
+        const dayList    = formatPartyMemberList(plan.dayMembers);
+        const dayLine    = dayList ? `<div class="party-img-daymembers">👥 當天隊員：${dayList}</div>` : '';
+
+        const itemsHtml = (plan.bosses || []).map(boss => {
+            const name  = escapePartyText(boss.name || '（未命名項目）');
+            const teams = boss.teams || [];
+            let body;
+            if (teams.length === 0) {
+                body = `<div class="party-img-inherit">（沿用當天隊員）</div>`;
+            } else {
+                body = teams.map((team, i) => {
+                    const list = formatPartyMemberList(team.members);
+                    return `<div class="party-img-team">隊伍${i + 1}：${list || '（無隊員）'}</div>`;
+                }).join('');
+            }
+            return `<div><div class="party-img-item-name">📌 ${name}</div>${body}</div>`;
+        }).join('');
+
+        return `
+            <div class="party-img-card">
+                <div class="party-img-header">📅 ${dateLabel} ${weekday} ${timeLabel}　${summary}</div>
+                ${note}
+                ${dayLine}
+                <div class="party-img-items">${itemsHtml}</div>
+            </div>`;
+    }).join('');
+
+    return `<div class="party-img-summary-box">${summaryRows}</div><div class="party-img-cards">${cardsHtml}</div>`;
+}
+
+// 把總覽清單 + 所有出團卡片，用乾淨的公告排版合成一張圖片，複製到剪貼簿
 async function copyPartyPlanImage() {
-    const captureEl = document.getElementById('party-plan-capture-area');
-    if (!captureEl || partyPlans.length === 0) { showToast('⚠️ 尚無出團紀錄可複製！'); return; }
+    if (partyPlans.length === 0) { showToast('⚠️ 尚無出團紀錄可複製！'); return; }
     if (typeof html2canvas === 'undefined') { showToast('❌ 圖片功能載入失敗，請重新整理頁面'); return; }
 
     const btn = document.getElementById('btn-copy-party-image');
     const originalText = btn ? btn.innerText : '';
     if (btn) { btn.disabled = true; btn.innerText = '產生中...'; }
 
+    const renderEl = document.getElementById('party-plan-image-render');
+    if (!renderEl) { showToast('❌ 圖片產生失敗：找不到渲染容器'); if (btn) { btn.disabled = false; btn.innerText = originalText; } return; }
+    renderEl.innerHTML = buildPartyImageHtml();
+
     try {
-        const canvas = await html2canvas(captureEl, { backgroundColor: '#121212', scale: 2 });
+        const canvas = await html2canvas(renderEl, { backgroundColor: '#121212', scale: 2 });
         canvas.toBlob(async (blob) => {
             try {
                 await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
@@ -3434,11 +3522,13 @@ async function copyPartyPlanImage() {
                 showToast('⚠️ 複製失敗，你的瀏覽器可能不支援此功能');
             } finally {
                 if (btn) { btn.disabled = false; btn.innerText = originalText; }
+                renderEl.innerHTML = '';
             }
         }, 'image/png');
     } catch(e) {
         showToast('❌ 圖片產生失敗：' + e.message);
         if (btn) { btn.disabled = false; btn.innerText = originalText; }
+        renderEl.innerHTML = '';
     }
 }
 

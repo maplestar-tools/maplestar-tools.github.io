@@ -777,14 +777,15 @@
             <button id="btn-add-party-plan" class="calc-btn btn-green" style="width:auto;padding:10px 18px;margin:0;display:none;">+ 新增出團</button>
         </div>
 
-        <!-- 複製圖片時連同總覽一起擷取，用同一個容器包起來 -->
-        <div id="party-plan-capture-area" style="max-width:900px;margin:0 auto;">
-            <!-- 總覽清單：自動彙整所有卡片的日期/星期/時間/摘要，不可直接編輯 -->
-            <div id="party-plan-summary" class="party-summary-box"></div>
-            <div id="party-plan-list" style="display:flex;flex-direction:column;gap:16px;"></div>
-        </div>
+        <!-- 總覽清單：自動彙整所有卡片的日期/星期/時間/摘要/當天隊員，不可直接編輯 -->
+        <div id="party-plan-summary" class="party-summary-box" style="max-width:900px;margin:0 auto 18px;display:none;"></div>
+        <div id="party-plan-list" style="max-width:900px;margin:0 auto;display:flex;flex-direction:column;gap:16px;"></div>
         <div id="party-plan-empty" style="text-align:center;color:#555;font-size:13px;padding:30px;display:none;">尚無出團紀錄</div>
     </div><!-- end party-plan -->
+
+    <!-- 「複製圖片」專用的離screen渲染容器：平常不顯示，複製時動態填入乾淨排版供 html2canvas 擷取 -->
+    <div id="party-plan-image-render" style="position:fixed;left:-9999px;top:0;width:860px;padding:20px;box-sizing:border-box;background:#121212;"></div>
+
 
 </div><!-- end content -->
 

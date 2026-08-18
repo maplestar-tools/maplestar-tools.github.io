@@ -346,7 +346,7 @@ h1 {
 /* ==========================================================================
    🛡️ 13. 分隊出團
    ========================================================================== */
-/* 總覽清單（頁面常駐，自動彙整，不可編輯） */
+/* 總覽清單（頁面常駐，自動彙整，不可編輯；沒有任何出團時由 JS 設 display:none 整塊隱藏） */
 .party-summary-box {
     background: #1e1e1e;
     border: 1px solid #333;
@@ -355,10 +355,19 @@ h1 {
     margin-bottom: 18px;
 }
 
+.party-summary-item { padding: 5px 0; }
+.party-summary-item:not(:last-child) { border-bottom: 1px dashed #2a2a2a; }
+
 .party-summary-row {
     font-size: 14px;
     color: #e0e0e0;
-    padding: 4px 0;
+}
+
+.party-summary-members {
+    font-size: 12px;
+    color: #888;
+    margin-top: 2px;
+    padding-left: 20px;
 }
 
 /* 出團卡片 */
@@ -378,21 +387,76 @@ h1 {
     flex-wrap: wrap;
 }
 
-.party-card-header .party-date    { width: 150px; flex-shrink: 0; }
-.party-card-header .party-time    { width: 110px; flex-shrink: 0; }
+.party-card-header .party-date    { width: 152px; flex-shrink: 0; }
+.party-card-header .party-time    { width: 150px; flex-shrink: 0; }
 .party-card-header .party-summary { flex: 1; min-width: 140px; }
 
 .party-note {
     margin-bottom: 14px;
 }
 
-/* 拖曳把手 */
+/* 拖曳把手：只有這個小圖示可以拖曳，欄位裡選字反白不會誤觸拖曳 */
 .party-drag-handle {
     color: #888;
     cursor: grab;
     flex-shrink: 0;
     font-size: 15px;
     padding: 0 2px;
+}
+
+/* 欄位上方的固定小標籤（例如「項目名稱」），跟 placeholder 不同，永遠顯示 */
+.party-field-label {
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 3px;
+}
+
+.party-boss-name-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+/* 隊員表格：名稱/職業標題列（跟團隊分紅隊員表格同樣兩欄並排風格） */
+.party-member-header-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.party-member-header-col {
+    display: flex;
+    gap: 6px;
+    padding: 0 8px;
+    font-size: 12px;
+    color: #aaa;
+}
+
+.party-member-header-col .lbl-name,
+.party-member-header-col .lbl-job { flex: 1; text-align: center; }
+
+.party-member-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.party-member-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #2a2a2a;
+    border-radius: 8px;
+    padding: 6px 8px;
+}
+
+.party-member-cell input {
+    flex: 1;
+    min-width: 0;
+    font-size: 13px;
+    padding: 6px 8px;
 }
 
 /* 當天隊員區塊 */
@@ -410,24 +474,7 @@ h1 {
     margin-bottom: 8px;
 }
 
-.party-member-rows {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-}
-
-.party-member-row {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-}
-
-.party-member-row .party-daymember-name,
-.party-member-row .party-team-member-name,
-.party-member-row .party-daymember-job,
-.party-member-row .party-team-member-job { flex: 1; }
-
-/* 王段落清單 */
+/* 項目段落清單（原本叫「王段落」，因為不一定打王，改稱項目） */
 .party-bosses {
     display: flex;
     flex-direction: column;
@@ -443,12 +490,10 @@ h1 {
 
 .party-boss-header {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 8px;
     margin-bottom: 8px;
 }
-
-.party-boss-header .party-boss-name { flex: 1; }
 
 /* 沿用當天隊員提示文字 */
 .party-boss-inherit {
@@ -458,7 +503,7 @@ h1 {
     padding: 4px 2px 8px;
 }
 
-/* 王段落底下的隊伍 */
+/* 項目底下的隊伍 */
 .party-team {
     background: #262626;
     border-radius: 8px;
@@ -474,6 +519,14 @@ h1 {
     color: #ff9f43;
     font-weight: bold;
     margin-bottom: 6px;
+}
+
+/* del-btn 原本的 margin:0 auto 是為了在表格儲存格內置中設計的，
+   套到這些左右並排（space-between）的標題列會被拉到正中間，這裡覆寫拉回最右邊 */
+.party-card-header .del-btn,
+.party-boss-header .del-btn,
+.party-team-header .del-btn {
+    margin: 0;
 }
 
 /* 唯讀模式（非管理員）：隱藏所有編輯用元件，欄位不可互動 */
@@ -501,8 +554,45 @@ h1 {
     opacity: 0.4;
 }
 
+/* ---- 圖片輸出專用排版（複製圖片時才動態產生，畫面上平常看不到，
+   拿掉所有輸入框外觀與按鈕，用淡底色區塊取代分隔線） ---- */
+.party-img-summary-box {
+    background: rgba(255,255,255,0.03);
+    border-radius: 12px;
+    padding: 14px 18px;
+    margin-bottom: 22px;
+}
+
+.party-img-summary-item { padding: 6px 0; }
+.party-img-summary-item > div:first-child { font-size: 14px; color: #e0e0e0; }
+.party-img-summary-members { font-size: 12px; color: #888; margin-top: 2px; padding-left: 20px; }
+
+.party-img-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+/* 每天出團用淡淡的底色區塊分隔，不用硬線 */
+.party-img-card {
+    background: rgba(255, 159, 67, 0.06);
+    border-radius: 14px;
+    padding: 18px 22px;
+}
+
+.party-img-header { font-size: 15px; font-weight: bold; color: #fff; margin-bottom: 4px; }
+.party-img-note { font-size: 13px; color: #ff9f43; margin-bottom: 6px; }
+.party-img-daymembers { font-size: 13px; color: #64b5f6; margin-bottom: 12px; }
+
+.party-img-items { display: flex; flex-direction: column; gap: 12px; }
+.party-img-item-name { font-size: 14px; font-weight: bold; color: #ff9f43; margin-bottom: 2px; }
+.party-img-inherit { font-size: 13px; color: #888; font-style: italic; padding-left: 4px; }
+.party-img-team { font-size: 13px; color: #e0e0e0; padding-left: 4px; margin-top: 2px; }
+
 @media (max-width: 600px) {
     .party-card-header .party-date,
     .party-card-header .party-time { width: 100%; }
-    .party-member-row { flex-wrap: wrap; }
+    .party-member-header-row { grid-template-columns: 1fr; }
+    .party-member-header-row .party-member-header-col-2 { display: none; }
+    .party-member-grid { grid-template-columns: 1fr; }
 }
