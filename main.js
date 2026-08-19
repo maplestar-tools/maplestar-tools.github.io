@@ -3034,9 +3034,9 @@ function triggerPartySave() {
     partySaveTimer = setTimeout(savePartyPlansNow, 800);
 }
 
-// 把 YYYY-MM-DD 轉成 M/D，留空顯示「自定」
+// 把 YYYY-MM-DD 轉成 M/D，留空回傳空字串（由 formatPartyDateTimeLabel 統一處理顯示文字）
 function formatPartyDate(dateStr) {
-    if (!dateStr) return '自定';
+    if (!dateStr) return '';
     const parts = dateStr.split('-');
     if (parts.length !== 3) return dateStr;
     return `${parseInt(parts[1], 10)}/${parseInt(parts[2], 10)}`;
@@ -3049,6 +3049,33 @@ function getWeekdayLabel(dateStr) {
     if (isNaN(d.getTime())) return '';
     const days = ['日', '一', '二', '三', '四', '五', '六'];
     return `(${days[d.getDay()]})`;
+}
+
+// 把 24 小時制的 HH:MM 轉成中文口語格式，例如 "20:30" → "晚上8點30"、"09:00" → "上午9點"
+function formatPartyTime(timeStr) {
+    if (!timeStr) return '';
+    const [hStr, mStr] = timeStr.split(':');
+    const h = parseInt(hStr, 10);
+    const m = parseInt(mStr, 10);
+    if (isNaN(h)) return timeStr;
+    let prefix;
+    if (h < 6)       prefix = '凌晨';
+    else if (h < 12) prefix = '上午';
+    else if (h < 13) prefix = '中午';
+    else if (h < 18) prefix = '下午';
+    else             prefix = '晚上';
+    let h12 = h % 12;
+    if (h12 === 0) h12 = 12;
+    return `${prefix}${h12}點${m > 0 ? m : ''}`;
+}
+
+// 組合日期+時間的顯示文字：都沒填顯示「自行協調」一次；只有其中一個沒填，個別標示是哪個
+function formatPartyDateTimeLabel(dateStr, timeStr) {
+    // 日期沒填就整個顯示「自行協調」（不會有只填時間不填日期的情況，單獨顯示時間也沒意義）
+    if (!dateStr) return '自行協調';
+    const datePart = `${formatPartyDate(dateStr)} ${getWeekdayLabel(dateStr)}`;
+    const timePart = timeStr ? formatPartyTime(timeStr) : '時間自行協調';
+    return `${datePart}　${timePart}`;
 }
 
 // ----- 新增出團 / 刪除出團 / 卡片欄位更新 -----
@@ -3222,13 +3249,11 @@ function renderPartySummary() {
     if (partyPlans.length === 0) { el.innerHTML = ''; el.style.display = 'none'; return; }
     el.style.display = 'block';
     el.innerHTML = partyPlans.map(plan => {
-        const dateLabel   = formatPartyDate(plan.date);
-        const weekday     = getWeekdayLabel(plan.date);
-        const timeLabel   = plan.time || '自定';
-        const summary     = escapePartyText(plan.summary || '');
-        const memberList  = formatPartyMemberList(plan.dayMembers);
-        const memberLine  = memberList ? `<div class="party-summary-members">👥 當天隊員：${memberList}</div>` : '';
-        return `<div class="party-summary-item"><div class="party-summary-row">📅 ${dateLabel} ${weekday} ${timeLabel}　${summary}</div>${memberLine}</div>`;
+        const dateTimeLabel = formatPartyDateTimeLabel(plan.date, plan.time);
+        const summary        = escapePartyText(plan.summary || '');
+        const memberList     = formatPartyMemberList(plan.dayMembers);
+        const memberLine     = memberList ? `<div class="party-summary-members">👥 當天隊員：${memberList}</div>` : '';
+        return `<div class="party-summary-item"><div class="party-summary-row">📅 ${dateTimeLabel}　${summary}</div>${memberLine}</div>`;
     }).join('');
 }
 
@@ -3448,29 +3473,24 @@ function onPartyBossDrop(e) {
     savePartyPlansNow();
 }
 
-// 把總覽清單 + 所有出團卡片合成一張圖片，複製到剪貼簿
 // 建立「圖片輸出專用」的乾淨排版 HTML（不含輸入框外觀、不含任何按鈕）
 // 沿用當天隊員的項目不重複列印隊員名單，只印提示文字；有自訂隊伍的項目才印隊伍+完整名單
 // 文字全部自然換行，不做省略號截斷
 function buildPartyImageHtml() {
     const summaryRows = partyPlans.map(plan => {
-        const dateLabel  = formatPartyDate(plan.date);
-        const weekday    = getWeekdayLabel(plan.date);
-        const timeLabel  = plan.time || '自定';
-        const summary    = escapePartyText(plan.summary || '');
-        const memberList = formatPartyMemberList(plan.dayMembers);
-        const memberLine = memberList ? `<div class="party-img-summary-members">👥 當天隊員：${memberList}</div>` : '';
-        return `<div class="party-img-summary-item"><div>📅 ${dateLabel} ${weekday} ${timeLabel}　${summary}</div>${memberLine}</div>`;
+        const dateTimeLabel = formatPartyDateTimeLabel(plan.date, plan.time);
+        const summary        = escapePartyText(plan.summary || '');
+        const memberList     = formatPartyMemberList(plan.dayMembers);
+        const memberLine     = memberList ? `<div class="party-img-summary-members">👥 當天隊員：${memberList}</div>` : '';
+        return `<div class="party-img-summary-item"><div>📅 ${dateTimeLabel}　${summary}</div>${memberLine}</div>`;
     }).join('');
 
     const cardsHtml = partyPlans.map(plan => {
-        const dateLabel  = formatPartyDate(plan.date);
-        const weekday    = getWeekdayLabel(plan.date);
-        const timeLabel  = plan.time || '自定';
-        const summary    = escapePartyText(plan.summary || '');
-        const note       = plan.note ? `<div class="party-img-note">📋 ${escapePartyText(plan.note)}</div>` : '';
-        const dayList    = formatPartyMemberList(plan.dayMembers);
-        const dayLine    = dayList ? `<div class="party-img-daymembers">👥 當天隊員：${dayList}</div>` : '';
+        const dateTimeLabel = formatPartyDateTimeLabel(plan.date, plan.time);
+        const summary        = escapePartyText(plan.summary || '');
+        const note           = plan.note ? `<div class="party-img-note">📋 ${escapePartyText(plan.note)}</div>` : '';
+        const dayList        = formatPartyMemberList(plan.dayMembers);
+        const dayLine         = dayList ? `<div class="party-img-daymembers">👥 當天隊員：${dayList}</div>` : '';
 
         const itemsHtml = (plan.bosses || []).map(boss => {
             const name  = escapePartyText(boss.name || '（未命名項目）');
@@ -3489,7 +3509,7 @@ function buildPartyImageHtml() {
 
         return `
             <div class="party-img-card">
-                <div class="party-img-header">📅 ${dateLabel} ${weekday} ${timeLabel}　${summary}</div>
+                <div class="party-img-header">📅 ${dateTimeLabel}　${summary}</div>
                 ${note}
                 ${dayLine}
                 <div class="party-img-items">${itemsHtml}</div>
