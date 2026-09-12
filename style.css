@@ -404,6 +404,39 @@ h1 {
     padding: 0 2px;
 }
 
+/* 上移/下移按鈕：卡片內容太多、拖曳把手不好抓時的替代方案 */
+.party-move-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.party-move-btn {
+    background: #2d2d2d;
+    color: #ccc;
+    border: 1px solid #444;
+    border-radius: 4px;
+    width: 22px;
+    height: 16px;
+    font-size: 9px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.party-move-btn:hover:not(:disabled) {
+    background: #3a3a3a;
+}
+
+.party-move-btn:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
 /* 欄位上方的固定小標籤（例如「項目名稱」），跟 placeholder 不同，永遠顯示 */
 .party-field-label {
     font-size: 11px;
@@ -536,6 +569,7 @@ h1 {
 }
 
 .party-readonly .party-drag-handle,
+.party-readonly .party-move-btns,
 .party-readonly .party-del-plan,
 .party-readonly .party-del-boss,
 .party-readonly .party-del-team,

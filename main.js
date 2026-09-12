@@ -3104,6 +3104,25 @@ function deletePartyPlan(planId) {
     savePartyPlansNow();
 }
 
+// 上移/下移出團卡片（卡片內容太多、太長時，拖曳把手不好抓，改用按鈕直接交換順序）
+function movePartyPlanUp(planId) {
+    if (!isAdmin) return;
+    const idx = partyPlans.findIndex(p => p.id === planId);
+    if (idx <= 0) return;
+    [partyPlans[idx - 1], partyPlans[idx]] = [partyPlans[idx], partyPlans[idx - 1]];
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
+function movePartyPlanDown(planId) {
+    if (!isAdmin) return;
+    const idx = partyPlans.findIndex(p => p.id === planId);
+    if (idx === -1 || idx >= partyPlans.length - 1) return;
+    [partyPlans[idx + 1], partyPlans[idx]] = [partyPlans[idx], partyPlans[idx + 1]];
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
 function updatePartyPlanField(planId, field, value) {
     if (!isAdmin) return;
     const plan = partyPlans.find(p => p.id === planId);
@@ -3342,14 +3361,20 @@ function renderPartyPlans() {
     }
     if (emptyEl) emptyEl.style.display = 'none';
 
-    listEl.innerHTML = partyPlans.map(plan => {
+    listEl.innerHTML = partyPlans.map((plan, idx) => {
         const dayMembersHtml = (plan.dayMembers || []).map(m => dayMemberRowHtml(plan.id, m)).join('');
         const bossesHtml     = (plan.bosses || []).map(boss => bossSegmentHtml(plan, boss)).join('');
+        const isFirst = idx === 0;
+        const isLast  = idx === partyPlans.length - 1;
 
         return `
             <div class="party-card ${isAdmin ? '' : 'party-readonly'}" data-plan-id="${plan.id}">
                 <div class="party-card-header">
                     <span class="party-drag-handle" draggable="${isAdmin}">☰</span>
+                    <div class="party-move-btns">
+                        <button class="party-move-btn party-move-up" data-plan-id="${plan.id}" ${isFirst ? 'disabled' : ''}>▲</button>
+                        <button class="party-move-btn party-move-down" data-plan-id="${plan.id}" ${isLast ? 'disabled' : ''}>▼</button>
+                    </div>
                     <input type="date" class="cloud-input party-date" data-plan-id="${plan.id}" value="${plan.date || ''}">
                     <input type="time" class="cloud-input party-time" data-plan-id="${plan.id}" value="${plan.time || ''}">
                     <input type="text" class="cloud-input party-summary" data-plan-id="${plan.id}" value="${plan.summary || ''}" placeholder="摘要...">
@@ -3387,6 +3412,8 @@ function onPartyPlanListInput(e) {
 function onPartyPlanListClick(e) {
     const t = e.target;
     if (t.classList.contains('party-del-plan'))        deletePartyPlan(t.dataset.planId);
+    if (t.classList.contains('party-move-up'))          movePartyPlanUp(t.dataset.planId);
+    if (t.classList.contains('party-move-down'))        movePartyPlanDown(t.dataset.planId);
     if (t.classList.contains('party-add-daymember'))    addDayMember(t.dataset.planId);
     if (t.classList.contains('party-del-daymember'))    deleteDayMember(t.dataset.planId, t.dataset.memberId);
     if (t.classList.contains('party-add-boss'))         addBoss(t.dataset.planId);
