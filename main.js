@@ -3138,7 +3138,18 @@ function addDayMember(planId) {
     if (!isAdmin) return;
     const plan = partyPlans.find(p => p.id === planId);
     if (!plan) return;
-    plan.dayMembers.push({ id: generateId(), name: '', job: '' });
+    plan.dayMembers.push({ id: generateId(), name: '', job: '', active: true });
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
+// 切換「本次參加」勾選：不刪除，只是這次不列入總覽/圖片，下次直接勾回來
+function updateDayMemberActive(planId, memberId, active) {
+    if (!isAdmin) return;
+    const plan = partyPlans.find(p => p.id === planId);
+    const m = plan?.dayMembers.find(x => x.id === memberId);
+    if (!m) return;
+    m.active = active;
     renderPartyPlans();
     savePartyPlansNow();
 }
@@ -3219,7 +3230,7 @@ function addBossTeamMember(planId, bossId, teamId) {
     const boss = plan?.bosses.find(b => b.id === bossId);
     const team = boss?.teams.find(t => t.id === teamId);
     if (!team) return;
-    team.members.push({ id: generateId(), name: '', job: '' });
+    team.members.push({ id: generateId(), name: '', job: '', active: true });
     renderPartyPlans();
     savePartyPlansNow();
 }
@@ -3246,6 +3257,19 @@ function updateBossTeamMemberField(planId, bossId, teamId, memberId, field, valu
     triggerPartySave();
 }
 
+// 切換隊伍隊員的「本次參加」勾選：不刪除，只是這次不列入總覽/圖片
+function updateBossTeamMemberActive(planId, bossId, teamId, memberId, active) {
+    if (!isAdmin) return;
+    const plan = partyPlans.find(p => p.id === planId);
+    const boss = plan?.bosses.find(b => b.id === bossId);
+    const team = boss?.teams.find(t => t.id === teamId);
+    const m = team?.members.find(x => x.id === memberId);
+    if (!m) return;
+    m.active = active;
+    renderPartyPlans();
+    savePartyPlansNow();
+}
+
 // ----- 渲染 -----
 
 // HTML escape（圖片輸出/總覽都會用到，避免特殊字元破版）
@@ -3256,7 +3280,7 @@ function escapePartyText(str) {
 // 把隊員陣列轉成「名稱（職業）、名稱（職業）」的逗號串接文字
 function formatPartyMemberList(members) {
     return (members || [])
-        .filter(m => m.name)
+        .filter(m => m.name && m.active !== false)
         .map(m => m.job ? `${escapePartyText(m.name)}（${escapePartyText(m.job)}）` : escapePartyText(m.name))
         .join('、');
 }
@@ -3281,14 +3305,16 @@ function renderPartySummary() {
 function partyMemberHeaderRowHtml() {
     return `
         <div class="party-member-header-row">
-            <div class="party-member-header-col"><span class="lbl-name">名稱</span><span class="lbl-job">職業</span></div>
-            <div class="party-member-header-col party-member-header-col-2"><span class="lbl-name">名稱</span><span class="lbl-job">職業</span></div>
+            <div class="party-member-header-col"><span class="chk-spacer"></span><span class="lbl-name">名稱</span><span class="lbl-job">職業</span></div>
+            <div class="party-member-header-col party-member-header-col-2"><span class="chk-spacer"></span><span class="lbl-name">名稱</span><span class="lbl-job">職業</span></div>
         </div>`;
 }
 
 function dayMemberRowHtml(planId, m) {
+    const isActive = m.active !== false;
     return `
-        <div class="party-member-cell">
+        <div class="party-member-cell ${isActive ? '' : 'party-member-inactive'}">
+            <input type="checkbox" class="party-daymember-active" data-plan-id="${planId}" data-member-id="${m.id}" ${isActive ? 'checked' : ''} title="本次參加">
             <input type="text" class="cloud-input party-daymember-name" data-plan-id="${planId}" data-member-id="${m.id}" value="${m.name || ''}">
             <input type="text" class="cloud-input party-daymember-job" data-plan-id="${planId}" data-member-id="${m.id}" value="${m.job || ''}">
             <button class="del-btn party-del-daymember" data-plan-id="${planId}" data-member-id="${m.id}">✕</button>
@@ -3296,8 +3322,10 @@ function dayMemberRowHtml(planId, m) {
 }
 
 function teamMemberRowHtml(planId, bossId, teamId, m) {
+    const isActive = m.active !== false;
     return `
-        <div class="party-member-cell">
+        <div class="party-member-cell ${isActive ? '' : 'party-member-inactive'}">
+            <input type="checkbox" class="party-team-member-active" data-plan-id="${planId}" data-boss-id="${bossId}" data-team-id="${teamId}" data-member-id="${m.id}" ${isActive ? 'checked' : ''} title="本次參加">
             <input type="text" class="cloud-input party-team-member-name" data-plan-id="${planId}" data-boss-id="${bossId}" data-team-id="${teamId}" data-member-id="${m.id}" value="${m.name || ''}">
             <input type="text" class="cloud-input party-team-member-job" data-plan-id="${planId}" data-boss-id="${bossId}" data-team-id="${teamId}" data-member-id="${m.id}" value="${m.job || ''}">
             <button class="del-btn party-del-team-member" data-plan-id="${planId}" data-boss-id="${bossId}" data-team-id="${teamId}" data-member-id="${m.id}">✕</button>
@@ -3406,6 +3434,8 @@ function onPartyPlanListInput(e) {
     if (t.classList.contains('party-boss-name'))      updateBossName(t.dataset.planId, t.dataset.bossId, t.value);
     if (t.classList.contains('party-team-member-name')) updateBossTeamMemberField(t.dataset.planId, t.dataset.bossId, t.dataset.teamId, t.dataset.memberId, 'name', t.value);
     if (t.classList.contains('party-team-member-job'))  updateBossTeamMemberField(t.dataset.planId, t.dataset.bossId, t.dataset.teamId, t.dataset.memberId, 'job', t.value);
+    if (t.classList.contains('party-daymember-active'))     updateDayMemberActive(t.dataset.planId, t.dataset.memberId, t.checked);
+    if (t.classList.contains('party-team-member-active'))   updateBossTeamMemberActive(t.dataset.planId, t.dataset.bossId, t.dataset.teamId, t.dataset.memberId, t.checked);
 }
 
 // 事件代理：click（新增/刪除按鈕）

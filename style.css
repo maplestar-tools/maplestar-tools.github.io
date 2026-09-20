@@ -470,6 +470,8 @@ h1 {
 .party-member-header-col .lbl-name,
 .party-member-header-col .lbl-job { flex: 1; text-align: center; }
 
+.party-member-header-col .chk-spacer { width: 15px; flex-shrink: 0; }
+
 .party-member-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -490,6 +492,19 @@ h1 {
     min-width: 0;
     font-size: 13px;
     padding: 6px 8px;
+}
+
+.party-member-cell input[type="checkbox"] {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+    padding: 0;
+    cursor: pointer;
+}
+
+/* 「本次參加」沒勾的隊員：留著名字職業，但整列變灰淡出 */
+.party-member-inactive {
+    opacity: 0.4;
 }
 
 /* 當天隊員區塊 */
