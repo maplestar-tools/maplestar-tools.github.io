@@ -569,6 +569,12 @@ function updateDynamicPrices() {
     if (el('priceFancy'))    el('priceFancy').innerText    = toWan(3900);
     if (el('pricePlatinum')) el('pricePlatinum').innerText = toWan(7100);
     if (el('priceSnow'))     el('priceSnow').innerText     = toWan(3500 / 11);
+    // 瞬移石：單買單用，里程200
+    if (el('priceTeleport')) el('priceTeleport').innerText = toWan(200);
+    // 護身符：一次買13個，一次用1個，里程3000（換算成單個價格）
+    if (el('priceCharm'))    el('priceCharm').innerText    = toWan(3000 / 13);
+    // 原地復活術：一次買13個，一次用1個，里程4300（換算成單個價格）
+    if (el('priceRevive'))   el('priceRevive').innerText   = toWan(4300 / 13);
 }
 
 function getPrices() {
@@ -578,6 +584,9 @@ function getPrices() {
         fancy:          toWan(3900),
         platinum:       toWan(7100),
         snow:           toWan(3500 / 11),
+        teleport:       toWan(200),
+        charm:          toWan(3000 / 13),
+        revive:         toWan(4300 / 13),
         cubeFancy:      parseFloat(document.getElementById('cubeFancyPrice')?.value)      || 0,
         cubeSuspicious: parseFloat(document.getElementById('cubeSuspiciousPrice')?.value) || 0
     };
