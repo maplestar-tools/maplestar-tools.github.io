@@ -563,8 +563,8 @@ function showToast(msg) {
 // 💰 動態價格計算
 // ==========================================================================
 function updateDynamicPrices() {
-    const r = parseFloat(document.getElementById('moneyToMileage')?.value) || 10000;
-    const toWan = m => ((m / r) * 1000).toFixed(1);
+    const r = parseFloat(document.getElementById('moneyToMileage')?.value) || 700;
+    const toWan = m => ((m / r) * 100).toFixed(1); // 基準：100萬楓幣 = r 里程
     const el = id => document.getElementById(id);
     if (el('priceFancy'))    el('priceFancy').innerText    = toWan(3900);
     if (el('pricePlatinum')) el('pricePlatinum').innerText = toWan(7100);
@@ -578,8 +578,8 @@ function updateDynamicPrices() {
 }
 
 function getPrices() {
-    const r = parseFloat(document.getElementById('moneyToMileage')?.value) || 10000;
-    const toWan = m => (m / r) * 1000;
+    const r = parseFloat(document.getElementById('moneyToMileage')?.value) || 700;
+    const toWan = m => (m / r) * 100; // 基準：100萬楓幣 = r 里程
     return {
         fancy:          toWan(3900),
         platinum:       toWan(7100),
