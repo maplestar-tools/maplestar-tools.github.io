@@ -1244,10 +1244,16 @@ function executeSettlement() {
         if (uid && extraCostPerMember.hasOwnProperty(uid)) extraCostPerMember[uid] += row.amount;
     });
 
-    const totalRatio = active.reduce((s, m) => s + (m.ratio || 1), 0);
+    // 比例：只有空白/不是數字時才補 1，填 0 就是 0（該隊員不參與分錢，但自己賣的收入仍會被拿出來分）
+    const getRatio = m => (Number.isFinite(m.ratio) ? m.ratio : 1);
+    const totalRatio = active.reduce((s, m) => s + getRatio(m), 0);
+    if (totalRatio <= 0) {
+        alert("所有參加隊員的比例都是 0，無法分配！");
+        return;
+    }
     const shouldGet  = {};
     active.forEach(m => {
-        const base = Math.round((totalPool * (m.ratio || 1) / totalRatio) * 10) / 10;
+        const base = Math.round((totalPool * getRatio(m) / totalRatio) * 10) / 10;
         shouldGet[m.id] = Math.round((base + (snowCostPerMember[m.id] || 0) + (extraCostPerMember[m.id] || 0)) * 10) / 10;
     });
 
