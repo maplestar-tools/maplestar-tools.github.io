@@ -645,3 +645,72 @@ h1 {
     .party-member-header-row .party-member-header-col-2 { display: none; }
     .party-member-grid { grid-template-columns: 1fr; }
 }
+
+
+/* ==========================================================================
+   ⚖️ 14. 比值計算
+   ========================================================================== */
+.ratio-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 480px;
+}
+
+.ratio-table th {
+    padding: 8px 6px;
+    font-size: 12px;
+    color: #aaa;
+    text-align: left;
+    border-bottom: 1px solid #444;
+}
+
+.ratio-table td {
+    padding: 8px 6px;
+    font-size: 14px;
+    border-bottom: 1px solid #2a2a2a;
+    vertical-align: middle;
+}
+
+.ratio-table .ratio-col-center { text-align: center; }
+.ratio-table .ratio-col-right  { text-align: right; }
+
+.ratio-table .ratio-price { width: 120px; padding: 6px 8px; font-size: 13px; }
+
+.ratio-result {
+    text-align: right;
+    font-weight: bold;
+    color: #64b5f6;
+    white-space: nowrap;
+}
+
+/* 1硬幣價值最高的品項：整列淡綠底，結果數字變綠 */
+.ratio-row.ratio-best { background: rgba(77, 174, 76, 0.12); }
+.ratio-row.ratio-best .ratio-result { color: #4dae4c; }
+
+.ratio-actions-cell { width: 84px; }
+
+.ratio-actions {
+    display: flex;
+    gap: 6px;
+    justify-content: flex-end;
+}
+
+.ratio-actions .del-btn { margin: 0; }
+
+.ratio-edit-btn {
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2d2d2d;
+    border: 1px solid #555;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.ratio-edit-btn:hover { background: #3a3a3a; }

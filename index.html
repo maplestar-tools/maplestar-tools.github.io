@@ -18,6 +18,7 @@
     <button class="tab-btn" id="btn-tab-equip">⚔️ 裝備計算</button>
     <button class="tab-btn" id="btn-tab-exp">📊 經驗計算</button>
     <button class="tab-btn" id="btn-tab-party">🛡️ 分隊出團</button>
+    <button class="tab-btn" id="btn-tab-ratio">⚖️ 比值計算</button>
 </div>
 
 <div class="content">
@@ -795,6 +796,41 @@
         <div id="party-plan-empty" style="text-align:center;color:#555;font-size:13px;padding:30px;display:none;">尚無出團紀錄</div>
     </div><!-- end party-plan -->
 
+    <!-- ===== 比值計算 ===== -->
+    <div id="ratio-calc" class="tab-content">
+        <h3>⚖️ 比值計算</h3>
+        <p>輸入拍賣價，自動換算 1 個硬幣值多少萬。</p>
+
+        <!-- 傳說硬幣（可折疊） -->
+        <div class="calc-card settings-card">
+            <h4 class="title-orange" id="btn-toggle-ratio-coin" style="cursor:pointer;display:flex;justify-content:space-between;margin:0;">
+                🪙 傳說硬幣 <span>▼</span>
+            </h4>
+            <div id="ratio-coin-section" style="overflow:hidden;transition:max-height 0.3s ease-out;max-height:3000px;">
+                <div style="font-size:12px;color:#888;margin:12px 0 10px;">1硬幣 ＝ 拍賣價 ÷ 硬幣數（不扣手續費）；填了價格的品項中，1硬幣價值最高的會用顏色標出。</div>
+                <div style="overflow-x:auto;">
+                    <table class="ratio-table">
+                        <thead>
+                            <tr>
+                                <th>品項</th>
+                                <th class="ratio-col-center">硬幣數</th>
+                                <th>拍賣價(萬)</th>
+                                <th class="ratio-col-right">1硬幣 = (萬)</th>
+                                <th id="ratio-admin-th" style="display:none;"></th>
+                            </tr>
+                        </thead>
+                        <!-- 由 JS renderRatioCoins() 動態產生 -->
+                        <tbody id="ratio-coin-body"></tbody>
+                    </table>
+                </div>
+                <div id="ratio-coin-empty" style="text-align:center;color:#555;font-size:13px;padding:20px;display:none;">尚無品項</div>
+                <div style="margin-top:12px;">
+                    <button id="btn-add-ratio-coin" class="calc-btn btn-green" style="width:auto;padding:8px 16px;margin:0;display:none;">+ 新增品項</button>
+                </div>
+            </div>
+        </div>
+    </div><!-- end ratio-calc -->
+
     <!-- 「複製圖片」專用的離screen渲染容器：平常不顯示，複製時動態填入乾淨排版供 html2canvas 擷取 -->
     <div id="party-plan-image-render" style="position:fixed;left:-9999px;top:0;width:860px;padding:20px;box-sizing:border-box;background:#121212;"></div>
 
@@ -868,6 +904,21 @@
 
         <div style="margin-top:20px;">
             <button id="btn-close-admin-panel" class="calc-btn btn-blue">關閉</button>
+        </div>
+    </div>
+</div>
+
+<!-- 比值計算：新增/修改品項視窗（僅管理員） -->
+<div id="modal-ratio-item" class="modal-overlay">
+    <div class="modal-box" style="max-width:420px;">
+        <h4 id="ratio-modal-title">新增品項</h4>
+        <label style="display:block;margin-bottom:6px;font-size:14px;">品項名稱</label>
+        <input type="text" id="ratio-modal-name" class="cloud-input" placeholder="例如：黃金鐵鎚 50%">
+        <label style="display:block;margin:14px 0 6px;font-size:14px;">硬幣數</label>
+        <input type="number" id="ratio-modal-coins" class="cloud-input" min="1" placeholder="例如：10">
+        <div style="display:flex;gap:10px;margin-top:20px;">
+            <button id="btn-ratio-modal-save" class="calc-btn btn-green" style="flex:1;margin:0;">儲存</button>
+            <button id="btn-ratio-modal-cancel" class="calc-btn btn-gray" style="flex:1;margin:0;">取消</button>
         </div>
     </div>
 </div>

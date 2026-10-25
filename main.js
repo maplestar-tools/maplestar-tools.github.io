@@ -41,6 +41,8 @@ function checkIsAdmin() {
     }
     // 分隊出團：管理員權限變動時重新渲染（切換編輯/唯讀狀態）
     renderPartyPlans();
+    // 比值計算：管理員權限變動時重新渲染（顯示/隱藏 ✏️ ✕ 與新增按鈕）
+    renderRatioCoins();
 }
 
 // ==========================================================================
@@ -93,6 +95,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     bindEvents();
     await initExpRecords();
     await loadPartyPlans();
+    await loadRatioItems();
 
     // 同步里程匯率到掉落物標題旁的輸入框
     const mileageVal = document.getElementById('moneyToMileage')?.value;
@@ -128,6 +131,7 @@ function bindEvents() {
     document.getElementById('btn-tab-equip').addEventListener('click', () => switchTab('equip-calc'));
     document.getElementById('btn-tab-exp').addEventListener('click',   () => switchTab('exp-calc'));
     document.getElementById('btn-tab-party').addEventListener('click', () => switchTab('party-plan'));
+    document.getElementById('btn-tab-ratio').addEventListener('click', () => switchTab('ratio-calc'));
 
     // 雲端同步
     document.getElementById('btn-load-cloud').addEventListener('click', () => loadFromCloud(false));
@@ -318,6 +322,23 @@ function bindEvents() {
         if (e.target.closest('.party-boss')) onPartyBossDrop(e);
         else if (e.target.closest('.party-card')) onPartyCardDrop(e);
     });
+
+    // 比值計算
+    document.getElementById('btn-toggle-ratio-coin').addEventListener('click', (e) => toggleSection(e.currentTarget, 'ratio-coin-section'));
+    document.getElementById('btn-add-ratio-coin').addEventListener('click', () => openRatioModal(null));
+    const ratioBody = document.getElementById('ratio-coin-body');
+    ratioBody.addEventListener('input', onRatioBodyInput);
+    ratioBody.addEventListener('click', onRatioBodyClick);
+    document.getElementById('btn-ratio-modal-save').addEventListener('click', saveRatioModal);
+    document.getElementById('btn-ratio-modal-cancel').addEventListener('click', closeRatioModal);
+    document.getElementById('modal-ratio-item').addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) closeRatioModal();
+    });
+    ['ratio-modal-name', 'ratio-modal-coins'].forEach(id => {
+        document.getElementById(id).addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') saveRatioModal();
+        });
+    });
 }
 
 // ==========================================================================
@@ -327,7 +348,7 @@ function switchTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
-    const map = { home: 'btn-tab-home', 'money-split': 'btn-tab-money', 'equip-calc': 'btn-tab-equip', 'exp-calc': 'btn-tab-exp', 'party-plan': 'btn-tab-party' };
+    const map = { home: 'btn-tab-home', 'money-split': 'btn-tab-money', 'equip-calc': 'btn-tab-equip', 'exp-calc': 'btn-tab-exp', 'party-plan': 'btn-tab-party', 'ratio-calc': 'btn-tab-ratio' };
     if (map[tabId]) document.getElementById(map[tabId]).classList.add('active');
 }
 
@@ -507,6 +528,9 @@ function getFormValues() {
     const checkedFee = document.querySelector('input[name="defaultFee"]:checked');
     if (checkedFee) data.defaultFee = checkedFee.value;
 
+    // 比值計算：個人填的拍賣價一併存入個人雲端/本機
+    data.ratioPrices = { ...ratioPrices };
+
     // checkbox 狀態：含楓幣勾選、祈禱/加倍卷/休息獎勵加成勾選
     ['mapleCheckMain','mapleCheckSub','mapleCheckA','mapleCheckB','meso-enabled','bonus-prayer','bonus-2x','bonus-rest','bonus-teach'].forEach(id => {
         const el = document.getElementById(id);
@@ -517,6 +541,11 @@ function getFormValues() {
 }
 
 function fillValues(obj) {
+    // 比值計算：還原個人填的拍賣價
+    if (obj.ratioPrices && typeof obj.ratioPrices === 'object') {
+        ratioPrices = { ...obj.ratioPrices };
+        renderRatioCoins();
+    }
     for (const key in obj) {
         const el = document.getElementById(key);
         if (!el) continue;
@@ -3622,6 +3651,145 @@ async function copyPartyPlanImage() {
         if (btn) { btn.disabled = false; btn.innerText = originalText; }
         renderEl.innerHTML = '';
     }
+}
+
+// ==========================================================================
+// ⚖️ 比值計算
+// ==========================================================================
+let ratioCoinItems = [];   // 傳說硬幣品項（全隊共用雲端）：[{ id, name, coins }]
+let ratioPrices    = {};   // 個人填的拍賣價（存個人雲端）：{ 品項id: 價格字串 }
+let ratioEditingId = null; // 視窗目前編輯中的品項 id（null = 新增）
+
+// 從共用雲端載入品項清單
+async function loadRatioItems() {
+    try {
+        const snap = await getDoc(doc(db, 'shared_data', 'ratio_items'));
+        ratioCoinItems = snap.exists() ? (snap.data().coinItems || []) : [];
+    } catch(e) {
+        console.error('比值計算品項載入失敗：', e);
+        ratioCoinItems = [];
+    }
+    renderRatioCoins();
+}
+
+// 儲存品項清單到共用雲端（merge，之後新增其他分類欄位不會互相覆蓋）
+async function saveRatioItems() {
+    try {
+        await setDoc(doc(db, 'shared_data', 'ratio_items'), { coinItems: ratioCoinItems }, { merge: true });
+    } catch(e) {
+        console.error('比值計算品項儲存失敗：', e);
+        showToast('❌ 儲存失敗：' + e.message);
+    }
+}
+
+// 渲染傳說硬幣表格（管理員多一欄 ✏️ ✕ 與「新增品項」按鈕）
+function renderRatioCoins() {
+    const body = document.getElementById('ratio-coin-body');
+    if (!body) return;
+    const addBtn  = document.getElementById('btn-add-ratio-coin');
+    const adminTh = document.getElementById('ratio-admin-th');
+    const emptyEl = document.getElementById('ratio-coin-empty');
+    if (addBtn)  addBtn.style.display  = isAdmin ? 'inline-flex' : 'none';
+    if (adminTh) adminTh.style.display = isAdmin ? '' : 'none';
+    if (emptyEl) emptyEl.style.display = ratioCoinItems.length === 0 ? 'block' : 'none';
+
+    body.innerHTML = ratioCoinItems.map(item => {
+        const price = escapePartyText(ratioPrices[item.id] ?? '');
+        const actions = isAdmin ? `
+            <td class="ratio-actions-cell">
+                <div class="ratio-actions">
+                    <button class="ratio-edit-btn" data-id="${item.id}">✏️</button>
+                    <button class="del-btn ratio-del-btn" data-id="${item.id}">✕</button>
+                </div>
+            </td>` : '';
+        return `
+            <tr id="ratio-row-${item.id}" class="ratio-row">
+                <td class="ratio-name">${escapePartyText(item.name)}</td>
+                <td class="ratio-col-center">${escapePartyText(item.coins)}</td>
+                <td><input type="number" class="cloud-input ratio-price" data-id="${item.id}" value="${price}" placeholder="0" min="0"></td>
+                <td class="ratio-result" id="ratio-result-${item.id}">—</td>
+                ${actions}
+            </tr>`;
+    }).join('');
+    updateRatioResults();
+}
+
+// 重算每列「1硬幣 = 幾萬」，並標出最高的（至少兩個品項有填價格才標，只有一個沒有比較意義）
+function updateRatioResults() {
+    const values = {};
+    ratioCoinItems.forEach(item => {
+        const price = parseFloat(ratioPrices[item.id]);
+        const coins = Number(item.coins);
+        if (Number.isFinite(price) && price > 0 && coins > 0) values[item.id] = price / coins;
+    });
+    const ids = Object.keys(values);
+    const max = ids.length >= 2 ? Math.max(...ids.map(id => values[id])) : null;
+    ratioCoinItems.forEach(item => {
+        const resEl = document.getElementById(`ratio-result-${item.id}`);
+        const rowEl = document.getElementById(`ratio-row-${item.id}`);
+        const v = values[item.id];
+        if (resEl) resEl.innerText = v === undefined ? '—' : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (rowEl) rowEl.classList.toggle('ratio-best', max !== null && v === max);
+    });
+}
+
+// 拍賣價輸入：只更新記憶體與該列結果，不重繪整張表（避免打字打到一半失去焦點）
+function onRatioBodyInput(e) {
+    const t = e.target;
+    if (!t.classList.contains('ratio-price')) return;
+    ratioPrices[t.dataset.id] = t.value;
+    updateRatioResults();
+}
+
+function onRatioBodyClick(e) {
+    const t = e.target;
+    if (t.classList.contains('ratio-edit-btn')) openRatioModal(t.dataset.id);
+    if (t.classList.contains('ratio-del-btn'))  deleteRatioItem(t.dataset.id);
+}
+
+// 開啟新增/修改視窗（itemId 為 null = 新增）
+function openRatioModal(itemId = null) {
+    if (!isAdmin) return;
+    ratioEditingId = itemId;
+    const item = itemId ? ratioCoinItems.find(i => i.id === itemId) : null;
+    document.getElementById('ratio-modal-title').innerText = item ? '修改品項' : '新增品項';
+    document.getElementById('ratio-modal-name').value  = item ? item.name  : '';
+    document.getElementById('ratio-modal-coins').value = item ? item.coins : '';
+    document.getElementById('modal-ratio-item').classList.add('active');
+    document.getElementById('ratio-modal-name').focus();
+}
+
+function closeRatioModal() {
+    document.getElementById('modal-ratio-item').classList.remove('active');
+    ratioEditingId = null;
+}
+
+async function saveRatioModal() {
+    if (!isAdmin) return;
+    const name  = document.getElementById('ratio-modal-name').value.trim();
+    const coins = parseFloat(document.getElementById('ratio-modal-coins').value);
+    if (!name) { alert('請輸入品項名稱！'); return; }
+    if (!Number.isFinite(coins) || coins <= 0) { alert('硬幣數必須大於 0！'); return; }
+    if (ratioEditingId) {
+        const item = ratioCoinItems.find(i => i.id === ratioEditingId);
+        if (item) { item.name = name; item.coins = coins; }
+    } else {
+        ratioCoinItems.push({ id: generateId(), name, coins });
+    }
+    closeRatioModal();
+    renderRatioCoins();
+    await saveRatioItems();
+}
+
+async function deleteRatioItem(itemId) {
+    if (!isAdmin) return;
+    const item = ratioCoinItems.find(i => i.id === itemId);
+    if (!item) return;
+    if (!confirm(`確定要刪除「${item.name}」嗎？`)) return;
+    ratioCoinItems = ratioCoinItems.filter(i => i.id !== itemId);
+    delete ratioPrices[itemId];
+    renderRatioCoins();
+    await saveRatioItems();
 }
 
 // --- 休息經驗計算 ---
