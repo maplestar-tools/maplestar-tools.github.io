@@ -646,53 +646,84 @@ h1 {
     .party-member-grid { grid-template-columns: 1fr; }
 }
 
-
 /* ==========================================================================
    ⚖️ 14. 比值計算
    ========================================================================== */
-.ratio-table {
-    width: 100%;
-    border-collapse: collapse;
-    min-width: 480px;
+/* 傳說硬幣卡片加寬到內容區上限，讓一排兩個品項放得下（管理員多了把手與按鈕，需要更寬） */
+.calc-card.ratio-wide-card { max-width: 1200px; }
+
+/* 一排兩個品項；視窗太窄放不下兩個時自動改成一排一個 */
+.ratio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+    gap: 8px 12px;
+    margin-top: 4px;
+}
+.ratio-grid.is-admin { grid-template-columns: repeat(auto-fill, minmax(560px, 1fr)); }
+
+/* 單行品項格：欄寬依字數設計
+   名稱 12 字 ≈ 160px｜硬幣 3 位數 48px｜拍賣價 6 位整數(+小數) 96px｜結果 110px */
+.ratio-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #252525;
+    border-radius: 8px;
+    padding: 6px 8px;
+    min-width: 0;
 }
 
-.ratio-table th {
-    padding: 8px 6px;
-    font-size: 12px;
-    color: #aaa;
-    text-align: left;
-    border-bottom: 1px solid #444;
+.ratio-drag-handle {
+    width: 14px;
+    flex-shrink: 0;
+    text-align: center;
+    color: #888;
+    cursor: grab;
+    font-size: 15px;
 }
 
-.ratio-table td {
-    padding: 8px 6px;
-    font-size: 14px;
-    border-bottom: 1px solid #2a2a2a;
-    vertical-align: middle;
+.ratio-name {
+    flex: 1 1 160px;
+    min-width: 0;
+    font-size: 13px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.ratio-table .ratio-col-center { text-align: center; }
-.ratio-table .ratio-col-right  { text-align: right; }
+.ratio-coins {
+    width: 48px;
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 13px;
+    color: #ff9f43;
+}
 
-.ratio-table .ratio-price { width: 120px; padding: 6px 8px; font-size: 13px; }
+.ratio-cell .ratio-price {
+    width: 96px;
+    flex-shrink: 0;
+    padding: 6px 8px;
+    font-size: 13px;
+}
 
 .ratio-result {
+    width: 110px;
+    flex-shrink: 0;
     text-align: right;
     font-weight: bold;
+    font-size: 14px;
     color: #64b5f6;
     white-space: nowrap;
 }
 
-/* 1硬幣價值最高的品項：整列淡綠底，結果數字變綠 */
-.ratio-row.ratio-best { background: rgba(77, 174, 76, 0.12); }
-.ratio-row.ratio-best .ratio-result { color: #4dae4c; }
-
-.ratio-actions-cell { width: 84px; }
+/* 1硬幣價值最高的品項：整格淡綠底，結果數字變綠 */
+.ratio-cell.ratio-best { background: rgba(77, 174, 76, 0.2); }
+.ratio-cell.ratio-best .ratio-result { color: #4dae4c; }
 
 .ratio-actions {
     display: flex;
     gap: 6px;
-    justify-content: flex-end;
+    flex-shrink: 0;
 }
 
 .ratio-actions .del-btn { margin: 0; }
@@ -714,3 +745,13 @@ h1 {
 }
 
 .ratio-edit-btn:hover { background: #3a3a3a; }
+
+/* 拖曳中視覺回饋 */
+.ratio-cell.dragging  { opacity: 0.4; }
+.ratio-cell.drag-over { outline: 2px dashed #64b5f6; }
+
+@media (max-width: 600px) {
+    .ratio-grid,
+    .ratio-grid.is-admin { grid-template-columns: 1fr; }
+    .ratio-cell { flex-wrap: wrap; }
+}

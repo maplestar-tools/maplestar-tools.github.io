@@ -326,9 +326,17 @@ function bindEvents() {
     // 比值計算
     document.getElementById('btn-toggle-ratio-coin').addEventListener('click', (e) => toggleSection(e.currentTarget, 'ratio-coin-section'));
     document.getElementById('btn-add-ratio-coin').addEventListener('click', () => openRatioModal(null));
-    const ratioBody = document.getElementById('ratio-coin-body');
-    ratioBody.addEventListener('input', onRatioBodyInput);
-    ratioBody.addEventListener('click', onRatioBodyClick);
+    const ratioGrid = document.getElementById('ratio-coin-grid');
+    ratioGrid.addEventListener('input', onRatioGridInput);
+    ratioGrid.addEventListener('click', onRatioGridClick);
+    ratioGrid.addEventListener('dragstart', onRatioDragStart);
+    ratioGrid.addEventListener('dragover', onRatioDragOver);
+    ratioGrid.addEventListener('drop', onRatioDrop);
+    ratioGrid.addEventListener('dragend', onRatioDragEnd);
+    // 視窗裡的硬幣數只能輸入數字、最多 3 位
+    document.getElementById('ratio-modal-coins').addEventListener('input', (e) => {
+        e.target.value = e.target.value.replace(/\D/g, '').slice(0, 3);
+    });
     document.getElementById('btn-ratio-modal-save').addEventListener('click', saveRatioModal);
     document.getElementById('btn-ratio-modal-cancel').addEventListener('click', closeRatioModal);
     document.getElementById('modal-ratio-item').addEventListener('click', (e) => {
@@ -3656,9 +3664,14 @@ async function copyPartyPlanImage() {
 // ==========================================================================
 // ⚖️ 比值計算
 // ==========================================================================
-let ratioCoinItems = [];   // 傳說硬幣品項（全隊共用雲端）：[{ id, name, coins }]
+let ratioCoinItems = [];   // 傳說硬幣品項（全隊共用雲端）：[{ id, name, coins }]，陣列順序＝畫面順序
 let ratioPrices    = {};   // 個人填的拍賣價（存個人雲端）：{ 品項id: 價格字串 }
 let ratioEditingId = null; // 視窗目前編輯中的品項 id（null = 新增）
+let ratioDragId    = null; // 目前拖曳中的品項 id
+
+// 欄位限制：品項名稱最多 12 字、硬幣數最多 3 位整數、拍賣價整數最多 6 位（小數最多 2 位）
+const RATIO_NAME_MAX  = 12;
+const RATIO_COINS_MAX = 999;
 
 // 從共用雲端載入品項清單
 async function loadRatioItems() {
@@ -3682,39 +3695,49 @@ async function saveRatioItems() {
     }
 }
 
-// 渲染傳說硬幣表格（管理員多一欄 ✏️ ✕ 與「新增品項」按鈕）
+// 拍賣價輸入過濾：只留數字與一個小數點，整數最多 6 位、小數最多 2 位
+function sanitizeRatioPrice(raw) {
+    const v = String(raw).replace(/[^\d.]/g, '');
+    const dot = v.indexOf('.');
+    if (dot === -1) return v.slice(0, 6);
+    const intPart = v.slice(0, dot).slice(0, 6);
+    const decPart = v.slice(dot + 1).replace(/\./g, '').slice(0, 2);
+    return intPart + '.' + decPart;
+}
+
+// 渲染傳說硬幣格子（一排兩個品項；管理員多 ☰ 拖曳把手與 ✏️ ✕ 按鈕）
 function renderRatioCoins() {
-    const body = document.getElementById('ratio-coin-body');
-    if (!body) return;
+    const grid = document.getElementById('ratio-coin-grid');
+    if (!grid) return;
     const addBtn  = document.getElementById('btn-add-ratio-coin');
-    const adminTh = document.getElementById('ratio-admin-th');
     const emptyEl = document.getElementById('ratio-coin-empty');
     if (addBtn)  addBtn.style.display  = isAdmin ? 'inline-flex' : 'none';
-    if (adminTh) adminTh.style.display = isAdmin ? '' : 'none';
     if (emptyEl) emptyEl.style.display = ratioCoinItems.length === 0 ? 'block' : 'none';
+    grid.classList.toggle('is-admin', !!isAdmin);
 
-    body.innerHTML = ratioCoinItems.map(item => {
-        const price = escapePartyText(ratioPrices[item.id] ?? '');
+    grid.innerHTML = ratioCoinItems.map(item => {
+        const price  = escapePartyText(ratioPrices[item.id] ?? '');
+        const name   = escapePartyText(item.name);
+        const handle = isAdmin ? '<span class="ratio-drag-handle" draggable="true">☰</span>' : '';
         const actions = isAdmin ? `
-            <td class="ratio-actions-cell">
-                <div class="ratio-actions">
-                    <button class="ratio-edit-btn" data-id="${item.id}">✏️</button>
-                    <button class="del-btn ratio-del-btn" data-id="${item.id}">✕</button>
-                </div>
-            </td>` : '';
+            <div class="ratio-actions">
+                <button class="ratio-edit-btn" data-id="${item.id}">✏️</button>
+                <button class="del-btn ratio-del-btn" data-id="${item.id}">✕</button>
+            </div>` : '';
         return `
-            <tr id="ratio-row-${item.id}" class="ratio-row">
-                <td class="ratio-name">${escapePartyText(item.name)}</td>
-                <td class="ratio-col-center">${escapePartyText(item.coins)}</td>
-                <td><input type="number" class="cloud-input ratio-price" data-id="${item.id}" value="${price}" placeholder="0" min="0"></td>
-                <td class="ratio-result" id="ratio-result-${item.id}">—</td>
+            <div id="ratio-row-${item.id}" class="ratio-cell" data-id="${item.id}">
+                ${handle}
+                <div class="ratio-name" title="${name}">${name}</div>
+                <div class="ratio-coins">🪙${escapePartyText(item.coins)}</div>
+                <input type="text" inputmode="decimal" class="cloud-input ratio-price" data-id="${item.id}" value="${price}" placeholder="拍賣價(萬)" maxlength="9">
+                <div class="ratio-result" id="ratio-result-${item.id}">—</div>
                 ${actions}
-            </tr>`;
+            </div>`;
     }).join('');
     updateRatioResults();
 }
 
-// 重算每列「1硬幣 = 幾萬」，並標出最高的（至少兩個品項有填價格才標，只有一個沒有比較意義）
+// 重算每格「1硬幣 = 幾萬」，並標出最高的（至少兩個品項有填價格才標，只有一個沒有比較意義）
 function updateRatioResults() {
     const values = {};
     ratioCoinItems.forEach(item => {
@@ -3725,28 +3748,83 @@ function updateRatioResults() {
     const ids = Object.keys(values);
     const max = ids.length >= 2 ? Math.max(...ids.map(id => values[id])) : null;
     ratioCoinItems.forEach(item => {
-        const resEl = document.getElementById(`ratio-result-${item.id}`);
-        const rowEl = document.getElementById(`ratio-row-${item.id}`);
+        const resEl  = document.getElementById(`ratio-result-${item.id}`);
+        const cellEl = document.getElementById(`ratio-row-${item.id}`);
         const v = values[item.id];
-        if (resEl) resEl.innerText = v === undefined ? '—' : v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-        if (rowEl) rowEl.classList.toggle('ratio-best', max !== null && v === max);
+        if (resEl) resEl.innerText = v === undefined ? '—' : '= ' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        if (cellEl) cellEl.classList.toggle('ratio-best', max !== null && v === max);
     });
 }
 
-// 拍賣價輸入：只更新記憶體與該列結果，不重繪整張表（避免打字打到一半失去焦點）
-function onRatioBodyInput(e) {
+// 拍賣價輸入：過濾字數後只更新記憶體與該格結果，不重繪整個畫面（避免打字打到一半失去焦點）
+function onRatioGridInput(e) {
     const t = e.target;
     if (!t.classList.contains('ratio-price')) return;
-    ratioPrices[t.dataset.id] = t.value;
+    const clean = sanitizeRatioPrice(t.value);
+    if (clean !== t.value) t.value = clean;
+    ratioPrices[t.dataset.id] = clean;
     updateRatioResults();
 }
 
-function onRatioBodyClick(e) {
+function onRatioGridClick(e) {
     const t = e.target;
     if (t.classList.contains('ratio-edit-btn')) openRatioModal(t.dataset.id);
     if (t.classList.contains('ratio-del-btn'))  deleteRatioItem(t.dataset.id);
 }
 
+// ----- 拖曳排序（只有 ☰ 把手可以拖，管理員限定，順序存全隊共用雲端） -----
+function clearRatioDragOver() {
+    document.querySelectorAll('.ratio-cell.drag-over').forEach(el => el.classList.remove('drag-over'));
+}
+
+function onRatioDragStart(e) {
+    if (!isAdmin || !e.target.classList.contains('ratio-drag-handle')) return;
+    const cell = e.target.closest('.ratio-cell');
+    if (!cell) return;
+    ratioDragId = cell.dataset.id;
+    cell.classList.add('dragging');
+    if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', ratioDragId); // Firefox 需要有資料才會開始拖曳
+        e.dataTransfer.setDragImage(cell, 10, 10);
+    }
+}
+
+function onRatioDragOver(e) {
+    if (!isAdmin || ratioDragId === null) return;
+    const cell = e.target.closest('.ratio-cell');
+    if (!cell) return;
+    e.preventDefault();
+    clearRatioDragOver();
+    if (cell.dataset.id !== ratioDragId) cell.classList.add('drag-over');
+}
+
+async function onRatioDrop(e) {
+    if (!isAdmin || ratioDragId === null) return;
+    const cell = e.target.closest('.ratio-cell');
+    if (!cell) return;
+    e.preventDefault();
+    const dropId = cell.dataset.id;
+    const dragId = ratioDragId;
+    ratioDragId = null;
+    clearRatioDragOver();
+    if (dropId === dragId) return;
+    const fromIdx = ratioCoinItems.findIndex(i => i.id === dragId);
+    const toIdx   = ratioCoinItems.findIndex(i => i.id === dropId);
+    if (fromIdx === -1 || toIdx === -1) return;
+    const moved = ratioCoinItems.splice(fromIdx, 1)[0];
+    ratioCoinItems.splice(toIdx, 0, moved);
+    renderRatioCoins();
+    await saveRatioItems();
+}
+
+function onRatioDragEnd() {
+    ratioDragId = null;
+    clearRatioDragOver();
+    document.querySelectorAll('.ratio-cell.dragging').forEach(el => el.classList.remove('dragging'));
+}
+
+// ----- 新增/修改視窗 -----
 // 開啟新增/修改視窗（itemId 為 null = 新增）
 function openRatioModal(itemId = null) {
     if (!isAdmin) return;
@@ -3767,9 +3845,10 @@ function closeRatioModal() {
 async function saveRatioModal() {
     if (!isAdmin) return;
     const name  = document.getElementById('ratio-modal-name').value.trim();
-    const coins = parseFloat(document.getElementById('ratio-modal-coins').value);
+    const coins = parseInt(document.getElementById('ratio-modal-coins').value, 10);
     if (!name) { alert('請輸入品項名稱！'); return; }
-    if (!Number.isFinite(coins) || coins <= 0) { alert('硬幣數必須大於 0！'); return; }
+    if (name.length > RATIO_NAME_MAX) { alert(`品項名稱最多 ${RATIO_NAME_MAX} 個字！`); return; }
+    if (!Number.isInteger(coins) || coins < 1 || coins > RATIO_COINS_MAX) { alert(`硬幣數必須是 1～${RATIO_COINS_MAX} 的整數！`); return; }
     if (ratioEditingId) {
         const item = ratioCoinItems.find(i => i.id === ratioEditingId);
         if (item) { item.name = name; item.coins = coins; }
