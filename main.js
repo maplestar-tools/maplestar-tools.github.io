@@ -536,9 +536,6 @@ function getFormValues() {
     const checkedFee = document.querySelector('input[name="defaultFee"]:checked');
     if (checkedFee) data.defaultFee = checkedFee.value;
 
-    // 比值計算：個人填的拍賣價一併存入個人雲端/本機
-    data.ratioPrices = { ...ratioPrices };
-
     // checkbox 狀態：含楓幣勾選、祈禱/加倍卷/休息獎勵加成勾選
     ['mapleCheckMain','mapleCheckSub','mapleCheckA','mapleCheckB','meso-enabled','bonus-prayer','bonus-2x','bonus-rest','bonus-teach'].forEach(id => {
         const el = document.getElementById(id);
@@ -549,11 +546,6 @@ function getFormValues() {
 }
 
 function fillValues(obj) {
-    // 比值計算：還原個人填的拍賣價
-    if (obj.ratioPrices && typeof obj.ratioPrices === 'object') {
-        ratioPrices = { ...obj.ratioPrices };
-        renderRatioCoins();
-    }
     for (const key in obj) {
         const el = document.getElementById(key);
         if (!el) continue;
@@ -3665,7 +3657,7 @@ async function copyPartyPlanImage() {
 // ⚖️ 比值計算
 // ==========================================================================
 let ratioCoinItems = [];   // 傳說硬幣品項（全隊共用雲端）：[{ id, name, coins }]，陣列順序＝畫面順序
-let ratioPrices    = {};   // 個人填的拍賣價（存個人雲端）：{ 品項id: 價格字串 }
+let ratioPrices    = {};   // 填的價格：{ 品項id: 價格字串 }。只存在目前頁面記憶體，不存本機也不存雲端，重新整理就清空
 let ratioEditingId = null; // 視窗目前編輯中的品項 id（null = 新增）
 let ratioDragId    = null; // 目前拖曳中的品項 id
 
